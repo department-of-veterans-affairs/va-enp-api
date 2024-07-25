@@ -8,7 +8,9 @@ readme = "README.md"
 
 [tool.poetry.dependencies]
 python = "^3.12"
-
+fastapi = "*"
+uvicorn = {extras = ["standard"], version = "*"}
+gunicorn = "*"
 
 [build-system]
 requires = ["poetry-core"]
