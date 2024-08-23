@@ -8,10 +8,63 @@ readme = "README.md"
 package-mode = false
 
 [tool.poetry.dependencies]
+python = "^3.12"
 fastapi = {extras = ["standard"], version = "*"}
 gunicorn = "*"
-python = "^3.12"
-uvicorn = {extras = ["standard"], version = "*"}
+uvicorn-worker = "*"
+
+[tool.poetry.group.static_tools]
+optional = true
+
+[tool.poetry.group.static_tools.dependencies]
+flake8-docstrings-complete = "*"  # Needed to ensure Args are in the docstring
+mypy = "*"
+ruff = "*"
+
+[tool.ruff]
+exclude = [
+    ".bzr",
+    ".direnv",
+    ".eggs",
+    ".git",
+    ".git-rewrite",
+    ".hg",
+    ".ipynb_checkpoints",
+    ".mypy_cache",
+    ".nox",
+    ".pants.d",
+    ".pyenv",
+    ".pytest_cache",
+    ".pytype",
+    ".ruff_cache",
+    ".svn",
+    ".tox",
+    ".venv",
+    ".vscode",
+    "__pypackages__",
+    "_build",
+    "buck-out",
+    "build",
+    "dist",
+    "node_modules",
+    "site-packages",
+    "venv",
+    "migrations",
+]
+line-length = 120
+indent-width = 4
+target-version = "py312"
+
+[tool.ruff.lint]
+# Replace pydocstrings with pydoclint when it is ready: https://github.com/astral-sh/ruff/issues/12434
+# D417 will not raise an error if there is no arg/param section: https://github.com/astral-sh/ruff/issues/2310
+select = ["ANN", "ASYNC", "C901", "DOC", "D", "E4", "E7", "E9", "F", "FAST", "I", "RUF", "W"]
+ignore = ["ANN101", "ANN401", "D203", "D213"]
+preview = true
+
+[tool.ruff.lint.mccabe]
+# Flag errors (`C901`) whenever the complexity level exceeds 5.
+max-complexity = 5
 
 [build-system]
 requires = ["poetry-core"]
