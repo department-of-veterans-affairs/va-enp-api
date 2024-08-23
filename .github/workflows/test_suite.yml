@@ -24,6 +24,7 @@ env:
 
 jobs:
   test:
+    name: Lint Check and Test
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repo
