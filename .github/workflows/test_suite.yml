@@ -47,7 +47,7 @@ jobs:
         run: |
           # Set path to poetry venv
           export PATH="$PWD/.venv/bin:$PATH"
-          ./scripts/run_checks
+          ./scripts/run_checks.sh
 
       - name: Run Tests
         run: |
