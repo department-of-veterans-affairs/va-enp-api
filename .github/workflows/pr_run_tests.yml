@@ -1,0 +1,14 @@
+name: Run Tests
+
+on:
+  pull_request:
+    branches: [main]
+
+
+jobs:
+  test:
+    name: PR Tests
+    uses: ./.github/workflows/test_suite.yml
+    with:
+        ref: ${{ github.ref }}
+    secrets: inherit

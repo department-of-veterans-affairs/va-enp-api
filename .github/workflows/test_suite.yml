@@ -1,0 +1,54 @@
+name: Running Tests
+
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: "Branch or Commit"
+        type: string
+        required: true
+  workflow_call:
+    inputs:
+      ref:
+        description: "Branch or Commit"
+        type: string
+        required: true
+
+env:
+  PYTHONDONTWRITEBYTECODE: 1
+  PORT: 6011
+  POETRY_ARGS: "--with static_tools"
+  POETRY_HOME: "/opt/poetry"
+  POETRY_VIRTUALENVS_IN_PROJECT: 1
+  POETRY_NO_INTERACTION: 1
+
+jobs:
+  test:
+    name: Lint Check and Test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install Dependencies
+        run: |
+          # Prepare path to use environmental variable specified and install with poetry.lock
+          export PATH="$POETRY_HOME/bin:$PATH"
+          curl -sSL https://install.python-poetry.org | python3 - && poetry install --no-root --no-ansi $POETRY_ARGS
+
+      - name: Run Linting
+        run: |
+          # Set path to poetry venv
+          export PATH="$PWD/.venv/bin:$PATH"
+          ./scripts/run_checks.sh
+
+      - name: Run Tests
+        run: |
+          echo "This is where the tests would be if we had any!"
