@@ -58,7 +58,7 @@ target-version = "py312"
 [tool.ruff.lint]
 # Replace pydocstrings with pydoclint when it is ready: https://github.com/astral-sh/ruff/issues/12434
 # D417 will not raise an error if there is no arg/param section: https://github.com/astral-sh/ruff/issues/2310
-select = ["ANN", "ASYNC", "C901", "DOC", "D", "E4", "E7", "E9", "F", "G", "FAST", "I", "PLE", "RUF", "W"]
+select = ["ANN", "ASYNC", "C901", "DOC", "D", "E4", "E7", "E9", "F", "G", "FAST", "I", "PLE", "PT", "RUF", "W"]
 ignore = ["D203", "D213"]
 preview = true
 
