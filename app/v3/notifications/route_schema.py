@@ -1,7 +1,5 @@
 """Request and Response bodies for v3/notifications."""
 
-from typing import Optional, Union
-
 from pydantic import UUID4, AwareDatetime, BaseModel
 
 
@@ -9,15 +7,15 @@ class NotificationSingleRequest(BaseModel):
     """Request model for notification endpoint."""
 
     to: str
-    personalization: Optional[dict[str, str]] = None
+    personalization: None | dict[str, str] = None
     template: UUID4
 
-    def serialize(self) -> dict[str, Optional[Union[str, dict[str, str]]]]:
+    def serialize(self) -> dict[str, None | str | dict[str, str]]:
         """Serialize the pydantic model.
 
         Returns
         -------
-            dict[str, Optional[Union[str, dict[str, str]]]]: Serialized version of the model
+            dict[str, None | str | dict[str, str]]: Serialized version of the model
 
         """
         serialized = self.model_dump()
@@ -31,5 +29,5 @@ class NotificationSingleResponse(BaseModel):
     id: UUID4
     created_at: AwareDatetime
     updated_at: AwareDatetime
-    sent_at: Optional[AwareDatetime] = None
+    sent_at: None | AwareDatetime = None
     to: str

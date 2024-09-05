@@ -1,6 +1,6 @@
 #! /usr/bin/bash
 
-APP_FOLDER='app'
+APP_FOLDER='app tests'
 
 # Wrap each check so it hides the output unless there is failure. Quotes needed in echo to preserve newline
 args_check=$(flake8 --select=DCO020 $APP_FOLDER)

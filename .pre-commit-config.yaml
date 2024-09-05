@@ -10,7 +10,6 @@ repos:
       - id: bandit
         args: [-c, pyproject.toml, -r, -l]
         additional_dependencies: ["bandit[toml]"]
-        exclude: 'tests/*'
   - repo: https://github.com/astral-sh/ruff-pre-commit
     # Ruff version.
     rev: "v0.6.4"
@@ -18,6 +17,5 @@ repos:
       # Run the linter.
       - id: ruff
         args: [--fix]
-        exclude: 'tests/*'
       # Run the formatter.
       - id: ruff-format
