@@ -51,5 +51,4 @@ jobs:
 
       - name: Run Tests
         run: |
-          poetry install --with test,static_tools
           pytest
