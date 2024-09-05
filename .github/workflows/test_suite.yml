@@ -51,4 +51,5 @@ jobs:
 
       - name: Run Tests
         run: |
-          echo "This is where the tests would be if we had any!"
+          poetry install --with test,static_tools
+          pytest
