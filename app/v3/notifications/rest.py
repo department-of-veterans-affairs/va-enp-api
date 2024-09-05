@@ -50,7 +50,6 @@ class NotificationRoute(APIRoute):
                 logger.exception('%s: %s', RESPONSE_500, type(exc))
                 raise HTTPException(status_code, str(exc))
             finally:
-                # Is there any chance request would not be available?
                 logger.info('%s %s %s %ss', request.method, request.url, status_code, f'{(monotonic() - start):6f}')
 
         return custom_route_handler
