@@ -58,7 +58,7 @@ class NotificationRoute(APIRoute):
 # https://fastapi.tiangolo.com/reference/apirouter/
 notification_router = APIRouter(
     prefix='/v3/notifications',
-    tags=['Notification Endpoints'],
+    tags=['v3 Notification Endpoints'],
     responses={404: {'description': RESPONSE_404}},
     route_class=NotificationRoute,
 )
