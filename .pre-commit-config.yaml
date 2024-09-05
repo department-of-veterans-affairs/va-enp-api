@@ -10,7 +10,7 @@ repos:
       - id: bandit
         args: [-c, pyproject.toml, -r, -l]
         additional_dependencies: ["bandit[toml]"]
-        exclude: 'tests/*'
+        exclude: 'tests/'
   - repo: https://github.com/astral-sh/ruff-pre-commit
     # Ruff version.
     rev: "v0.6.4"
