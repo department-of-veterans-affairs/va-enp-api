@@ -42,13 +42,15 @@ jobs:
           # Prepare path to use environmental variable specified and install with poetry.lock
           export PATH="$POETRY_HOME/bin:$PATH"
           curl -sSL https://install.python-poetry.org | python3 - && poetry install --no-root --no-ansi $POETRY_ARGS
-          # Set path to poetry venv
-          export PATH="$PWD/.venv/bin:$PATH"
 
       - name: Run Linting
         run: |
+          # Set path to poetry venv
+          export PATH="$PWD/.venv/bin:$PATH"
           ./scripts/run_checks.sh
 
       - name: Run Tests
         run: |
+          # Set path to poetry venv
+          export PATH="$PWD/.venv/bin:$PATH"
           pytest
