@@ -16,7 +16,7 @@ from app.v3.notifications.route_schema import NotificationSingleRequest, Notific
 
 RESPONSE_400 = 'Request body failed validation'
 RESPONSE_404 = 'Not found'
-RESPONSE_500 = 'Unkown exception'
+RESPONSE_500 = 'Unhandled VA Notify exception'
 
 logger = logging.getLogger('uvicorn.default')
 

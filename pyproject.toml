@@ -20,14 +20,6 @@ optional = true
 [tool.poetry.group.test.dependencies]
 pytest = "*"
 
-[tool.pytest.ini_options]
-pythonpath = [
-  "."
-]
-testpath = [
-    "tests"
-]
-
 [tool.poetry.group.static_tools]
 optional = true
 
