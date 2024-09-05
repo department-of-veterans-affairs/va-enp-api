@@ -13,12 +13,28 @@ fastapi = {extras = ["standard"], version = "*"}
 gunicorn = "*"
 uvicorn-worker = "*"
 
+
+[tool.poetry.group.test]
+optional = true
+
+[tool.poetry.group.test.dependencies]
+pytest = "*"
+
+[tool.pytest.ini_options]
+pythonpath = [
+  "."
+]
+testpath = [
+    "tests"
+]
+
 [tool.poetry.group.static_tools]
 optional = true
 
 [tool.poetry.group.static_tools.dependencies]
 flake8-docstrings-complete = "*"  # Needed to ensure Args are in the docstring
 mypy = "*"
+pre-commit = "*"
 ruff = "*"
 
 [tool.ruff]
@@ -54,6 +70,14 @@ exclude = [
 line-length = 120
 indent-width = 4
 target-version = "py312"
+
+[tool.ruff.format]
+docstring-code-format = true  # https://docs.astral.sh/ruff/settings/#format-docstring-code-format
+# docstring-code-line-length = "dynamic"  # https://docs.astral.sh/ruff/settings/#format-docstring-code-line-length
+indent-style = "space"
+line-ending = "auto"
+quote-style = "single"
+skip-magic-trailing-comma = false
 
 [tool.ruff.lint]
 # Replace pydocstrings with pydoclint when it is ready: https://github.com/astral-sh/ruff/issues/12434
