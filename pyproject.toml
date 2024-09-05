@@ -82,9 +82,6 @@ preview = true
 # Flag errors (`C901`) whenever the complexity level exceeds 5.
 max-complexity = 5
 
-[tool.bandit.assert_used]
-skips = ['*_test.py', '*/test_*.py']
-
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
