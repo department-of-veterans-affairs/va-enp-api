@@ -19,6 +19,7 @@ optional = true
 
 [tool.poetry.group.test.dependencies]
 pytest = "*"
+pytest-asyncio = "*"
 
 [tool.poetry.group.static_tools]
 optional = true
@@ -81,6 +82,12 @@ preview = true
 [tool.ruff.lint.mccabe]
 # Flag errors (`C901`) whenever the complexity level exceeds 5.
 max-complexity = 5
+
+[tool.ruff.lint.per-file-ignores]
+"__init__.py" = ["D104"]
+
+[tool.pytest.ini_options]
+asyncio_default_fixture_loop_scope = "function"
 
 [build-system]
 requires = ["poetry-core"]
