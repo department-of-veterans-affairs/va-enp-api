@@ -19,6 +19,7 @@ optional = true
 
 [tool.poetry.group.test.dependencies]
 pytest = "*"
+pytest-asyncio = "*"
 
 [tool.poetry.group.static_tools]
 optional = true
