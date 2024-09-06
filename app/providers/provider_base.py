@@ -36,25 +36,25 @@ class ProviderBase(ABC):
         ...
 
     async def _process_email_response(self) -> None:
-        """Send an email through this provider."""
+        """Process an email response from this provider."""
         raise NotImplementedError(f'Derived class: {self.__class__.__name__} does not implement this method.')
 
     async def _process_push_response(self) -> None:
-        """Send an push through this provider."""
+        """Process a push response from this provider."""
         raise NotImplementedError(f'Derived class: {self.__class__.__name__} does not implement this method.')
 
     async def _process_sms_response(self) -> None:
-        """Send an sms through this provider."""
+        """Process a sms response from this provider."""
         raise NotImplementedError(f'Derived class: {self.__class__.__name__} does not implement this method.')
 
     async def _send_email(self) -> str:
-        """Send an email through this provider."""
+        """Send an email request to this provider."""
         raise NotImplementedError(f'Derived class: {self.__class__.__name__} does not implement this method.')
 
     async def _send_push(self) -> str:
-        """Send an push through this provider."""
+        """Send a push request to this provider."""
         raise NotImplementedError(f'Derived class: {self.__class__.__name__} does not implement this method.')
 
     async def _send_sms(self) -> str:
-        """Send an sms through this provider."""
+        """Send a sms request to this provider."""
         raise NotImplementedError(f'Derived class: {self.__class__.__name__} does not implement this method.')
