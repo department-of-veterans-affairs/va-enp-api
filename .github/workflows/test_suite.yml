@@ -17,7 +17,7 @@ on:
 env:
   PYTHONDONTWRITEBYTECODE: 1
   PORT: 6011
-  POETRY_ARGS: "--with static_tools"
+  POETRY_ARGS: "--with test,static_tools"
   POETRY_HOME: "/opt/poetry"
   POETRY_VIRTUALENVS_IN_PROJECT: 1
   POETRY_NO_INTERACTION: 1
@@ -51,4 +51,6 @@ jobs:
 
       - name: Run Tests
         run: |
-          echo "This is where the tests would be if we had any!"
+          # Set path to poetry venv
+          export PATH="$PWD/.venv/bin:$PATH"
+          pytest
