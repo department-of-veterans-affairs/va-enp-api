@@ -2,7 +2,8 @@
 
 from fastapi import FastAPI
 
-from app.logging_config import configure_loguru
+# from app.logging_config import configure_loguru
+from app.logging_config_playground import CustomizeLogger
 from app.v3.notifications.rest import notification_router
 
 
@@ -17,7 +18,7 @@ def create_app() -> FastAPI:
     app = FastAPI()
 
     app.include_router(notification_router)
-    app.logger = configure_loguru()
+    app.logger = CustomizeLogger.make_logger()
 
     return app
 
