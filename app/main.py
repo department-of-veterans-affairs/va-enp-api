@@ -2,10 +2,27 @@
 
 from fastapi import FastAPI
 
+from app.logging_config import configure_loguru
 from app.v3.notifications.rest import notification_router
 
-app = FastAPI()
-app.include_router(notification_router)
+
+def create_app() -> FastAPI:
+    """Create and configure the FastAPI app.
+
+    Returns
+    -------
+    FastAPI: The FastAPI application instance
+
+    """
+    app = FastAPI()
+
+    app.include_router(notification_router)
+    app.logger = configure_loguru()
+
+    return app
+
+
+app: FastAPI = create_app()
 
 
 @app.get('/')
@@ -17,4 +34,5 @@ def simple_route() -> dict[str, str]:
         dict[str, str]: Hello World
 
     """
+    app.logger.info('Hello World')
     return {'Hello': 'World'}
