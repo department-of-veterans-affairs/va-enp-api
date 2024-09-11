@@ -21,6 +21,3 @@ def configure_loguru() -> Logger:
     loguru_logger.add(sys.stdout, level='DEBUG', format='{time} {level} {message}')
 
     return loguru_logger
-
-
-logger = configure_loguru()
