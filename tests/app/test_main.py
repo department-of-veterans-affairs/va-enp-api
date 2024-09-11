@@ -20,7 +20,7 @@ def test_simple_route(client: TestClient) -> None:
     assert resp.json() == {'Hello': 'World'}
 
 
-@patch('app.main.logger.info')
+@patch('app.main.app.logger.info')
 def test_simple_route_logs_hello_world(mock_logger: Logger, client: TestClient) -> None:
     """Test that GET / logs 'Hello World' as an info log.
 
