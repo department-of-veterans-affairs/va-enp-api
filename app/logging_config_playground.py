@@ -64,7 +64,7 @@ class CustomizeLogger:
             'level': 'DEBUG',  # Logging level (e.g., DEBUG, INFO)
             'rotation': '1 week',  # Log rotation policy (e.g., daily, weekly)
             'retention': '30 days',  # Retention period for old logs
-            'format': '{time} {level} {message}',  # Log format
+            'format': 'TEST {time} {level} {message}',  # Log format
         }
 
         return cls.customize_logging(
