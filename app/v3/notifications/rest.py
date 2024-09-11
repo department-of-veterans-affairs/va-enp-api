@@ -1,6 +1,5 @@
 """All endpoints for the v3/notifications route."""
 
-import logging
 from datetime import datetime, timezone
 from time import monotonic
 from typing import Any, Callable, Coroutine
@@ -17,8 +16,6 @@ from app.v3.notifications.route_schema import NotificationSingleRequest, Notific
 RESPONSE_400 = 'Request body failed validation'
 RESPONSE_404 = 'Not found'
 RESPONSE_500 = 'Unhandled VA Notify exception'
-
-logger = logging.getLogger('uvicorn.default')
 
 
 class NotificationRoute(APIRoute):
@@ -43,14 +40,16 @@ class NotificationRoute(APIRoute):
                 return resp
             except RequestValidationError as exc:
                 status_code = 400
-                logger.warning('Request: %s failed validation: %s', request, exc.errors())
+                request.app.logger.warning('Request: %s failed validation: %s', request, exc.errors())
                 raise HTTPException(400, f'{RESPONSE_400} - {exc}')
             except Exception as exc:
                 status_code = 500
-                logger.exception('%s: %s', RESPONSE_500, type(exc).__name__)
+                request.app.logger.exception('%s: %s', RESPONSE_500, type(exc).__name__)
                 raise HTTPException(status_code, RESPONSE_500)
             finally:
-                logger.info('%s %s %s %ss', request.method, request.url, status_code, f'{(monotonic() - start):6f}')
+                request.app.logger.info(
+                    '%s %s %s %ss', request.method, request.url, status_code, f'{(monotonic() - start):6f}'
+                )
 
         return custom_route_handler
 
