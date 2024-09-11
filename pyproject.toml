@@ -12,6 +12,7 @@ python = "^3.12"
 fastapi = {extras = ["standard"], version = "*"}
 gunicorn = "*"
 uvicorn-worker = "*"
+loguru = "^0.7.2"
 
 
 [tool.poetry.group.test]
