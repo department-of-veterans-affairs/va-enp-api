@@ -73,7 +73,9 @@ class CustomizeLogger:
             format=logging_config['format'],
         )
 
-        # Check if running under Gunicorn and configure the Gunicorn logger
+        # Configure specific loggers for FastAPI, Uvicorn, and Gunicorn
+        cls._configure_fastapi_logger()
+        cls._configure_uvicorn_logger()
         cls._configure_gunicorn_logger()
 
         return log
@@ -129,15 +131,24 @@ class CustomizeLogger:
             format=format,
         )
 
-        # Intercept standard Python logging and Uvicorn logs
-        logging.basicConfig(handlers=[InterceptHandler()], level=0)
-        # Override Uvicorn's default logging handlers
-        logging.getLogger('uvicorn.access').handlers = [InterceptHandler()]
-        for log_name in ['uvicorn', 'uvicorn.error', 'fastapi']:
-            logging.getLogger(log_name).handlers = [InterceptHandler()]
-
         # Return the logger bound with additional context
         return logger.bind(request_id=None, method=None)
+
+    @classmethod
+    def _configure_fastapi_logger(cls) -> None:
+        """Configure FastAPI to use Loguru for logging."""
+        logging.getLogger('fastapi').handlers = [InterceptHandler()]
+        logger.info('FastAPI logger has been configured with Loguru.')
+
+    @classmethod
+    def _configure_uvicorn_logger(cls) -> None:
+        """Configure Uvicorn to use Loguru for logging."""
+        # Intercept standard Python logging and Uvicorn logs
+        logging.basicConfig(handlers=[InterceptHandler()], level=0)
+        logging.getLogger('uvicorn.access').handlers = [InterceptHandler()]
+        for log_name in ['uvicorn', 'uvicorn.error']:
+            logging.getLogger(log_name).handlers = [InterceptHandler()]
+        logger.info('Uvicorn logger has been configured with Loguru.')
 
     @classmethod
     def _configure_gunicorn_logger(cls) -> None:
