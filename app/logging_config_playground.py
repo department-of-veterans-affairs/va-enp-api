@@ -1,6 +1,7 @@
 """Playground to test code from https://medium.com/1mgofficial/how-to-override-uvicorn-logger-in-fastapi-using-loguru-124133cdcd4e."""
 
 import logging
+import os
 import sys
 from pathlib import Path
 from typing import ClassVar
@@ -67,13 +68,19 @@ class CustomizeLogger:
             'format': 'TEST {time} {level} {message}',  # Log format
         }
 
-        return cls.customize_logging(
+        # Create the logger
+        log = cls.customize_logging(
             filepath=logging_config['path'],
             level=logging_config['level'],
             rotation=logging_config['rotation'],
             retention=logging_config['retention'],
             format=logging_config['format'],
         )
+
+        # Check if running under Gunicorn and configure the Gunicorn logger
+        cls._configure_gunicorn_logger()
+
+        return log
 
     @classmethod
     def customize_logging(cls, filepath: Path, level: str, rotation: str, retention: str, format: str) -> logger:
@@ -120,3 +127,12 @@ class CustomizeLogger:
 
         # Return the logger bound with additional context
         return logger.bind(request_id=None, method=None)
+
+    @classmethod
+    def _configure_gunicorn_logger(cls) -> None:
+        """Configure Gunicorn logger to use Loguru handlers if running under Gunicorn."""
+        if 'gunicorn' in os.environ.get('SERVER_SOFTWARE', ''):
+            # Intercept Gunicorn logs
+            logging.getLogger('gunicorn.error').handlers = [InterceptHandler()]
+            logging.getLogger('gunicorn.access').handlers = [InterceptHandler()]
+            logger.info('Gunicorn logger has been configured with Loguru.')
