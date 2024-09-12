@@ -2,8 +2,7 @@
 
 from fastapi import FastAPI
 
-# from app.logging_config import configure_loguru
-from app.logging_config_playground import CustomizeLogger
+from app.logging_config import CustomizeLogger
 from app.v3.notifications.rest import notification_router
 
 
