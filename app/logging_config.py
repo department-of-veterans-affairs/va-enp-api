@@ -143,7 +143,6 @@ class CustomizeLogger:
     @classmethod
     def _configure_uvicorn_logger(cls) -> None:
         """Configure Uvicorn to use Loguru for logging."""
-        # Intercept standard Python logging and Uvicorn logs
         logging.basicConfig(handlers=[InterceptHandler()], level=0)
         logging.getLogger('uvicorn.access').handlers = [InterceptHandler()]
         for log_name in ['uvicorn', 'uvicorn.error']:
