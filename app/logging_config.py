@@ -9,6 +9,8 @@ from typing import Dict
 
 from loguru import logger
 
+LOGGING_CONFIG_PATH = 'app/logging_config.json'
+
 LOGLEVEL_CRITICAL = 'CRITICAL'
 LOGLEVEL_ERROR = 'ERROR'
 LOGLEVEL_WARNING = 'WARNING'
@@ -50,8 +52,6 @@ class InterceptHandler(logging.Handler):
 
 class CustomizeLogger:
     """Customizes and configures Loguru logging for FastAPI, Uvicorn, and Gunicorn."""
-
-    CONFIG_PATH = 'logging_config.json'
 
     @classmethod
     def make_logger(cls) -> logger:
@@ -95,7 +95,7 @@ class CustomizeLogger:
 
         """
         try:
-            with open(cls.CONFIG_PATH, 'r') as file:
+            with open(LOGGING_CONFIG_PATH, 'r') as file:
                 return json.load(file)
         except FileNotFoundError:
             logger.error('Logging configuration file not found at {cls.CONFIG_PATH}')
