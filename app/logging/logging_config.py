@@ -5,7 +5,6 @@ import logging
 import os
 import sys
 from pathlib import Path
-from typing import Any
 
 from loguru import Logger, logger
 
@@ -91,7 +90,7 @@ class CustomizeLogger:
         return log
 
     @classmethod
-    def load_config(cls) -> dict[str, Any]:
+    def load_config(cls) -> dict[str, str]:
         """Load logging configuration from a JSON file.
 
         Raises
@@ -178,7 +177,6 @@ class CustomizeLogger:
     def _configure_gunicorn_logger(cls) -> None:
         """Configure Gunicorn to use Loguru for error and access logs."""
         if 'gunicorn' in os.environ.get('SERVER_SOFTWARE', ''):
-            print('here')
             logging.getLogger('gunicorn.error').handlers = [InterceptHandler()]
             logging.getLogger('gunicorn.access').handlers = [InterceptHandler()]
             logger.info('Gunicorn logger has been configured with Loguru.')
