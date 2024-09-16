@@ -64,7 +64,7 @@ class CustomizeLogger:
         """
         logging_config = cls.load_config()
 
-        # Create the logger
+        # Create the custom Loguru logger
         log = cls.customize_logging(
             filepath=logging_config['path'],
             level=logging_config['level'],
@@ -73,7 +73,7 @@ class CustomizeLogger:
             format=logging_config['format'],
         )
 
-        # Configure specific loggers for FastAPI, Uvicorn, and Gunicorn
+        # Configure specific Loguru loggers for FastAPI, Uvicorn, and Gunicorn
         cls._configure_fastapi_logger()
         cls._configure_uvicorn_logger()
         cls._configure_gunicorn_logger()
@@ -100,10 +100,10 @@ class CustomizeLogger:
             with open(LOGGING_CONFIG_PATH, 'r') as file:
                 return json.load(file)
         except FileNotFoundError:
-            logger.error('Logging configuration file not found at {cls.CONFIG_PATH}')
+            logger.error('Logging configuration file not found at %s', {LOGGING_CONFIG_PATH})
             raise
         except json.JSONDecodeError:
-            logger.error(f'Error decoding logging configuration file at {cls.CONFIG_PATH}')
+            logger.error('Error decoding logging configuration file at %s', {LOGGING_CONFIG_PATH})
             raise
 
     @classmethod
@@ -153,6 +153,7 @@ class CustomizeLogger:
     def _configure_gunicorn_logger(cls) -> None:
         """Configure Gunicorn to use Loguru for error and access logs."""
         if 'gunicorn' in os.environ.get('SERVER_SOFTWARE', ''):
+            print('here')
             logging.getLogger('gunicorn.error').handlers = [InterceptHandler()]
             logging.getLogger('gunicorn.access').handlers = [InterceptHandler()]
             logger.info('Gunicorn logger has been configured with Loguru.')
