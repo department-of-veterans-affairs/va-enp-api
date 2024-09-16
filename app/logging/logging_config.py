@@ -32,7 +32,14 @@ class InterceptHandler(logging.Handler):
     """Intercepts standard Python logging events and routes them through Loguru."""
 
     def emit(self, record: logging.LogRecord) -> None:
-        """Emit a standard log record using Loguru."""
+        """Emit a standard log record using Loguru.
+
+        Args:
+        ----
+        record : logging.LogRecord
+            The log record to be emitted through Loguru.
+
+        """
         try:
             # Get the corresponding Loguru log level
             level = logger.level(record.levelname).name
@@ -110,7 +117,20 @@ class CustomizeLogger:
     def customize_logging(cls, filepath: Path, level: str, rotation: str, retention: str, format: str) -> logger:
         """Customize Loguru logging with specific configurations.
 
-        Returns
+        Args:
+        ----
+        filepath : Path
+            Path to the log file where logs will be written.
+        level : str
+            The logging level to be used (e.g., 'DEBUG', 'INFO').
+        rotation : str
+            Log rotation policy (e.g., '1 day', '100 MB').
+        retention : str
+            Log retention policy (e.g., '10 days', '1 year').
+        format : str
+            Log format to be used for log messages.
+
+        Returns:
         -------
         logger
             The Loguru logger instance, bound with additional context such as request_id and method.
