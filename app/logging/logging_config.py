@@ -5,6 +5,7 @@ import logging
 import os
 import sys
 from pathlib import Path
+from typing import Any
 
 from loguru import Logger, logger
 
@@ -46,7 +47,10 @@ class InterceptHandler(logging.Handler):
             level = LOGLEVEL_MAPPING[record.levelno]
 
         # Find the correct frame to display the source of the log message
-        frame, depth = logging.currentframe(), 2
+        frame = logging.currentframe()
+        if frame is None:
+            return
+        depth = 2
         while frame.f_code.co_filename == logging.__file__:
             frame = frame.f_back
             depth += 1
@@ -87,7 +91,7 @@ class CustomizeLogger:
         return log
 
     @classmethod
-    def load_config(cls) -> dict:
+    def load_config(cls) -> dict[str, Any]:
         """Load logging configuration from a JSON file.
 
         Raises
