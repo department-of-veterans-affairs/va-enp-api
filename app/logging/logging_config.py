@@ -5,7 +5,6 @@ import logging
 import os
 import sys
 from pathlib import Path
-from typing import Dict
 
 from loguru import Logger, logger
 
@@ -18,7 +17,7 @@ LOGLEVEL_INFO = 'INFO'
 LOGLEVEL_DEBUG = 'DEBUG'
 LOGLEVEL_NOTSET = 'NOTSET'
 
-LOGLEVEL_MAPPING: Dict[int, str] = {
+LOGLEVEL_MAPPING: dict[int, str] = {
     50: LOGLEVEL_CRITICAL,
     40: LOGLEVEL_ERROR,
     30: LOGLEVEL_WARNING,
@@ -88,7 +87,7 @@ class CustomizeLogger:
         return log
 
     @classmethod
-    def load_config(cls) -> Dict:
+    def load_config(cls) -> dict:
         """Load logging configuration from a JSON file.
 
         Raises
