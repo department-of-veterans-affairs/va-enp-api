@@ -1,4 +1,4 @@
-"""Playground to test code from https://medium.com/1mgofficial/how-to-override-uvicorn-logger-in-fastapi-using-loguru-124133cdcd4e."""
+"""Create custom logging with Loguru."""
 
 import json
 import logging
@@ -9,7 +9,7 @@ from typing import Dict
 
 from loguru import logger
 
-LOGGING_CONFIG_PATH = 'app/logging_config.json'
+LOGGING_CONFIG_PATH = 'app/logging/logging_config.json'
 
 LOGLEVEL_CRITICAL = 'CRITICAL'
 LOGLEVEL_ERROR = 'ERROR'
@@ -118,8 +118,10 @@ class CustomizeLogger:
         """
         # Remove the default logger
         logger.remove()
+
         # Add a logger to stdout
         logger.add(sys.stdout, enqueue=True, backtrace=True, level=level.upper(), format=format)
+
         # Add a logger to a file with rotation and retention
         logger.add(
             str(filepath),

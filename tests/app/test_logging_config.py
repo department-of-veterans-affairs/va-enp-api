@@ -5,7 +5,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from app.logging_config import CustomizeLogger, InterceptHandler
+from app.logging.logging_config import CustomizeLogger, InterceptHandler
 
 
 @pytest.fixture
@@ -16,7 +16,7 @@ def logger_mock() -> MagicMock:
     MagicMock: The mock logger object.
 
     """
-    with patch('app.logging_config.logger') as mock_logger:
+    with patch('app.logging.logging_config.logger') as mock_logger:
         yield mock_logger
 
 
@@ -40,7 +40,7 @@ def mock_logging_config() -> dict:
 def test_make_logger(logger_mock: MagicMock, mock_logging_config: dict) -> None:
     """Test to ensure the logger is configured correctly using CustomizeLogger."""
     with (
-        patch('app.logging_config.CustomizeLogger.load_config', return_value=mock_logging_config),
+        patch('app.logging.logging_config.CustomizeLogger.load_config', return_value=mock_logging_config),
         patch('logging.getLogger') as mock_get_logger,
         patch.dict('os.environ', {'SERVER_SOFTWARE': 'gunicorn'}),
     ):
