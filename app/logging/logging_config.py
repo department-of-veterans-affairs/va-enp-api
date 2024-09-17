@@ -10,7 +10,7 @@ from types import FrameType
 from typing import Dict, Optional
 
 import loguru
-from loguru import logger
+from loguru import logger as loguru_logger
 
 LOGGING_CONFIG_PATH = 'app/logging/logging_config.json'
 
@@ -45,7 +45,7 @@ class InterceptHandler(logging.Handler):
         """
         try:
             # Get the corresponding Loguru log level
-            level = logger.level(record.levelname).name
+            level = loguru_logger.level(record.levelname).name
         except AttributeError:
             level = LOGLEVEL_MAPPING[record.levelno]
 
@@ -61,7 +61,7 @@ class InterceptHandler(logging.Handler):
                 depth += 1
 
             # Log the message with Loguru
-            log = logger.bind(request_id='app')
+            log = loguru_logger.bind(request_id='app')
             log.opt(depth=depth, exception=record.exc_info).log(level, record.getMessage())
 
 
@@ -115,10 +115,10 @@ class CustomizeLogger:
             with open(LOGGING_CONFIG_PATH, 'r') as file:
                 return dict(json.load(file))
         except FileNotFoundError:
-            logger.error('Logging configuration file not found at %s', {LOGGING_CONFIG_PATH})
+            loguru_logger.error('Logging configuration file not found at %s', {LOGGING_CONFIG_PATH})
             raise
         except json.JSONDecodeError:
-            logger.error('Error decoding logging configuration file at %s', {LOGGING_CONFIG_PATH})
+            loguru_logger.error('Error decoding logging configuration file at %s', {LOGGING_CONFIG_PATH})
             raise
 
     @classmethod
@@ -145,13 +145,13 @@ class CustomizeLogger:
 
         """
         # Remove the default logger
-        logger.remove()
+        loguru_logger.remove()
 
         # Add a logger to stdout
-        logger.add(sys.stdout, enqueue=True, backtrace=True, level=level.upper(), format=format)
+        loguru_logger.add(sys.stdout, enqueue=True, backtrace=True, level=level.upper(), format=format)
 
         # Add a logger to a file with rotation and retention
-        logger.add(
+        loguru_logger.add(
             str(filepath),
             rotation=rotation,
             retention=retention,
@@ -162,13 +162,13 @@ class CustomizeLogger:
         )
 
         # Return the logger bound with additional context
-        return logger.bind(request_id=None, method=None)
+        return loguru_logger.bind(request_id=None, method=None)
 
     @classmethod
     def _configure_fastapi_logger(cls) -> None:
         """Configure FastAPI to use Loguru for logging."""
         logging.getLogger('fastapi').handlers = [InterceptHandler()]
-        logger.info('FastAPI logger has been configured with Loguru.')
+        loguru_logger.info('FastAPI logger has been configured with Loguru.')
 
     @classmethod
     def _configure_uvicorn_logger(cls) -> None:
@@ -177,7 +177,7 @@ class CustomizeLogger:
         logging.getLogger('uvicorn.access').handlers = [InterceptHandler()]
         for log_name in ['uvicorn', 'uvicorn.error']:
             logging.getLogger(log_name).handlers = [InterceptHandler()]
-        logger.info('Uvicorn logger has been configured with Loguru.')
+        loguru_logger.info('Uvicorn logger has been configured with Loguru.')
 
     @classmethod
     def _configure_gunicorn_logger(cls) -> None:
@@ -185,4 +185,4 @@ class CustomizeLogger:
         if 'gunicorn' in os.environ.get('SERVER_SOFTWARE', ''):
             logging.getLogger('gunicorn.error').handlers = [InterceptHandler()]
             logging.getLogger('gunicorn.access').handlers = [InterceptHandler()]
-            logger.info('Gunicorn logger has been configured with Loguru.')
+            loguru_logger.info('Gunicorn logger has been configured with Loguru.')
