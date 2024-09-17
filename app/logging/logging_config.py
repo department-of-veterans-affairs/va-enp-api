@@ -4,8 +4,7 @@ import json
 import logging
 import os
 import sys
-from types import FrameType
-from typing import Dict, Optional
+from typing import Dict
 
 from loguru import logger
 
@@ -47,17 +46,16 @@ class InterceptHandler(logging.Handler):
             level = LOGLEVEL_MAPPING[record.levelno]
 
         # Find the correct frame to display the source of the log message
-        frame: Optional[FrameType] = logging.currentframe()
-        if frame is None:
-            return
-        depth = 2
-        while frame.f_code.co_filename == logging.__file__:
-            frame = frame.f_back
-            depth += 1
+        frame = logging.currentframe()
+        if frame is not None:
+            depth = 2
+            while frame.f_code.co_filename == logging.__file__:
+                frame = frame.f_back
+                depth += 1
 
-        # Log the message with Loguru
-        log = logger.bind(request_id='app')
-        log.opt(depth=depth, exception=record.exc_info).log(level, record.getMessage())
+            # Log the message with Loguru
+            log = logger.bind(request_id='app')
+            log.opt(depth=depth, exception=record.exc_info).log(level, record.getMessage())
 
 
 class CustomizeLogger:
