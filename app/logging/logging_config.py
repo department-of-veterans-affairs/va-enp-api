@@ -6,6 +6,7 @@ import os
 import sys
 from typing import Dict
 
+import loguru
 from loguru import logger
 
 LOGGING_CONFIG_PATH = 'app/logging/logging_config.json'
@@ -62,7 +63,7 @@ class CustomizeLogger:
     """Customizes and configures Loguru logging for FastAPI, Uvicorn, and Gunicorn."""
 
     @classmethod
-    def make_logger(cls) -> logger:
+    def make_logger(cls) -> loguru.Logger:
         """Create and configure the Loguru logger using an external configuration file.
 
         Returns
@@ -115,7 +116,7 @@ class CustomizeLogger:
             raise
 
     @classmethod
-    def customize_logging(cls, filepath: str, level: str, rotation: str, retention: str, format: str) -> logger:
+    def customize_logging(cls, filepath: str, level: str, rotation: str, retention: str, format: str) -> loguru.Logger:
         """Customize Loguru logging with specific configurations.
 
         Args:
