@@ -7,7 +7,7 @@ import sys
 from types import FrameType
 from typing import Dict, Optional
 
-from loguru import Logger, logger
+from loguru import logger
 
 LOGGING_CONFIG_PATH = 'app/logging/logging_config.json'
 
@@ -64,7 +64,7 @@ class CustomizeLogger:
     """Customizes and configures Loguru logging for FastAPI, Uvicorn, and Gunicorn."""
 
     @classmethod
-    def make_logger(cls) -> Logger:
+    def make_logger(cls) -> logger:
         """Create and configure the Loguru logger using an external configuration file.
 
         Returns
@@ -118,7 +118,7 @@ class CustomizeLogger:
             raise
 
     @classmethod
-    def customize_logging(cls, filepath: str, level: str, rotation: str, retention: str, format: str) -> Logger:
+    def customize_logging(cls, filepath: str, level: str, rotation: str, retention: str, format: str) -> logger:
         """Customize Loguru logging with specific configurations.
 
         Args:
