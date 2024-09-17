@@ -123,7 +123,10 @@ class CustomizeLogger:
             The Loguru logger instance, bound with additional context such as request_id and method.
 
         """
-        # Remove the default logger
+        # Remove existing handlers
+        logging.getLogger().handlers = []
+
+        # Remove Loguru's default handler
         loguru_logger.remove()
 
         # Add a logger to stdout
