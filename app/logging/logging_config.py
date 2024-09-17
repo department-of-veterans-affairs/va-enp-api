@@ -4,7 +4,6 @@ import json
 import logging
 import os
 import sys
-from pathlib import Path
 from types import FrameType
 from typing import Optional
 
@@ -118,7 +117,7 @@ class CustomizeLogger:
             raise
 
     @classmethod
-    def customize_logging(cls, filepath: Path, level: str, rotation: str, retention: str, format: str) -> Logger:
+    def customize_logging(cls, filepath: str, level: str, rotation: str, retention: str, format: str) -> Logger:
         """Customize Loguru logging with specific configurations.
 
         Args:
