@@ -1,6 +1,7 @@
 """Test suite for logging configurations with Loguru."""
 
 import sys
+from typing import Generator
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -9,7 +10,7 @@ from app.logging.logging_config import CustomizeLogger, InterceptHandler
 
 
 @pytest.fixture
-def logger_mock() -> MagicMock:
+def logger_mock() -> Generator[MagicMock, None, None]:
     """Fixture to mock the logger object from app.logging_config.
 
     Yields:
