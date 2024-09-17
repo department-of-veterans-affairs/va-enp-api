@@ -17,7 +17,7 @@ def create_app() -> FastAPI:
     app = FastAPI()
 
     app.include_router(notification_router)
-    app.logger = CustomizeLogger.make_logger()
+    app.logger = CustomizeLogger.make_logger()  # type: ignore
 
     return app
 
