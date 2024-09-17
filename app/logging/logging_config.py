@@ -5,7 +5,7 @@ import logging
 import os
 import sys
 from types import FrameType
-from typing import Optional
+from typing import Any, Dict, List, Optional, Union
 
 from loguru import Logger, logger
 
@@ -91,7 +91,7 @@ class CustomizeLogger:
         return log
 
     @classmethod
-    def load_config(cls) -> dict[str, str]:
+    def load_config(cls) -> Union[Dict[str, Any], List[Any]]:
         """Load logging configuration from a JSON file.
 
         Raises
