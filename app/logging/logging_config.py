@@ -34,7 +34,13 @@ class InterceptHandler(logging.Handler):
     """Intercept standard logging and route it through Loguru."""
 
     def emit(self, record: logging.LogRecord) -> None:
-        """Emit a log record using Loguru."""
+        """Emit a log record using Loguru.
+
+        Args:
+        ----
+            record (logging.LogRecord): The log record to emit.
+
+        """
         try:
             level = loguru_logger.level(record.levelname).name
         except ValueError:
