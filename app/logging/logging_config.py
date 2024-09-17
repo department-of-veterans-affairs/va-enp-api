@@ -108,8 +108,8 @@ class CustomizeLogger:
         """
         try:
             with open(LOGGING_CONFIG_PATH, 'r') as file:
-                file = json.load(file)
-                return file
+                config_file = json.load(file)
+                return config_file
         except FileNotFoundError:
             logger.error('Logging configuration file not found at %s', {LOGGING_CONFIG_PATH})
             raise
