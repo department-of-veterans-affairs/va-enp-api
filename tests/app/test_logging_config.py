@@ -1,7 +1,7 @@
 """Test suite for logging configurations with Loguru."""
 
 import sys
-from typing import Generator
+from typing import Dict, Generator
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -22,7 +22,7 @@ def logger_mock() -> Generator[MagicMock, None, None]:
 
 
 @pytest.fixture
-def mock_logging_config() -> dict:
+def mock_logging_config() -> Dict[str, str]:
     """Fixture to provide a mock logging configuration.
 
     Returns:
@@ -38,7 +38,7 @@ def mock_logging_config() -> dict:
     }
 
 
-def test_make_logger(logger_mock: MagicMock, mock_logging_config: dict) -> None:
+def test_make_logger(logger_mock: MagicMock, mock_logging_config: Dict[str, str]) -> None:
     """Test to ensure the logger is configured correctly using CustomizeLogger."""
     with (
         patch('app.logging.logging_config.CustomizeLogger.load_config', return_value=mock_logging_config),
