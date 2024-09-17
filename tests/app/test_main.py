@@ -1,9 +1,8 @@
 """Test suite for initializing FastAPI application."""
 
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 from fastapi.testclient import TestClient
-from loguru._logger import Logger
 from starlette import status
 
 
@@ -21,7 +20,7 @@ def test_simple_route(client: TestClient) -> None:
 
 
 @patch('app.main.app.logger.info')
-def test_simple_route_logs_hello_world(mock_logger: Logger, client: TestClient) -> None:
+def test_simple_route_logs_hello_world(mock_logger: Mock, client: TestClient) -> None:
     """Test that GET / logs 'Hello World' as an info log.
 
     Args:
