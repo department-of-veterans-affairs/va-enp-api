@@ -5,6 +5,8 @@ import logging
 import os
 import sys
 from pathlib import Path
+from types import FrameType
+from typing import Optional
 
 from loguru import Logger, logger
 
@@ -46,7 +48,7 @@ class InterceptHandler(logging.Handler):
             level = LOGLEVEL_MAPPING[record.levelno]
 
         # Find the correct frame to display the source of the log message
-        frame = logging.currentframe()
+        frame: Optional[FrameType] = logging.currentframe()
         if frame is None:
             return
         depth = 2
