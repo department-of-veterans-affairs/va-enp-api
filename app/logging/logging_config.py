@@ -20,7 +20,7 @@ LOGLEVEL_INFO = 'INFO'
 LOGLEVEL_DEBUG = 'DEBUG'
 LOGLEVEL_NOTSET = 'NOTSET'
 
-LOGLEVEL_MAPPING: dict[int, str] = {
+LOGLEVEL_MAPPING: Dict[int, str] = {
     50: LOGLEVEL_CRITICAL,
     40: LOGLEVEL_ERROR,
     30: LOGLEVEL_WARNING,
@@ -94,10 +94,10 @@ class CustomizeLogger:
             with open(LOGGING_CONFIG_PATH, 'r') as file:
                 return dict(json.load(file))
         except FileNotFoundError:
-            loguru_logger.error('Logging configuration file not found at %s', {LOGGING_CONFIG_PATH})
+            loguru_logger.critical('Logging configuration file not found at %s', {LOGGING_CONFIG_PATH})
             raise
         except json.JSONDecodeError:
-            loguru_logger.error('Error decoding logging configuration file at %s', {LOGGING_CONFIG_PATH})
+            loguru_logger.critical('Error decoding logging configuration file at %s', {LOGGING_CONFIG_PATH})
             raise
 
     @classmethod
