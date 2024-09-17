@@ -5,7 +5,7 @@ import logging
 import os
 import sys
 from types import FrameType
-from typing import Any, Dict, Optional
+from typing import Dict, Optional
 
 from loguru import Logger, logger
 
@@ -91,7 +91,7 @@ class CustomizeLogger:
         return log
 
     @classmethod
-    def load_config(cls) -> Dict[str, Any]:
+    def load_config(cls) -> Dict[str, str]:
         """Load logging configuration from a JSON file.
 
         Raises
@@ -108,7 +108,8 @@ class CustomizeLogger:
         """
         try:
             with open(LOGGING_CONFIG_PATH, 'r') as file:
-                return json.load(file)
+                file = json.load(file)
+                return file
         except FileNotFoundError:
             logger.error('Logging configuration file not found at %s', {LOGGING_CONFIG_PATH})
             raise
