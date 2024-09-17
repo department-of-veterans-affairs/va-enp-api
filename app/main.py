@@ -38,9 +38,6 @@ def create_app() -> CustomFastAPI:
 app: CustomFastAPI = create_app()
 
 
-app: FastAPI = create_app()
-
-
 @app.get('/')
 def simple_route() -> dict[str, str]:
     """Return a hello world.
