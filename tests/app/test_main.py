@@ -32,5 +32,4 @@ def test_simple_route_logs_hello_world(mock_logger: Mock, client: TestClient) ->
     client.get('/')
 
     # Check if the logger.info was called with "Hello World"
-    breakpoint()
     mock_logger.assert_called_with('Hello World')
