@@ -6,8 +6,7 @@ import json
 import logging
 import os
 import sys
-from types import FrameType
-from typing import Dict, Optional
+from typing import Dict
 
 import loguru
 from loguru import logger as loguru_logger
@@ -32,37 +31,17 @@ LOGLEVEL_MAPPING: dict[int, str] = {
 
 
 class InterceptHandler(logging.Handler):
-    """Intercepts standard Python logging events and routes them through Loguru."""
+    """Intercept standard logging and route it through Loguru."""
 
     def emit(self, record: logging.LogRecord) -> None:
-        """Emit a standard log record using Loguru.
-
-        Args:
-        ----
-        record : logging.LogRecord
-            The log record to be emitted through Loguru.
-
-        """
+        """Emit a log record using Loguru."""
         try:
-            # Get the corresponding Loguru log level
             level = loguru_logger.level(record.levelname).name
-        except AttributeError:
-            level = LOGLEVEL_MAPPING[record.levelno]
+        except ValueError:
+            level = LOGLEVEL_MAPPING.get(record.levelno, 'INFO')
 
-        # Find the correct frame to display the source of the log message
-        frame: Optional[FrameType] = logging.currentframe()
-        if frame is not None:
-            depth = 2
-            while (
-                frame is not None  # Ensure frame is not None
-                and frame.f_code.co_filename == logging.__file__
-            ):
-                frame = frame.f_back  # frame can become None here
-                depth += 1
-
-            # Log the message with Loguru
-            log = loguru_logger.bind(request_id='app')
-            log.opt(depth=depth, exception=record.exc_info).log(level, record.getMessage())
+        # Redirect log message to Loguru
+        loguru_logger.opt(exception=record.exc_info).log(level, record.getMessage())
 
 
 class CustomizeLogger:
