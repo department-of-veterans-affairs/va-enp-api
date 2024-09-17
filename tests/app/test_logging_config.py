@@ -17,7 +17,7 @@ def logger_mock() -> Generator[MagicMock, None, None]:
     MagicMock: The mock logger object.
 
     """
-    with patch('app.logging.logging_config.logger') as mock_logger:
+    with patch('app.logging.logging_config.loguru_logger') as mock_logger:
         yield mock_logger
 
 
