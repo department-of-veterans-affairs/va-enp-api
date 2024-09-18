@@ -147,7 +147,12 @@ class CustomizeLogger:
         loguru_logger.remove()
 
         # Add a logger to stdout
-        loguru_logger.add(sys.stdout, enqueue=True, backtrace=True, level=level.upper(), format=format)
+        loguru_logger.add(
+            sys.stdout,
+            enqueue=True,
+            backtrace=True,
+            level=level.upper(),
+        )
 
         # Add a logger to a file with rotation and retention
         loguru_logger.add(
@@ -157,7 +162,6 @@ class CustomizeLogger:
             enqueue=True,
             backtrace=True,
             level=level.upper(),
-            format=format,
         )
 
         # Return the logger bound with additional context
