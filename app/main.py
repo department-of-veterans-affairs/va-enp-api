@@ -11,7 +11,7 @@ from app.v3.notifications.rest import notification_router
 class CustomFastAPI(FastAPI):
     """FastAPI subclass that integrates custom logging."""
 
-    def __init__(self, *args: Any, **kwargs: Any) -> None:  # noqa
+    def __init__(self, *args: Any, **kwargs: Any) -> None:  # noqa linter does not allow the type Any or kwargs else every FastAPI attribute has to be defined.
         """Initialize the CustomFastAPI instance with custom logging.
 
         Args:
