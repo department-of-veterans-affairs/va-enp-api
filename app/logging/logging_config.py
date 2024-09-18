@@ -112,7 +112,7 @@ class CustomizeLogger:
 
         Args:
         ----
-        filepath : Path
+        filepath : str
             Path to the log file where logs will be written.
         level : str
             The logging level to be used (e.g., 'DEBUG', 'INFO').

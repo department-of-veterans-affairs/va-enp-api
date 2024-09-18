@@ -50,7 +50,6 @@ def test_make_logger(logger_mock: MagicMock, mock_logging_config: Dict[str, str]
         uvicorn_logger = MagicMock()
         gunicorn_logger = MagicMock()
 
-        # Adjusted lambda function
         mock_get_logger.side_effect = lambda name=None: {
             'fastapi': fastapi_logger,
             'uvicorn.access': uvicorn_logger,
