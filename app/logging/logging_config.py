@@ -46,7 +46,7 @@ class InterceptHandler(logging.Handler):
         try:
             level = loguru_logger.level(record.levelname).name
         except ValueError:
-            level = LOGLEVEL_MAPPING[record.levelno]
+            level = LOGLEVEL_MAPPING.get(record.levelno, 'INFO')
 
         # Find the correct frame to display the source of the log message
         frame: Optional[FrameType] = logging.currentframe()
