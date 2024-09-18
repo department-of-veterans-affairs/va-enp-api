@@ -40,15 +40,20 @@ class NotificationRoute(APIRoute):
                 return resp
             except RequestValidationError as exc:
                 status_code = 400
-                request.app.logger.warning('Request: %s failed validation: %s', request, exc.errors())
+                # Line not working
+                # request.app.logger.warning('Request: {request_value} failed validation: {error}', request=request, error=exc.errors())
                 raise HTTPException(400, f'{RESPONSE_400} - {exc}')
             except Exception as exc:
                 status_code = 500
-                request.app.logger.exception('%s: %s', RESPONSE_500, type(exc).__name__)
+                (request.app.logger.exception('{RESPONSE_500}: {error}', error=type(exc).__name__),)
                 raise HTTPException(status_code, RESPONSE_500)
             finally:
                 request.app.logger.info(
-                    '%s %s %s %ss', request.method, request.url, status_code, f'{(monotonic() - start):6f}'
+                    '{method} {url} {status_code} {time}',
+                    method=request.method,
+                    url=request.url,
+                    status_code=status_code,
+                    time=f'{(monotonic() - start):6f}',
                 )
 
         return custom_route_handler

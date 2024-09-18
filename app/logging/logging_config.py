@@ -6,7 +6,8 @@ import json
 import logging
 import os
 import sys
-from typing import Dict
+from types import FrameType
+from typing import Dict, Optional
 
 import loguru
 from loguru import logger as loguru_logger
@@ -34,19 +35,30 @@ class InterceptHandler(logging.Handler):
     """Intercept standard logging and route it through Loguru."""
 
     def emit(self, record: logging.LogRecord) -> None:
-        """Emit a log record using Loguru.
+        """Emit a standard log record using Loguru.
 
         Args:
         ----
-            record (logging.LogRecord): The log record to emit.
+        record : logging.LogRecord
+            The log record to be emitted through Loguru.
 
         """
         try:
             level = loguru_logger.level(record.levelname).name
         except ValueError:
-            level = LOGLEVEL_MAPPING.get(record.levelno, 'INFO')
-        # Redirect log message to Loguru
-        loguru_logger.opt(exception=record.exc_info).log(level, record.getMessage())
+            level = LOGLEVEL_MAPPING[record.levelno]
+
+        # Find the correct frame to display the source of the log message
+        frame: Optional[FrameType] = logging.currentframe()
+        if frame is not None:
+            depth = 2
+            while frame is not None and frame.f_code.co_filename == logging.__file__:
+                frame = frame.f_back
+                depth += 1
+
+            # Log the message with Loguru
+            log = loguru_logger.bind(request_id='app')
+            log.opt(depth=depth, exception=record.exc_info).log(level, record.getMessage())
 
 
 class CustomizeLogger:
@@ -99,10 +111,10 @@ class CustomizeLogger:
             with open(LOGGING_CONFIG_PATH, 'r') as file:
                 return dict(json.load(file))
         except FileNotFoundError:
-            loguru_logger.critical('Logging configuration file not found at %s', {LOGGING_CONFIG_PATH})
+            loguru_logger.critical('Logging configuration file not found at {}', LOGGING_CONFIG_PATH)
             raise
         except json.JSONDecodeError:
-            loguru_logger.critical('Error decoding logging configuration file at %s', {LOGGING_CONFIG_PATH})
+            loguru_logger.critical('Error decoding logging configuration file at {}', LOGGING_CONFIG_PATH)
             raise
 
     @classmethod
@@ -160,11 +172,11 @@ class CustomizeLogger:
     @classmethod
     def _configure_uvicorn_logger(cls) -> None:
         """Configure Uvicorn to use Loguru for logging."""
-        logging.basicConfig(handlers=[InterceptHandler()], level=0)
-        logging.getLogger('uvicorn.access').handlers = [InterceptHandler()]
-        for log_name in ('uvicorn', 'uvicorn.error'):
-            logging.getLogger(log_name).handlers = [InterceptHandler()]
-        loguru_logger.info('Uvicorn logger has been configured with Loguru.')
+        for logger_name in ('uvicorn', 'uvicorn.error', 'uvicorn.access'):
+            uvicorn_logger = logging.getLogger(logger_name)
+            uvicorn_logger.handlers = [InterceptHandler()]
+            uvicorn_logger.propagate = True
+        loguru_logger.info('Uvicorn logger -has been configured with Loguru.')
 
     @classmethod
     def _configure_gunicorn_logger(cls) -> None:
