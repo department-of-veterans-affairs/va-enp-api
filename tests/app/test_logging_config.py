@@ -31,9 +31,7 @@ def test_make_logger() -> None:
         CustomizeLogger.make_logger()
 
         # Check logger.add was called with correct parameters
-        logger_mock.add.assert_any_call(
-            sys.stdout, enqueue=True, backtrace=True, level='DEBUG', format='{time} {level} {message}'
-        )
+        logger_mock.add.assert_any_call(sys.stdout, enqueue=True, backtrace=True, level='DEBUG')
         logger_mock.add.assert_any_call(
             'app.log',
             rotation='1 week',
@@ -41,7 +39,6 @@ def test_make_logger() -> None:
             enqueue=True,
             backtrace=True,
             level='DEBUG',
-            format='{time} {level} {message}',
         )
 
         # Verify that the InterceptHandler was added to the appropriate loggers
