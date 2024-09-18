@@ -45,8 +45,6 @@ class InterceptHandler(logging.Handler):
             level = loguru_logger.level(record.levelname).name
         except ValueError:
             level = LOGLEVEL_MAPPING.get(record.levelno, 'INFO')
-        print('here')
-        breakpoint()
         # Redirect log message to Loguru
         loguru_logger.opt(exception=record.exc_info).log(level, record.getMessage())
 
