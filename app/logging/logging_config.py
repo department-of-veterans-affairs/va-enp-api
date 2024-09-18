@@ -111,10 +111,12 @@ class CustomizeLogger:
             with open(LOGGING_CONFIG_PATH, 'r') as file:
                 return dict(json.load(file))
         except FileNotFoundError:
-            loguru_logger.critical('Logging configuration file not found at {}', LOGGING_CONFIG_PATH)
+            loguru_logger.critical('Logging configuration file not found at {file_path}', file_path=LOGGING_CONFIG_PATH)
             raise
         except json.JSONDecodeError:
-            loguru_logger.critical('Error decoding logging configuration file at {}', LOGGING_CONFIG_PATH)
+            loguru_logger.critical(
+                'Error decoding logging configuration file at {file_path}', file_path=LOGGING_CONFIG_PATH
+            )
             raise
 
     @classmethod

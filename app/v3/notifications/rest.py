@@ -41,8 +41,7 @@ class NotificationRoute(APIRoute):
             except RequestValidationError as exc:
                 status_code = 400
                 request.app.logger.warning(
-                    'Request: {request_json} failed validation: {error}',
-                    request_json=await request.json(),
+                    'Request: Failed validation: {error}',
                     error=exc.errors(),
                 )
                 raise HTTPException(400, f'{RESPONSE_400} - {exc}')
