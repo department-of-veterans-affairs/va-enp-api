@@ -1,26 +1,12 @@
 """Test suite for logging configurations with Loguru."""
 
 import sys
-from typing import Generator
 from unittest.mock import MagicMock, patch
-
-import pytest
 
 from app.logging.logging_config import CustomizeLogger, InterceptHandler
 
 
-@pytest.fixture
-def logger_mock() -> Generator[MagicMock, None, None]:
-    """Fixture to mock the logger object from app.logging_config.
-
-    Yields:
-    MagicMock: The mock logger object.
-
-    """
-    with patch('app.logging.logging_config.loguru_logger') as mock_logger:
-        yield mock_logger
-
-
+@patch('app.logging.logging_config.loguru_logger')
 def test_make_logger(logger_mock: MagicMock) -> None:
     """Test to ensure the logger is configured correctly using CustomizeLogger."""
     mock_logging_config = {
