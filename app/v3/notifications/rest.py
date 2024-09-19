@@ -49,15 +49,15 @@ class NotificationRoute(APIRoute):
                 raise HTTPException(400, f'{RESPONSE_400} - {exc}')
             except Exception as exc:
                 status_code = 500
-                logger.exception('{RESPONSE_500}: {error}', error=type(exc).__name__)
+                logger.exception('{}: {}', RESPONSE_500, type(exc).__name__)
                 raise HTTPException(status_code, RESPONSE_500)
             finally:
                 logger.info(
-                    '{method} {url} {status_code} {time}',
-                    method=request.method,
-                    url=request.url,
-                    status_code=status_code,
-                    time=f'{(monotonic() - start):6f}',
+                    '{} {} {} {}',
+                    request.method,
+                    request.url,
+                    status_code,
+                    f'{(monotonic() - start):6f}',
                 )
 
         return custom_route_handler

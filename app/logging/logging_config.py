@@ -81,7 +81,6 @@ class CustomizeLogger:
             level=logging_config['level'],
             rotation=logging_config['rotation'],
             retention=logging_config['retention'],
-            format=logging_config['format'],
         )
 
         # Configure specific Loguru loggers for FastAPI, Uvicorn, and Gunicorn
@@ -111,16 +110,20 @@ class CustomizeLogger:
             with open(LOGGING_CONFIG_PATH, 'r') as file:
                 return dict(json.load(file))
         except FileNotFoundError:
-            loguru_logger.critical('Logging configuration file not found at {file_path}', file_path=LOGGING_CONFIG_PATH)
+            loguru_logger.critical('Logging configuration file not found at {}', LOGGING_CONFIG_PATH)
             raise
         except json.JSONDecodeError:
-            loguru_logger.critical(
-                'Error decoding logging configuration file at {file_path}', file_path=LOGGING_CONFIG_PATH
-            )
+            loguru_logger.critical('Error decoding logging configuration file at {}', LOGGING_CONFIG_PATH)
             raise
 
     @classmethod
-    def customize_logging(cls, filepath: str, level: str, rotation: str, retention: str, format: str) -> loguru.Logger:
+    def customize_logging(
+        cls,
+        filepath: str,
+        level: str,
+        rotation: str,
+        retention: str,
+    ) -> loguru.Logger:
         """Customize Loguru logging with specific configurations.
 
         Args:
@@ -133,8 +136,6 @@ class CustomizeLogger:
             Log rotation policy (e.g., '1 day', '100 MB').
         retention : str
             Log retention policy (e.g., '10 days', '1 year').
-        format : str
-            Log format to be used for log messages.
 
         Returns:
         -------

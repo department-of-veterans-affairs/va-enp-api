@@ -14,7 +14,6 @@ def test_make_logger() -> None:
         'level': 'DEBUG',
         'rotation': '1 week',
         'retention': '30 days',
-        'format': '{time} {level} {message}',
     }
 
     with (
