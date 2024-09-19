@@ -153,7 +153,7 @@ class CustomizeLogger:
         loguru_logger.add(
             sys.stdout,
             enqueue=True,
-            backtrace=True,
+            backtrace=False,
             level=level.upper(),
         )
 
@@ -163,7 +163,7 @@ class CustomizeLogger:
             rotation=rotation,
             retention=retention,
             enqueue=True,
-            backtrace=True,
+            backtrace=False,
             level=level.upper(),
         )
 
