@@ -2,9 +2,13 @@
 
 import logging
 import sys
-from unittest.mock import patch
+from unittest.mock import ANY, patch
 
-from app.logging.logging_config import CustomizeLogger, InterceptHandler
+from app.logging.logging_config import (
+    LOGLEVEL_DEBUG,
+    CustomizeLogger,
+    InterceptHandler,
+)
 
 
 def test_make_logger() -> None:
@@ -21,7 +25,7 @@ def test_make_logger() -> None:
         CustomizeLogger.make_logger()
 
         # Check logger.add was called with correct parameters
-        logger_mock.add.assert_any_call(sys.stdout, enqueue=True, backtrace=False, level='DEBUG')
+        logger_mock.add.assert_any_call(sys.stdout, enqueue=True, backtrace=False, level=LOGLEVEL_DEBUG, filter=ANY)
         logger_mock.add.assert_any_call(
             sys.stderr,
             enqueue=True,
