@@ -61,23 +61,15 @@ class CustomizeLogger:
     """Customizes and configures Loguru logging for FastAPI, Uvicorn, and Gunicorn."""
 
     @classmethod
-    def make_logger(cls) -> loguru.Logger:
-        """Create and configure the Loguru logger.
-
-        Returns
-        -------
-            logger: Configured Loguru logger instance.
-
-        """
+    def make_logger(cls) -> None:
+        """Create and configure the Loguru logger."""
         # Create the custom Loguru logger
-        log = cls.customize_logging()
+        cls.customize_logging()
 
         # Configure specific Loguru loggers for FastAPI, Uvicorn, and Gunicorn
         cls._configure_fastapi_logger()
         cls._configure_uvicorn_logger()
         cls._configure_gunicorn_logger()
-
-        return log
 
     @classmethod
     def customize_logging(
