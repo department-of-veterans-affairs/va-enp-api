@@ -1,41 +1,26 @@
 """App entrypoint."""
 
-from typing import Any
-
 from fastapi import FastAPI
+from loguru import logger
 
 from app.logging.logging_config import CustomizeLogger
 from app.v3.notifications.rest import notification_router
 
 
-class CustomFastAPI(FastAPI):
-    """FastAPI subclass that integrates custom logging."""
-
-    def __init__(self, *args: Any, **kwargs: Any) -> None:  # noqa linter does not allow the type Any or kwargs else every FastAPI attribute has to be defined.
-        """Initialize the CustomFastAPI instance with custom logging.
-
-        Args:
-            *args: Variable length argument list.
-            **kwargs: Arbitrary keyword arguments.
-
-        """
-        super(CustomFastAPI, self).__init__(*args, **kwargs)
-        self.logger = CustomizeLogger.make_logger()
-
-
-def create_app() -> CustomFastAPI:
+def create_app() -> FastAPI:
     """Create and configure the FastAPI app.
 
     Returns:
         CustomFastAPI: The FastAPI application instance with custom logging.
 
     """
-    app = CustomFastAPI()
+    CustomizeLogger.make_logger()
+    app = FastAPI()
     app.include_router(notification_router)
     return app
 
 
-app: CustomFastAPI = create_app()
+app: FastAPI = create_app()
 
 
 @app.get('/')
@@ -47,5 +32,5 @@ def simple_route() -> dict[str, str]:
         dict[str, str]: Hello World
 
     """
-    app.logger.info('Hello World')
+    logger.info('Hello World')
     return {'Hello': 'World'}

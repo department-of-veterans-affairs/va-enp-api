@@ -9,6 +9,7 @@ from fastapi import APIRouter, HTTPException, Request, status
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import Response
 from fastapi.routing import APIRoute
+from loguru import logger
 from pydantic import UUID4
 
 from app.v3.notifications.route_schema import NotificationSingleRequest, NotificationSingleResponse
@@ -40,17 +41,18 @@ class NotificationRoute(APIRoute):
                 return resp
             except RequestValidationError as exc:
                 status_code = 400
-                request.app.logger.warning(
-                    'Request: Failed validation: {error}',
-                    error=exc.errors(),
+                logger.warning(
+                    'Request: {} Failed validation: {}',
+                    request,
+                    exc,
                 )
                 raise HTTPException(400, f'{RESPONSE_400} - {exc}')
             except Exception as exc:
                 status_code = 500
-                request.app.logger.exception('{RESPONSE_500}: {error}', error=type(exc).__name__)
+                logger.exception('{RESPONSE_500}: {error}', error=type(exc).__name__)
                 raise HTTPException(status_code, RESPONSE_500)
             finally:
-                request.app.logger.info(
+                logger.info(
                     '{method} {url} {status_code} {time}',
                     method=request.method,
                     url=request.url,
