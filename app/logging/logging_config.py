@@ -2,17 +2,13 @@
 
 from __future__ import annotations
 
-import json
 import logging
-import os
 import sys
 from types import FrameType
 from typing import Dict, Optional
 
 import loguru
 from loguru import logger as loguru_logger
-
-LOGGING_CONFIG_PATH = 'app/logging/logging_config.json'
 
 LOGLEVEL_CRITICAL = 'CRITICAL'
 LOGLEVEL_ERROR = 'ERROR'
@@ -66,22 +62,15 @@ class CustomizeLogger:
 
     @classmethod
     def make_logger(cls) -> loguru.Logger:
-        """Create and configure the Loguru logger using an external configuration file.
+        """Create and configure the Loguru logger.
 
         Returns
         -------
             logger: Configured Loguru logger instance.
 
         """
-        logging_config = cls.load_config()
-
         # Create the custom Loguru logger
-        log = cls.customize_logging(
-            filepath=logging_config['path'],
-            level=logging_config['level'],
-            rotation=logging_config['rotation'],
-            retention=logging_config['retention'],
-        )
+        log = cls.customize_logging()
 
         # Configure specific Loguru loggers for FastAPI, Uvicorn, and Gunicorn
         cls._configure_fastapi_logger()
@@ -91,59 +80,18 @@ class CustomizeLogger:
         return log
 
     @classmethod
-    def load_config(cls) -> Dict[str, str]:
-        """Load logging configuration from a JSON file.
-
-        Raises
-        ------
-        FileNotFoundError
-            If the configuration file is not found at the expected path.
-        JSONDecodeError
-            If the configuration file cannot be parsed as valid JSON.
-
-        Returns
-        -------
-            dict: Logging configuration loaded from the JSON file.
-
-        """
-        try:
-            with open(LOGGING_CONFIG_PATH, 'r') as file:
-                return dict(json.load(file))
-        except FileNotFoundError:
-            loguru_logger.critical('Logging configuration file not found at {}', LOGGING_CONFIG_PATH)
-            raise
-        except json.JSONDecodeError:
-            loguru_logger.critical('Error decoding logging configuration file at {}', LOGGING_CONFIG_PATH)
-            raise
-
-    @classmethod
     def customize_logging(
         cls,
-        filepath: str,
-        level: str,
-        rotation: str,
-        retention: str,
     ) -> loguru.Logger:
         """Customize Loguru logging with specific configurations.
 
-        Args:
-        ----
-        filepath : str
-            Path to the log file where logs will be written.
-        level : str
-            The logging level to be used (e.g., 'DEBUG', 'INFO').
-        rotation : str
-            Log rotation policy (e.g., '1 day', '100 MB').
-        retention : str
-            Log retention policy (e.g., '10 days', '1 year').
-
-        Returns:
+        Returns
         -------
         logger
             The Loguru logger instance, bound with additional context such as request_id and method.
 
         """
-        # Remove existing handlers
+        # Remove any existing handlers
         logging.getLogger().handlers = []
 
         # Remove Loguru's default handler
@@ -154,17 +102,16 @@ class CustomizeLogger:
             sys.stdout,
             enqueue=True,
             backtrace=False,
-            level=level.upper(),
+            level=LOGLEVEL_DEBUG,
         )
 
-        # Add a logger to a file with rotation and retention
+        # Add a logger to stderr
+        # ERROR and CRITICAL only
         loguru_logger.add(
-            str(filepath),
-            rotation=rotation,
-            retention=retention,
+            sys.stderr,
             enqueue=True,
             backtrace=False,
-            level=level.upper(),
+            level=LOGLEVEL_ERROR,
         )
 
         # Return the logger bound with additional context
@@ -182,13 +129,14 @@ class CustomizeLogger:
         for logger_name in ('uvicorn', 'uvicorn.error', 'uvicorn.access'):
             uvicorn_logger = logging.getLogger(logger_name)
             uvicorn_logger.handlers = [InterceptHandler()]
-            uvicorn_logger.propagate = True
-        loguru_logger.info('Uvicorn logger -has been configured with Loguru.')
+
+            # Set to False to avoid duplicate logs
+            uvicorn_logger.propagate = False
+        loguru_logger.info('Uvicorn logger has been configured with Loguru.')
 
     @classmethod
     def _configure_gunicorn_logger(cls) -> None:
         """Configure Gunicorn to use Loguru for error and access logs."""
-        if 'gunicorn' in os.environ.get('SERVER_SOFTWARE', ''):
-            logging.getLogger('gunicorn.error').handlers = [InterceptHandler()]
-            logging.getLogger('gunicorn.access').handlers = [InterceptHandler()]
-            loguru_logger.info('Gunicorn logger has been configured with Loguru.')
+        logging.getLogger('gunicorn.error').handlers = [InterceptHandler()]
+        logging.getLogger('gunicorn.access').handlers = [InterceptHandler()]
+        loguru_logger.info('Gunicorn logger has been configured with Loguru.')
