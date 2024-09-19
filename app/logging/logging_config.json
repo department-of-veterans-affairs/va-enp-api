@@ -1,7 +1,0 @@
-{
-    "path": "app.log",
-    "level": "DEBUG",
-    "rotation": "1 week",
-    "retention": "30 days"
-}
-  
