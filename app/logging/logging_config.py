@@ -97,7 +97,7 @@ class CustomizeLogger:
         # Remove Loguru's default handler
         loguru_logger.remove()
 
-        # Add a logger to stdout
+        # Add sink to stdout
         loguru_logger.add(
             sys.stdout,
             enqueue=True,
@@ -105,8 +105,8 @@ class CustomizeLogger:
             level=LOGLEVEL_DEBUG,
         )
 
-        # Add a logger to stderr
-        # ERROR and CRITICAL only
+        # Add sink to stderr
+        # ERROR and higher log levels only
         loguru_logger.add(
             sys.stderr,
             enqueue=True,
