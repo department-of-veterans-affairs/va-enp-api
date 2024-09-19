@@ -140,6 +140,10 @@ class CustomizeLogger:
     @classmethod
     def _configure_gunicorn_logger(cls) -> None:
         """Configure Gunicorn to use Loguru for error and access logs."""
-        logging.getLogger('gunicorn.error').handlers = [InterceptHandler()]
-        logging.getLogger('gunicorn.access').handlers = [InterceptHandler()]
+        for logger_name in ('gunicorn.error', 'gunicorn.access'):
+            gunicorn_logger = logging.getLogger(logger_name)
+            gunicorn_logger.handlers = [InterceptHandler()]
+
+            # Set to False to avoid duplicate logs
+            gunicorn_logger.propagate = False
         loguru_logger.info('Gunicorn logger has been configured with Loguru.')
