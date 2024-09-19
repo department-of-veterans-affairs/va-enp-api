@@ -83,7 +83,7 @@ class CustomizeLogger:
     def customize_logging(
         cls,
     ) -> loguru.Logger:
-        """Customize Loguru logging with specific configurations.
+        """Create sinks for sys.stdout and sys.stderr with Loguru.
 
         Returns
         -------
@@ -98,15 +98,18 @@ class CustomizeLogger:
         loguru_logger.remove()
 
         # Add sink to stdout
+        # Limit stdout sink to DEBUG, INFO, and WARNING log levels to avoid duplicate logs after adding stderr sink
+        stdout_allowed_levels = (LOGLEVEL_DEBUG, LOGLEVEL_INFO, LOGLEVEL_WARNING)
         loguru_logger.add(
             sys.stdout,
             enqueue=True,
             backtrace=False,
             level=LOGLEVEL_DEBUG,
+            filter=lambda record: record['level'].name in stdout_allowed_levels,
         )
 
         # Add sink to stderr
-        # ERROR and higher log levels only
+        # Limit stderr to ERROR and higher log levels only
         loguru_logger.add(
             sys.stderr,
             enqueue=True,
