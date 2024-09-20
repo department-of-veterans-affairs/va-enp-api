@@ -43,6 +43,7 @@ class InterceptHandler(logging.Handler):
             level = loguru_logger.level(record.levelname).name
         except ValueError:
             level = LOGLEVEL_MAPPING.get(record.levelno, 'INFO')
+            loguru_logger.warning('No log level matching Loguru log level for incoming log: {}', record.getMessage())
 
         # Find the correct frame to display the source of the log message
         frame: Optional[FrameType] = logging.currentframe()
