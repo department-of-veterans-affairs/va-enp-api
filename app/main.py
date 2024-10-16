@@ -1,10 +1,25 @@
 """App entrypoint."""
 
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 from loguru import logger
 
 from app.logging.logging_config import CustomizeLogger
+from app.providers.provider_aws import ProviderAWS
 from app.v3.notifications.rest import notification_router
+
+# Route handlers should access this dictionary to send notifications using various
+# third-party services, such as AWS, Twilio, etc.
+providers = {}
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """https://fastapi.tiangolo.com/advanced/events/?h=life#lifespan"""
+    providers['aws'] = ProviderAWS()
+    yield
+    providers.clear()
 
 
 def create_app() -> FastAPI:
@@ -15,7 +30,7 @@ def create_app() -> FastAPI:
 
     """
     CustomizeLogger.make_logger()
-    app = FastAPI()
+    app = FastAPI(lifespan=lifespan)
     app.include_router(notification_router)
     return app
 

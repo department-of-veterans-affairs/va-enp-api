@@ -16,11 +16,12 @@ from tests.app.providers import botocore_exceptions_kwargs
 class TestProviderAWS:
     provider = ProviderAWS()
 
-    @pytest.mark.parametrize('data',
-        (
+    @pytest.mark.parametrize(
+        'data',
+        [
             {'Message': 'This is a message.', 'TargetArn': 'This is an ARN.'},
             {'Message': 'This is a message.', 'TopicArn': 'This is an ARN.'},
-        ),
+        ],
         ids=(
             'target',
             'topic',
@@ -34,7 +35,7 @@ class TestProviderAWS:
         """
 
         mock_client = AsyncMock()
-        mock_client.publish.return_value={'MessageId': 'message_id', 'SequenceNumber': '12345'}
+        mock_client.publish.return_value = {'MessageId': 'message_id', 'SequenceNumber': '12345'}
         mock_get_session.return_value.create_client.return_value.__aenter__.return_value = mock_client
 
         push_model = PushModel(**data)
@@ -72,8 +73,9 @@ class TestProviderAWS:
             with pytest.raises(ProviderNonRetryableError):
                 await self.provider.send_notification(push_model)
 
-    @pytest.mark.parametrize('exc, is_retriable',
-        (
+    @pytest.mark.parametrize(
+        'exc, should_retry',
+        [
             ('InvalidParameterException', False),
             ('InvalidParameterValueException', False),
             ('InternalErrorException', True),
@@ -89,9 +91,11 @@ class TestProviderAWS:
             ('KMSAccessDeniedException', False),
             ('InvalidSecurityException', False),
             ('ValidationException', False),
-        ),
+        ],
     )
-    async def test_send_push_notification_ClientError_exceptions(self, mock_get_session: AsyncMock, exc: str, is_retriable: bool) -> None:
+    async def test_send_push_notification_ClientError_exceptions(
+        self, mock_get_session: AsyncMock, exc: str, should_retry: bool
+    ) -> None:
         """
         Exceptions in the provider code should re-raise ProviderNonRetryableError or ProviderRetryableError.
         Some instances of ClientError should result in a retry.
@@ -110,7 +114,7 @@ class TestProviderAWS:
         # Initializing a ClientError requires the positional arguments "error_response" and "operation_name".
         mock_client.publish.side_effect = botocore.exceptions.ClientError({'Error': {'Code': exc}}, 'sns')
 
-        if is_retriable:
+        if should_retry:
             with pytest.raises(ProviderRetryableError):
                 await self.provider.send_notification(push_model)
         else:
