@@ -15,8 +15,16 @@ providers = {}
 
 
 @asynccontextmanager
-async def lifespan(app: FastAPI):
-    """https://fastapi.tiangolo.com/advanced/events/?h=life#lifespan"""
+async def lifespan(app: FastAPI) -> None:  # noqa: RUF029
+    """Populate the providers dictionary.
+
+    https://fastapi.tiangolo.com/advanced/events/?h=life#lifespan
+
+    Yields
+    ------
+        None: nothing
+
+    """
     providers['aws'] = ProviderAWS()
     yield
     providers.clear()

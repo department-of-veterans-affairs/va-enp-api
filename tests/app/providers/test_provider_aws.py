@@ -14,6 +14,8 @@ from tests.app.providers import botocore_exceptions_kwargs
 @pytest.mark.asyncio
 @patch('app.providers.provider_aws.get_session')
 class TestProviderAWS:
+    """Test the methods of the ProviderAWS class."""
+
     provider = ProviderAWS()
 
     @pytest.mark.parametrize(
@@ -28,12 +30,12 @@ class TestProviderAWS:
         ),
     )
     async def test_send_push_notification(self, mock_get_session: AsyncMock, data: dict) -> None:
-        """
-        Test the happy path.  Tests for PushModel ensure the rejection of invalid data.
+        """Test the happy path.
+
+        Tests for PushModel ensure the rejection of invalid data.
 
         https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/sns/client/publish.html
         """
-
         mock_client = AsyncMock()
         mock_client.publish.return_value = {'MessageId': 'message_id', 'SequenceNumber': '12345'}
         mock_get_session.return_value.create_client.return_value.__aenter__.return_value = mock_client
@@ -45,13 +47,12 @@ class TestProviderAWS:
         assert reference_id == 'message_id'
 
     async def test_send_push_notification_botocore_exceptions_not_retriable(self, mock_get_session: AsyncMock) -> None:
-        """
+        """Other than ClientError, Botocore exceptions are client-side exceptions that should not result in a retry.
+
         Exceptions in the provider code should re-raise ProviderNonRetryableError or ProviderRetryableError.
-        Other than ClientError, Botocore exceptions are client-side exceptions that should not result in a retry.
 
         https://boto3.amazonaws.com/v1/documentation/api/latest/guide/error-handling.html
         """
-
         mock_client = AsyncMock()
         mock_get_session.return_value.create_client.return_value.__aenter__.return_value = mock_client
         push_model = PushModel(Message='', TargetArn='')
@@ -74,7 +75,7 @@ class TestProviderAWS:
                 await self.provider.send_notification(push_model)
 
     @pytest.mark.parametrize(
-        'exc, should_retry',
+        ('exc', 'should_retry'),
         [
             ('InvalidParameterException', False),
             ('InvalidParameterValueException', False),
@@ -96,9 +97,9 @@ class TestProviderAWS:
     async def test_send_push_notification_ClientError_exceptions(
         self, mock_get_session: AsyncMock, exc: str, should_retry: bool
     ) -> None:
-        """
+        """Some instances of ClientError should result in a retry.
+
         Exceptions in the provider code should re-raise ProviderNonRetryableError or ProviderRetryableError.
-        Some instances of ClientError should result in a retry.
 
         The AWS provider uses SNS to send push notifications.  The tested exceptions are the exceptions
         that might get raised via calling the SNS client's "publish" method.
@@ -106,7 +107,6 @@ class TestProviderAWS:
         https://boto3.amazonaws.com/v1/documentation/api/latest/guide/error-handling.html
         https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/sns/client/publish.html
         """
-
         mock_client = AsyncMock()
         mock_get_session.return_value.create_client.return_value.__aenter__.return_value = mock_client
         push_model = PushModel(Message='', TargetArn='')

@@ -2,9 +2,9 @@
 
 from abc import ABC
 
-from app.providers.provider_schemas import PushModel
-
 from loguru import logger
+
+from app.providers.provider_schemas import PushModel
 
 
 class ProviderRetryableError(Exception):
@@ -36,8 +36,17 @@ class ProviderBase(ABC):
         """Send a notification using the provider.
 
         Facilitates update and log consistency regardless of notification.
-        """
 
+        Raises
+        ------
+            ProviderNonRetryableError: Don't retry the request
+            ProviderRetryableError: Retry the request
+
+        Returns
+        -------
+            str: A reference identifier for the sent notification
+
+        """
         try:
             return await self._send_push(model)
         except (ProviderRetryableError, ProviderNonRetryableError) as e:

@@ -13,7 +13,9 @@ fastapi = {extras = ["standard"], version = "*"}
 gunicorn = "*"
 uvicorn-worker = "*"
 loguru = "*"
-
+pydantic = "^2.9.2"
+aiobotocore = "^2.15.2"
+botocore = "*"
 
 [tool.poetry.group.test]
 optional = true

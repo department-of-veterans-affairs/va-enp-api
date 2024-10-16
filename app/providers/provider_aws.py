@@ -1,3 +1,5 @@
+"""Definition for ProviderAWS."""
+
 import os
 
 import botocore
@@ -10,12 +12,22 @@ from app.providers.provider_schemas import PushModel
 
 
 class ProviderAWS(ProviderBase):
-    """This is the provider interface for Amazon Web Services (AWS)."""
+    """Provider interface for Amazon Web Services (AWS)."""
 
     async def _send_push(self, push_model: PushModel) -> str:
-        """Sends a message to an Amazon SNS topic.  Return a reference string.
+        """Send a message to an Amazon SNS topic.
 
         https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/sns/client/publish.html
+
+        Raises
+        ------
+            ProviderNonRetryableError: Don't retry the request
+            ProviderRetryableError: Retry the request
+
+        Returns
+        -------
+            str: A reference identifier for the sent notification
+
         """
         # The AWS SNS "publish" method (called below) does not accept parameters set to None.
         publish_params = push_model.model_dump()
