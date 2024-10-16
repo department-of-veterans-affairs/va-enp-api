@@ -3,6 +3,7 @@
 import pytest
 
 from app.providers.provider_base import ProviderBase
+from app.providers.provider_schemas import PushModel
 
 
 @pytest.mark.asyncio
@@ -23,6 +24,6 @@ async def test_not_implemented_virtual_void() -> None:
     with pytest.raises(NotImplementedError):
         await derived._send_email()
     with pytest.raises(NotImplementedError):
-        await derived._send_push()
+        await derived._send_push(PushModel(Message='', TargetArn=''))
     with pytest.raises(NotImplementedError):
         await derived._send_sms()

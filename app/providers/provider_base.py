@@ -2,14 +2,18 @@
 
 from abc import ABC
 
+from app.providers.provider_schemas import PushModel
 
-class ProviderRetryable(Exception):
+from loguru import logger
+
+
+class ProviderRetryableError(Exception):
     """Indicative of a retryable exception."""
 
     ...
 
 
-class ProviderNonRetryable(Exception):
+class ProviderNonRetryableError(Exception):
     """Indicative of a non-retryable exception."""
 
     ...
@@ -28,12 +32,17 @@ class ProviderBase(ABC):
         """
         ...
 
-    async def send_notification(self) -> None:
+    async def send_notification(self, model: PushModel) -> str:
         """Send a notification using the provider.
 
         Facilitates update and log consistency regardless of notification.
         """
-        ...
+
+        try:
+            return await self._send_push(model)
+        except (ProviderRetryableError, ProviderNonRetryableError) as e:
+            logger.exception(e)
+            raise
 
     async def _process_email_response(self) -> None:
         """Process an email response from this provider."""
@@ -48,13 +57,13 @@ class ProviderBase(ABC):
         raise NotImplementedError(f'Derived class: {self.__class__.__name__} does not implement this method.')
 
     async def _send_email(self) -> str:
-        """Send an email request to this provider."""
+        """Send an email request to this provider.  Return a reference string."""
         raise NotImplementedError(f'Derived class: {self.__class__.__name__} does not implement this method.')
 
-    async def _send_push(self) -> str:
-        """Send a push request to this provider."""
+    async def _send_push(self, push_model: PushModel) -> str:
+        """Send a push request to this provider.  Return a reference string."""
         raise NotImplementedError(f'Derived class: {self.__class__.__name__} does not implement this method.')
 
     async def _send_sms(self) -> str:
-        """Send a sms request to this provider."""
+        """Send a sms request to this provider.  Return a reference string."""
         raise NotImplementedError(f'Derived class: {self.__class__.__name__} does not implement this method.')
