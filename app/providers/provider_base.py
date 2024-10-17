@@ -25,6 +25,10 @@ class ProviderBase(ABC):
     # id: key
     credentials: dict[str, str]
 
+    def __init__(self) -> None:
+        """Log instantiations."""
+        logger.info('Initialized class %s.', type(self).__name__)
+
     async def process_response(self) -> None:
         """Process the asynchronous response from a provider.
 
@@ -53,8 +57,12 @@ class ProviderBase(ABC):
         """
         try:
             return await self._send_push(model)
-        except (ProviderRetryableError, ProviderNonRetryableError) as e:
-            logger.exception(e)
+        except (ProviderRetryableError, ProviderNonRetryableError):
+            logger.exception(
+                'Sending a push notification failed for %s %s.',
+                'TargetArn' if (model.target_arn is not None) else 'TopicArn',
+                model.target_arn or model.topic_arn,
+            )
             raise
 
     async def _process_email_response(self) -> None:

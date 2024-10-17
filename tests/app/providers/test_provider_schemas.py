@@ -9,8 +9,8 @@ from app.providers.provider_schemas import PushModel
 @pytest.mark.parametrize(
     'data',
     [
-        {'Message': 'This is a message.', 'TargetArn': 'This is an ARN.'},
-        {'Message': 'This is a message.', 'TopicArn': 'This is an ARN.'},
+        {'message': 'This is a message.', 'target_arn': 'This is an ARN.'},
+        {'message': 'This is a message.', 'topic_arn': 'This is an ARN.'},
     ],
     ids=(
         'target',
@@ -25,8 +25,8 @@ def test_PushModel_valid(data: dict[str, str]) -> None:
 @pytest.mark.parametrize(
     'data',
     [
-        {'Message': 'This is a message.'},
-        {'Message': 'This is a message.', 'TargetArn': 'This is an ARN.', 'TopicArn': 'This is an ARN.'},
+        {'message': 'This is a message.'},
+        {'message': 'This is a message.', 'target_arn': 'This is an ARN.', 'topic_arn': 'This is an ARN.'},
     ],
     ids=(
         'no ARN',

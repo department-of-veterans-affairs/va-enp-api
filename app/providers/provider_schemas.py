@@ -10,13 +10,13 @@ class PushModel(BaseModel):
     As currently implemented, it is idiosyncratic to sending push notifications to the VA Mobile App using AWS SNS.
     """
 
-    Message: str
-    TargetArn: str | None = None
-    TopicArn: str | None = None
+    message: str
+    target_arn: str | None = None
+    topic_arn: str | None = None
 
     @model_validator(mode='after')
     def check_arn(self) -> Self:
-        """One, and only one, of TopicArn or TargetArn must not be None.
+        """One, and only one, of topic_arn or target_arn must not be None.
 
         Raises
         ------
@@ -27,8 +27,8 @@ class PushModel(BaseModel):
             Self: this instance
 
         """
-        if (self.TargetArn is None and self.TopicArn is None) or (
-            self.TargetArn is not None and self.TopicArn is not None
+        if (self.target_arn is None and self.topic_arn is None) or (
+            self.target_arn is not None and self.topic_arn is not None
         ):
-            raise ValueError('One, and only one, of TopicArn or TargetArn must not be None.')
+            raise ValueError('One, and only one, of topic_arn or target_arn must not be None.')
         return self

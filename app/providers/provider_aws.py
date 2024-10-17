@@ -33,11 +33,16 @@ class ProviderAWS(ProviderBase):
             str: A reference identifier for the sent notification
 
         """
-        # The AWS SNS "publish" method (called below) does not accept parameters set to None.
-        publish_params = push_model.model_dump()
-        del publish_params['TargetArn' if (push_model.TargetArn is None) else 'TopicArn']
+        publish_params = {'Message': push_model.message}
+        if push_model.target_arn is not None:
+            publish_params['TargetArn'] = push_model.target_arn
+        else:
+            publish_params['TopicArn'] = push_model.topic_arn
 
         try:
+            # Ideally, we would create the client once and use it to handle all requests.
+            # The aiobotocore docs do not explain how to create a client outside of a
+            # "with" block.
             session = get_session()
             async with session.create_client(
                 'sns',
