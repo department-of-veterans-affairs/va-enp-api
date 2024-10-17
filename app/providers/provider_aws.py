@@ -37,7 +37,7 @@ class ProviderAWS(ProviderBase):
         if push_model.target_arn is not None:
             publish_params['TargetArn'] = push_model.target_arn
         else:
-            publish_params['TopicArn'] = push_model.topic_arn
+            publish_params['TopicArn'] = push_model.topic_arn  # type: ignore
 
         try:
             # Ideally, we would create the client once and use it to handle all requests.
