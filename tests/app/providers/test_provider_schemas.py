@@ -17,7 +17,7 @@ from app.providers.provider_schemas import PushModel
         'topic',
     ),
 )
-def test_PushModel_valid(data: dict) -> None:
+def test_PushModel_valid(data: dict[str, str]) -> None:
     """Valid data should not raise ValidationError."""
     assert isinstance(PushModel.model_validate(data), PushModel)
 
@@ -33,7 +33,7 @@ def test_PushModel_valid(data: dict) -> None:
         'multiple ARNs',
     ),
 )
-def test_PushModel_invalid(data: dict) -> None:
+def test_PushModel_invalid(data: dict[str, str]) -> None:
     """Invalid data should raise ValidationError."""
     with pytest.raises(ValidationError):
         PushModel.model_validate(data)

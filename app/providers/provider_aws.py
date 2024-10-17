@@ -19,12 +19,16 @@ class ProviderAWS(ProviderBase):
 
         https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/sns/client/publish.html
 
-        Raises
+        Args:
+        ----
+            push_model: the parameters to pass to SNS.Client.publish
+
+        Raises:
         ------
             ProviderNonRetryableError: Don't retry the request
             ProviderRetryableError: Retry the request
 
-        Returns
+        Returns:
         -------
             str: A reference identifier for the sent notification
 
@@ -41,7 +45,7 @@ class ProviderAWS(ProviderBase):
                 aws_secret_access_key=os.getenv('AWS_SECRET_ACCESS_KEY', ''),
                 aws_access_key_id=os.getenv('AWS_ACCESS_KEY_ID', ''),
             ) as client:
-                response = await client.publish(**publish_params)
+                response: dict[str, str] = await client.publish(**publish_params)
         except botocore.exceptions.ClientError as e:
             if e.response['Error']['Code'] in sns_publish_retriable_exceptions_set:
                 raise ProviderRetryableError from e

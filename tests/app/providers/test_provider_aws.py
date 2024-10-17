@@ -29,7 +29,7 @@ class TestProviderAWS:
             'topic',
         ),
     )
-    async def test_send_push_notification(self, mock_get_session: AsyncMock, data: dict) -> None:
+    async def test_send_push_notification(self, mock_get_session: AsyncMock, data: dict[str, str]) -> None:
         """Test the happy path.
 
         Tests for PushModel ensure the rejection of invalid data.

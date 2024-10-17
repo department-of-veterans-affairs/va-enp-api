@@ -37,12 +37,16 @@ class ProviderBase(ABC):
 
         Facilitates update and log consistency regardless of notification.
 
-        Raises
+        Args:
+        ----
+            model: the parameters to pass to SNS.Client.publish
+
+        Raises:
         ------
             ProviderNonRetryableError: Don't retry the request
             ProviderRetryableError: Retry the request
 
-        Returns
+        Returns:
         -------
             str: A reference identifier for the sent notification
 
@@ -70,7 +74,19 @@ class ProviderBase(ABC):
         raise NotImplementedError(f'Derived class: {self.__class__.__name__} does not implement this method.')
 
     async def _send_push(self, push_model: PushModel) -> str:
-        """Send a push request to this provider.  Return a reference string."""
+        """Send a push request to this provider.
+
+        Return a reference string.
+
+        Args:
+        ----
+            push_model: the parameters to pass to SNS.Client.publish
+
+        Returns:
+        -------
+            str: A reference identifier for the sent notification
+
+        """
         raise NotImplementedError(f'Derived class: {self.__class__.__name__} does not implement this method.')
 
     async def _send_sms(self) -> str:

@@ -32,6 +32,7 @@ flake8-docstrings-complete = "*"  # Needed to ensure Args are in the docstring
 mypy = "*"
 pre-commit = "*"
 ruff = "*"
+types-aiobotocore = {extras = ["essential"], version = "^2.15.2"}
 
 [tool.ruff]
 exclude = [
