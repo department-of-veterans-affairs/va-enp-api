@@ -9,11 +9,13 @@ package-mode = false
 
 [tool.poetry.dependencies]
 python = "^3.12"
+aiobotocore = "*"
+botocore = "*"
 fastapi = {extras = ["standard"], version = "*"}
 gunicorn = "*"
-uvicorn-worker = "*"
 loguru = "*"
-
+pydantic = "*"
+uvicorn-worker = "*"
 
 [tool.poetry.group.test]
 optional = true
@@ -30,6 +32,7 @@ flake8-docstrings-complete = "*"  # Needed to ensure Args are in the docstring
 mypy = "*"
 pre-commit = "*"
 ruff = "*"
+types-aiobotocore = {extras = ["essential"], version = "*"}
 
 [tool.ruff]
 exclude = [
