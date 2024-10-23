@@ -10,9 +10,8 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.routing import APIRoute
 from loguru import logger
 
+from app.legacy.v2.notifications.route_schema import V2NotificationSingleRequest, V2NotificationSingleResponse
 from app.v3.notifications.rest import RESPONSE_400, RESPONSE_404, RESPONSE_500
-
-from .route_schema import V2NotificationSingleRequest, V2NotificationSingleResponse
 
 
 class NotificationV2Route(APIRoute):
