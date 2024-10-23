@@ -3,5 +3,12 @@
   "extends": [
     "config:recommended",
     ":dependencyDashboard"
+  ],
+    "packageRules": [
+    {
+      "matchDepTypes": ["static_tools"],
+      "matchPackageNames": ["*"],
+      "automerge": true
+    }
   ]
 }
