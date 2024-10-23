@@ -72,7 +72,7 @@ v2_notification_router = APIRouter(
 )
 
 
-@v2_notification_router.post('/', status_code=status.HTTP_202_ACCEPTED)
+@v2_notification_router.post('/', status_code=status.HTTP_201_CREATED)
 async def create_notification(request: V2NotificationSingleRequest) -> V2NotificationSingleResponse:
     """Create a notification.
 

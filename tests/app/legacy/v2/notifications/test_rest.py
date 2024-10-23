@@ -23,7 +23,7 @@ def test_post(client: TestClient) -> None:
         to='vanotify@va.gov',
     )
     resp = client.post('v2/notifications', json=srequest.serialize())
-    assert resp.status_code == status.HTTP_202_ACCEPTED
+    assert resp.status_code == status.HTTP_201_CREATED
     assert isinstance(V2NotificationSingleResponse.model_validate(resp.json()), V2NotificationSingleResponse)
 
 
@@ -39,7 +39,7 @@ def test_post_without_optional_fields(client: TestClient) -> None:
         to='vanotify@va.gov',
     )
     resp = client.post('v2/notifications', json=request.serialize())
-    assert resp.status_code == status.HTTP_202_ACCEPTED
+    assert resp.status_code == status.HTTP_201_CREATED
     assert isinstance(V2NotificationSingleResponse.model_validate(resp.json()), V2NotificationSingleResponse)
 
 
