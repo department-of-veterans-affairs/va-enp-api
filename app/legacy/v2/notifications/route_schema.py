@@ -4,7 +4,10 @@ from pydantic import UUID4, AwareDatetime, BaseModel
 
 
 class V2NotificationSingleRequest(BaseModel):
-    """Request model for v2 notification endpoint."""
+    """Request model for v2 notification endpoint.
+
+    Note: This is just a placeholder model for now. Please replace or update when working enp-45
+    """
 
     personalisation: dict[str, str] | None = None
     reference: str | None = None
@@ -25,7 +28,10 @@ class V2NotificationSingleRequest(BaseModel):
 
 
 class V2NotificationSingleResponse(BaseModel):
-    """Response for v2 notification endpoint."""
+    """Response for v2 notification endpoint.
+
+    Note: This is just a placeholder model for now. Please replace or update when working enp-45
+    """
 
     id: UUID4
     created_at: AwareDatetime
