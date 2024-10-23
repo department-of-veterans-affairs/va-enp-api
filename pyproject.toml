@@ -21,6 +21,7 @@ uvicorn-worker = "*"
 optional = true
 
 [tool.poetry.group.test.dependencies]
+pytest-cov = "*"
 pytest = "*"
 pytest-asyncio = "*"
 
@@ -37,6 +38,11 @@ types-aiobotocore = {extras = ["essential"], version = "*"}
 [tool.bandit]
 exclude_dirs = ["tests"]
 skips = ["B101"]  # https://bandit.readthedocs.io/en/latest/plugins/b101_assert_used.html
+
+[tool.coverage.run]
+omit = [
+    "app/logging/*",
+]
 
 [tool.ruff]
 exclude = [
