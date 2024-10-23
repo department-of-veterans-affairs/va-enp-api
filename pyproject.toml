@@ -34,6 +34,10 @@ pre-commit = "*"
 ruff = "*"
 types-aiobotocore = {extras = ["essential"], version = "*"}
 
+[tool.bandit]
+exclude_dirs = ["tests"]
+skips = ["B101"]  # https://bandit.readthedocs.io/en/latest/plugins/b101_assert_used.html
+
 [tool.ruff]
 exclude = [
     ".bzr",

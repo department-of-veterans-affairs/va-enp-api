@@ -7,6 +7,7 @@ from typing import Never
 from fastapi import FastAPI
 from loguru import logger
 
+from app.legacy.v2.notifications.rest import v2_notification_router
 from app.logging.logging_config import CustomizeLogger
 from app.providers.provider_aws import ProviderAWS
 from app.v3.notifications.rest import notification_router
@@ -46,6 +47,7 @@ def create_app() -> FastAPI:
     CustomizeLogger.make_logger()
     app = FastAPI(lifespan=lifespan)
     app.include_router(notification_router)
+    app.include_router(v2_notification_router)
     return app
 
 
