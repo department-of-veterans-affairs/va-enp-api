@@ -1,6 +1,6 @@
 fileignoreconfig:
 - filename: poetry.lock
-  checksum: 63e9387e1cbe5908d2b9dbcf6f181f464deedc5f7228ba509946d0bdef970cbc
+  checksum: b05743d84558787cf7ca5c1ef4f0524d42a2a2402bc003f526c392d7e4f48316
 - filename: .env.example
   checksum: 144c5ddce1db2983a7d8a1fcbe7dd0d0a5238f4a3ee936bba08d1d72591b4589
 - filename: app/providers/provider_aws.py
