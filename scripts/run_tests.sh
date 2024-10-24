@@ -1,3 +1,4 @@
 #! /bin/bash
 
-pytest --cov --cov-report=term-missing
+# Values set in pyroject.toml
+pytest

@@ -44,6 +44,10 @@ omit = [
     "app/logging/*",
 ]
 
+[tool.coverage.report]
+fail_under = 96
+precision = 2
+
 [tool.ruff]
 exclude = [
     ".bzr",
@@ -106,6 +110,7 @@ max-complexity = 5
 
 [tool.pytest.ini_options]
 asyncio_default_fixture_loop_scope = "function"
+addopts = "--cov --cov-report=term-missing"
 
 [build-system]
 requires = ["poetry-core"]
