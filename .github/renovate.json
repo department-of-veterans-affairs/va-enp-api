@@ -4,6 +4,7 @@
     "config:recommended",
     ":dependencyDashboard"
   ],
+    "rebaseWhen": "behind-base-branch",
     "packageRules": [
     {
       "matchDepTypes": ["static_tools"],
