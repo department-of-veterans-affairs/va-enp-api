@@ -53,4 +53,4 @@ jobs:
         run: |
           # Set path to poetry venv
           export PATH="$PWD/.venv/bin:$PATH"
-          pytest
+          ./scripts/run_tests.sh

@@ -23,6 +23,7 @@ uvicorn-worker = "*"
 optional = true
 
 [tool.poetry.group.test.dependencies]
+pytest-cov = "*"
 pytest = "*"
 pytest-asyncio = "*"
 
@@ -39,6 +40,15 @@ types-aiobotocore = {extras = ["essential"], version = "*"}
 [tool.bandit]
 exclude_dirs = ["tests"]
 skips = ["B101"]  # https://bandit.readthedocs.io/en/latest/plugins/b101_assert_used.html
+
+[tool.coverage.run]
+omit = [
+    "app/logging/*",
+]
+
+[tool.coverage.report]
+fail_under = 96
+precision = 2
 
 [tool.ruff]
 exclude = [
@@ -89,6 +99,10 @@ select = ["ANN", "ASYNC", "C901", "DOC", "D", "E4", "E7", "E9", "F", "G", "FAST"
 ignore = ["D203", "D213"]
 preview = true
 
+[tool.ruff.lint.flake8-tidy-imports]
+# Disallow all relative imports.
+ban-relative-imports = "all"
+
 [tool.ruff.lint.mccabe]
 # Flag errors (`C901`) whenever the complexity level exceeds 5.
 max-complexity = 5
@@ -98,6 +112,7 @@ max-complexity = 5
 
 [tool.pytest.ini_options]
 asyncio_default_fixture_loop_scope = "function"
+addopts = "--cov --cov-report=term-missing"
 
 [build-system]
 requires = ["poetry-core"]
