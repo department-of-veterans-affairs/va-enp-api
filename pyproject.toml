@@ -14,7 +14,9 @@ botocore = "*"
 fastapi = {extras = ["standard"], version = "*"}
 gunicorn = "*"
 loguru = "*"
+psycopg = {extras = ["binary"], version = "*"}
 pydantic = "*"
+sqlalchemy = {extras = ["asyncio"], version = "*"}
 uvicorn-worker = "*"
 
 [tool.poetry.group.test]

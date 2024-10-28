@@ -1,12 +1,18 @@
 fileignoreconfig:
-- filename: poetry.lock
-  checksum: 63e9387e1cbe5908d2b9dbcf6f181f464deedc5f7228ba509946d0bdef970cbc
 - filename: .env.example
   checksum: 144c5ddce1db2983a7d8a1fcbe7dd0d0a5238f4a3ee936bba08d1d72591b4589
+- filename: app/db/models.py
+  checksum: 7d4ecbf42881a742407eb39ee8a27f541527bad6934f5f3503d4cd57c1b63139
 - filename: app/providers/provider_aws.py
   checksum: c88ec2886e4983a5920b056a8494c62957de8f0d330585c08768e6d0e8cd260b
+- filename: ci/.local.env
+  checksum: 47e9f19fdfb3655ceb51cfee25242e87d45bb05618a1cca6ac2bc8a709e0cdf9
+- filename: ci/docker-compose-local.yml
+  checksum: c73beda98c39232441d86f6d6f6f2858274f9703f8a462eac1effacfbb9aa39d
+- filename: poetry.lock
+  checksum: 929cc81597e4d99d46cc23a0f7a43f1fa3e599d608f30a4143f1a078cbbcead1
 - filename: tests/app/providers/__init__.py
   checksum: 0e3ae2fd3a50245a8c143d31c4316b164b51161d2db6e660aa956b78eda1b4d8
 - filename: tests/app/providers/test_provider_aws.py
   checksum: 80b0eda070e642900a348299f5e0023f42bbf39e9e6c8db2deeabf1f1a93bb45
-version: ""
+version: "1.0"
