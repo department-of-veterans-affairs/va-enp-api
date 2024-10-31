@@ -17,7 +17,7 @@ from app.providers.provider_schemas import PushModel, PushRegistrationModel
         'topic',
     ),
 )
-def test_PushModel_valid(data: dict[str, str]) -> None:
+def test_push_model_valid(data: dict[str, str]) -> None:
     """Valid data should not raise ValidationError."""
     assert isinstance(PushModel.model_validate(data), PushModel)
 
@@ -33,7 +33,7 @@ def test_PushModel_valid(data: dict[str, str]) -> None:
         'multiple ARNs',
     ),
 )
-def test_PushModel_invalid(data: dict[str, str]) -> None:
+def test_push_model_invalid(data: dict[str, str]) -> None:
     """Invalid data should raise ValidationError."""
     with pytest.raises(ValidationError):
         PushModel.model_validate(data)
@@ -54,7 +54,7 @@ def test_PushModel_invalid(data: dict[str, str]) -> None:
         'empty data',
     ),
 )
-def test_PushRegistrationModel_valid(data: dict[str, str], is_valid: bool) -> None:
+def test_push_registration_model_valid(data: dict[str, str], is_valid: bool) -> None:
     """Test the PushRegistrationModel schema."""
     if is_valid:
         assert isinstance(PushRegistrationModel.model_validate(data), PushRegistrationModel)

@@ -64,7 +64,7 @@ class ProviderAWS(ProviderBase):
         return response['MessageId']
 
     async def register_push_endpoint(self, push_registration_model: PushRegistrationModel) -> str:
-        """(Re-)register a mobile app user.
+        """Register a mobile app user.
 
         https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/sns/client/create_platform_endpoint.html
 
