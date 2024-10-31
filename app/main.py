@@ -8,9 +8,9 @@ from uuid import uuid4
 from fastapi import Depends, FastAPI, status
 from loguru import logger
 from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
+from sqlalchemy.ext.asyncio import AsyncSession, async_scoped_session
 
-from app.db.db_init import get_db_session, init_db
+from app.db.db_init import close_db, get_read_session, get_write_session, init_db
 from app.db.models import Test
 from app.legacy.v2.notifications.rest import v2_notification_router
 from app.logging.logging_config import CustomizeLogger
@@ -38,10 +38,10 @@ async def lifespan(app: FastAPI) -> AsyncIterator[Never]:
 
     """
     providers['aws'] = ProviderAWS()
-    db_engine: AsyncEngine = await init_db()
+    await init_db()
     yield  # type: ignore
     providers.clear()
-    await db_engine.dispose()
+    await close_db()
 
 
 def create_app() -> FastAPI:
@@ -74,23 +74,24 @@ def simple_route() -> dict[str, str]:
     return {'Hello': 'World'}
 
 
-@app.post('/db/test_add', status_code=status.HTTP_201_CREATED)
+@app.post('/db/test_post', status_code=status.HTTP_201_CREATED)
 async def test_db_add(
-    db_session: Annotated[async_sessionmaker[AsyncSession], Depends(get_db_session)],
+    *,
+    data: str | None = None,
+    db_session: Annotated[async_scoped_session[AsyncSession], Depends(get_write_session)],
 ) -> dict[str, str]:
     """Test inserting into the database. This is a temporary test endpoint.
 
     Args:
-    ----
+        data (str | None): The data to insert
         db_session: The database session
 
     Returns:
-    -------
-        Test: The inserted item
+        dict[str, str]: The inserted item
 
     """
     logger.info('Testing db insert...')
-    item = {'id': str(uuid4()), 'data': 'test data'}
+    item = {'id': str(uuid4()), 'data': data or 'test data'}
     test_item = Test(**item)
     async with db_session() as session:
         session.add(test_item)
@@ -101,7 +102,7 @@ async def test_db_add(
 
 @app.post('/db/test_get', status_code=status.HTTP_200_OK)
 async def test_db_get(
-    db_session: Annotated[async_sessionmaker[AsyncSession], Depends(get_db_session)],
+    db_session: Annotated[async_scoped_session[AsyncSession], Depends(get_read_session)],
 ) -> list[dict[str, str]]:
     """Test getting items from the database. This is a temporary test endpoint.
 
@@ -117,8 +118,7 @@ async def test_db_get(
     items = []
     logger.info('Testing db get...')
     async with db_session() as session:
-        results = await session.execute(select(Test).limit(10))
+        results = await session.execute(select(Test))
         for r in results:
-            logger.info(f'{r[0].id=}')
             items.append({'id': str(r[0].id), 'data': r[0].data})
     return items
