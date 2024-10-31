@@ -32,3 +32,13 @@ class PushModel(BaseModel):
         ):
             raise ValueError('One, and only one, of topic_arn or target_arn must not be None.')
         return self
+
+
+class PushRegistrationModel(BaseModel):
+    """Define the input to register a device that will receive push notifications.
+
+    As currently implemented, this class is idiosyncratic to AWS SNS and includes only required parameters.
+    """
+
+    platform_application_arn: str
+    token: str
