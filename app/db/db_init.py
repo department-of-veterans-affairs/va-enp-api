@@ -83,8 +83,8 @@ async def get_read_session() -> AsyncIterator[async_scoped_session[AsyncSession]
 
     """
     session = async_scoped_session(
-        get_db_session(engine_read, 'read'),
-        current_task,
+        session_factory=get_db_session(engine_read, 'read'),
+        scopefunc=current_task,
     )
     try:
         yield session
@@ -101,8 +101,8 @@ async def get_read_session_with_context() -> AsyncIterator[async_scoped_session[
 
     """
     session = async_scoped_session(
-        get_db_session(engine_read, 'read'),
-        current_task,
+        session_factory=get_db_session(engine_read, 'read'),
+        scopefunc=current_task,
     )
     try:
         yield session
@@ -120,8 +120,8 @@ async def get_write_session() -> AsyncIterator[async_scoped_session[AsyncSession
 
     """
     session = async_scoped_session(
-        get_db_session(engine_write, 'write'),
-        current_task,
+        session_factory=get_db_session(engine_write, 'write'),
+        scopefunc=current_task,
     )
     try:
         yield session
@@ -138,8 +138,8 @@ async def get_write_session_with_context() -> AsyncIterator[async_scoped_session
 
     """
     session = async_scoped_session(
-        get_db_session(engine_write, 'write'),
-        current_task,
+        session_factory=get_db_session(engine_write, 'write'),
+        scopefunc=current_task,
     )
     try:
         yield session
