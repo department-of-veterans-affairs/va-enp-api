@@ -6,7 +6,7 @@ fileignoreconfig:
 - filename: app/db/models.py
   checksum: 7d4ecbf42881a742407eb39ee8a27f541527bad6934f5f3503d4cd57c1b63139
 - filename: app/providers/provider_aws.py
-  checksum: c88ec2886e4983a5920b056a8494c62957de8f0d330585c08768e6d0e8cd260b
+  checksum: f345ea8dea997d72c8d40a0cac2a2b1aacacef8959088ba5cc2ea9e5df57c9fd
 - filename: ci/.env.local
   checksum: dcdc621473581160f135b93be027bfebee8d34da2bade87bd225271a1804b8a2
 - filename: ci/.local.env

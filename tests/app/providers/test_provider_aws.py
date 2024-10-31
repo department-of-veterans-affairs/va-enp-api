@@ -1,4 +1,8 @@
-"""Test module for app/providers/provider_aws.py."""
+"""Test module for app/providers/provider_aws.py.
+
+For a discussion of AWS error handling:
+    https://boto3.amazonaws.com/v1/documentation/api/latest/guide/error-handling.html
+"""
 
 from unittest.mock import AsyncMock, patch
 
@@ -8,7 +12,7 @@ import pytest
 from app.providers import sns_publish_retriable_exceptions_set
 from app.providers.provider_aws import ProviderAWS
 from app.providers.provider_base import ProviderNonRetryableError, ProviderRetryableError
-from app.providers.provider_schemas import PushModel
+from app.providers.provider_schemas import PushModel, PushRegistrationModel
 from tests.app.providers import botocore_exceptions_kwargs
 
 
@@ -51,8 +55,6 @@ class TestProviderAWS:
         """Other than ClientError, Botocore exceptions are client-side exceptions that should not result in a retry.
 
         Exceptions in the provider code should re-raise ProviderNonRetryableError or ProviderRetryableError.
-
-        https://boto3.amazonaws.com/v1/documentation/api/latest/guide/error-handling.html
         """
         mock_client = AsyncMock()
         mock_get_session.return_value.create_client.return_value.__aenter__.return_value = mock_client
@@ -97,7 +99,6 @@ class TestProviderAWS:
         The AWS provider uses SNS to send push notifications.  The tested exceptions are exceptions
         that might get raised via calling the SNS client's "publish" method.
 
-        https://boto3.amazonaws.com/v1/documentation/api/latest/guide/error-handling.html
         https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/sns/client/publish.html
         """
         mock_client = AsyncMock()
@@ -119,7 +120,6 @@ class TestProviderAWS:
         The AWS provider uses SNS to send push notifications.  The tested exceptions are exceptions
         that might get raised via calling the SNS client's "publish" method.
 
-        https://boto3.amazonaws.com/v1/documentation/api/latest/guide/error-handling.html
         https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/sns/client/publish.html
         """
         mock_client = AsyncMock()
@@ -131,3 +131,17 @@ class TestProviderAWS:
 
         with pytest.raises(ProviderRetryableError):
             await self.provider.send_notification(push_model)
+
+    async def test_register_push_endpoint(self, mock_get_session: AsyncMock) -> None:
+        """Test the happy path.
+
+        Tests for PushRegistrationModel ensure the rejection of invalid data.  There are no negative tests
+        for this feature because exceptions are just logged and re-raised.
+        """
+        mock_client = AsyncMock()
+        mock_client.create_platform_endpoint.return_value = {'EndpointArn': '12345'}
+        mock_get_session.return_value.create_client.return_value.__aenter__.return_value = mock_client
+
+        push_registration_model = PushRegistrationModel(platform_application_arn='123', token='456')
+        assert await self.provider.register_push_endpoint(push_registration_model) == '12345'
+        mock_client.create_platform_endpoint.assert_called_once()
