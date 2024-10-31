@@ -83,10 +83,12 @@ async def test_db_add(
     """Test inserting into the database. This is a temporary test endpoint.
 
     Args:
+    ----
         data (str | None): The data to insert
         db_session: The database session
 
     Returns:
+    -------
         dict[str, str]: The inserted item
 
     """
@@ -100,7 +102,7 @@ async def test_db_add(
     return item
 
 
-@app.post('/db/test_get', status_code=status.HTTP_200_OK)
+@app.get('/db/test_get', status_code=status.HTTP_200_OK)
 async def test_db_get(
     db_session: Annotated[async_scoped_session[AsyncSession], Depends(get_read_session)],
 ) -> list[dict[str, str]]:
