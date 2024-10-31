@@ -68,7 +68,11 @@ class ProviderAWS(ProviderBase):
 
         https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/sns/client/create_platform_endpoint.html
 
-        Returns
+        Args:
+        ----
+            push_registration_model: the parameters to pass to SNS.Client.create_platform_endpoint
+
+        Returns:
         -------
             str: The endpoint ARN needed to send a push notification to the registered device
 
