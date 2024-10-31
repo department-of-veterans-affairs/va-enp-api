@@ -28,15 +28,17 @@ async def init_db() -> None:
 
     # create the write database engine
     # echo=True logs the queries that are executed, set to False to disable these logs
-    logger.debug('Initializing the read db engine with uri: {}', DB_WRITE_URI)
-    engine_write = create_async_engine(DB_WRITE_URI, echo=True)
+    logger.debug('Initializing the write db engine with uri: {}', DB_WRITE_URI)
+    engine_write = create_async_engine(DB_WRITE_URI, echo=False)
 
     async with engine_write.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
 
     if DB_READ_URI:
+        # create the write database engine
+        # echo=True logs the queries that are executed, set to False to disable these logs
         logger.debug('Initializing the read db engine with uri: {}', DB_READ_URI)
-        engine_read = create_async_engine(DB_READ_URI, echo=True)
+        engine_read = create_async_engine(DB_READ_URI, echo=False)
 
         async with engine_write.begin() as conn:
             await conn.run_sync(Base.metadata.create_all)
