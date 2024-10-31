@@ -11,6 +11,6 @@ WORKDIR /app
 RUN pip install --upgrade pip 
 RUN pip install poetry==1.8.3
 
-COPY . .
+COPY pyproject.toml poetry.lock ./app /app/
 
 RUN poetry install --no-root --with static_tools,test && rm -rf $POETRY_CACHE_DIR

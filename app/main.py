@@ -24,7 +24,7 @@ providers = {}
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[Never]:
-    """Populate the providers dictionary.
+    """Initialize the database, and populate the providers dictionary.
 
     https://fastapi.tiangolo.com/advanced/events/?h=life#lifespan
 
@@ -37,8 +37,8 @@ async def lifespan(app: FastAPI) -> AsyncIterator[Never]:
         None: nothing
 
     """
-    providers['aws'] = ProviderAWS()
     await init_db()
+    providers['aws'] = ProviderAWS()
     yield  # type: ignore
     providers.clear()
     await close_db()
@@ -74,8 +74,8 @@ def simple_route() -> dict[str, str]:
     return {'Hello': 'World'}
 
 
-@app.post('/db/test_post', status_code=status.HTTP_201_CREATED)
-async def test_db_add(
+@app.post('/db/test', status_code=status.HTTP_201_CREATED)
+async def test_db_create(
     *,
     data: str | None = None,
     db_session: Annotated[async_scoped_session[AsyncSession], Depends(get_write_session)],
@@ -92,18 +92,16 @@ async def test_db_add(
         dict[str, str]: The inserted item
 
     """
-    logger.info('Testing db insert...')
     item = {'id': str(uuid4()), 'data': data or 'test data'}
     test_item = Test(**item)
     async with db_session() as session:
         session.add(test_item)
         await session.commit()
-        await session.refresh(test_item)
     return item
 
 
-@app.get('/db/test_get', status_code=status.HTTP_200_OK)
-async def test_db_get(
+@app.get('/db/test', status_code=status.HTTP_200_OK)
+async def test_db_read(
     db_session: Annotated[async_scoped_session[AsyncSession], Depends(get_read_session)],
 ) -> list[dict[str, str]]:
     """Test getting items from the database. This is a temporary test endpoint.
@@ -114,11 +112,10 @@ async def test_db_get(
 
     Returns:
     -------
-        list[dict[str,str]]: The first 10 items in the tests table
+        list[dict[str,str]]: The items in the tests table
 
     """
     items = []
-    logger.info('Testing db get...')
     async with db_session() as session:
         results = await session.execute(select(Test))
         for r in results:

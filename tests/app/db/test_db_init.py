@@ -33,12 +33,6 @@ from app.db.db_init import (
 async def test_init_db(mock_create_async_engine: Mock, read_uri_value: str) -> None:
     """Test the init_db function."""
     patch('app.db.db_init.DB_READ_URI', return_value=read_uri_value)
-    # patch('app.db.db_init.DB_WRITE_URI', return_value='write_uri')
-    # patch.dict(os.environ, {'DB_READ_URI': '', 'app.db.DB_WRITE_URI': 'write_uri'}, clear=True)
-
-    # mock_create_async_engine = patch('app.db.db_init.create_async_engine')
-    # mock_conn = Mock()
-    # mock_create_async_engine.return_value.begin.return_value = Mock()
 
     await init_db()
 
