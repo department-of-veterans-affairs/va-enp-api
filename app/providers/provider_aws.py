@@ -1,4 +1,8 @@
-"""Definition for ProviderAWS."""
+"""Definition for ProviderAWS.
+
+This module uses aiobotocore to make asynchronous requests to AWS.  Ideally, we would create a client once and use it
+to handle all requests, but the aiobotocore docs do not explain how to create a client outside of a "with" block.
+"""
 
 import os
 
@@ -8,7 +12,7 @@ from loguru import logger
 
 from app.providers import sns_publish_retriable_exceptions_set
 from app.providers.provider_base import ProviderBase, ProviderNonRetryableError, ProviderRetryableError
-from app.providers.provider_schemas import PushModel
+from app.providers.provider_schemas import PushModel, PushRegistrationModel
 
 
 class ProviderAWS(ProviderBase):
@@ -40,9 +44,6 @@ class ProviderAWS(ProviderBase):
             publish_params['TopicArn'] = push_model.topic_arn  # type: ignore
 
         try:
-            # Ideally, we would create the client once and use it to handle all requests.
-            # The aiobotocore docs do not explain how to create a client outside of a
-            # "with" block.
             session = get_session()
             async with session.create_client(
                 'sns',
@@ -61,3 +62,37 @@ class ProviderAWS(ProviderBase):
 
         logger.debug(response)
         return response['MessageId']
+
+    async def register_push_endpoint(self, push_registration_model: PushRegistrationModel) -> str:
+        """(Re-)register a mobile app user.
+
+        https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/sns/client/create_platform_endpoint.html
+
+        Returns
+        -------
+            str: The endpoint ARN needed to send a push notification to the registered device
+
+        """
+        try:
+            session = get_session()
+            async with session.create_client(
+                'sns',
+                region_name=os.getenv('AWS_REGION_NAME', 'us-east-1'),
+                aws_secret_access_key=os.getenv('AWS_SECRET_ACCESS_KEY', ''),
+                aws_access_key_id=os.getenv('AWS_ACCESS_KEY_ID', ''),
+            ) as client:
+                response: dict[str, str] = await client.create_platform_endpoint(
+                    PlatformApplicationArn=push_registration_model.platform_application_arn,
+                    Token=push_registration_model.token,
+                )
+        except Exception:
+            logger.exception('Failed to register a push client with AWS SNS: %s', push_registration_model)
+            raise
+
+        logger.info(
+            'Created push endpoint ARN %s for device %s on application %s.',
+            response['EndpointArn'],
+            push_registration_model.token,
+            push_registration_model.platform_application_arn,
+        )
+        return response['EndpointArn']
