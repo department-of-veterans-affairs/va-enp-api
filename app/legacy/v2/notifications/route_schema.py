@@ -1,6 +1,10 @@
 """Request and Response bodies for v2/notifications."""
 
+from typing import Dict, Optional
+
 from pydantic import UUID4, AwareDatetime, BaseModel
+
+from app.constants import MobileAppType
 
 
 class V2NotificationSingleRequest(BaseModel):
@@ -38,3 +42,27 @@ class V2NotificationSingleResponse(BaseModel):
     updated_at: AwareDatetime
     sent_at: None | AwareDatetime = None
     to: str
+
+
+class V2NotificationPushRequest(BaseModel):
+    """Send a push notification to a mobile app."""
+
+    mobile_app: MobileAppType
+    template_id: str
+    recipient_identifier: str
+    personalisation: Optional[Dict[str, str]] = None
+
+    def serialize(self) -> dict[str, Optional[str] | dict[str, str]]:
+        """Serialize the Pydantic model.
+
+        Returns
+        -------
+            dict[str, None | str | dict[str, str]]: Serialized version of the model
+
+        """
+        serialized = self.model_dump()
+        return serialized
+
+
+class V2NotificationPushResponse(BaseModel):
+    """Response for v2 notification endpoint Push Notifications."""
