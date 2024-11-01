@@ -1,5 +1,5 @@
 # basic starting point to run the app in a container
-FROM python:3.12-alpine3.20
+FROM python:3.13-alpine3.20
 
 ENV POETRY_NO_INTERACTION=1 \
     POETRY_VIRTUALENVS_IN_PROJECT=1 \
