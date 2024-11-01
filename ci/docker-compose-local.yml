@@ -10,7 +10,7 @@ services:
     env_file:
       - .env.local
     volumes:
-      - "../:/app:rw"
+      - "../app/:/app/app/:rw"
 
   enp-db:
     image: postgres:16
