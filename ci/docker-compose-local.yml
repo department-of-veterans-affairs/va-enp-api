@@ -13,7 +13,7 @@ services:
       - "../app/:/app/app/:rw"
 
   enp-db:
-    image: postgres:16
+    image: postgres:17
     container_name: enp-db
     ports:
       - 5432:5432
