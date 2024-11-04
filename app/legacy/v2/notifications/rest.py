@@ -10,7 +10,11 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.routing import APIRoute
 from loguru import logger
 
-from app.legacy.v2.notifications.route_schema import V2NotificationSingleRequest, V2NotificationSingleResponse
+from app.legacy.v2.notifications.route_schema import (
+    V2NotificationPushRequest,
+    V2NotificationPushResponse,
+)
+from app.legacy.v2.notifications.utils import get_arn_from_icn
 from app.v3.notifications.rest import RESPONSE_400, RESPONSE_404, RESPONSE_500
 
 
@@ -72,7 +76,7 @@ v2_notification_router = APIRouter(
 
 
 @v2_notification_router.post('/', status_code=status.HTTP_201_CREATED)
-async def create_notification(request: V2NotificationSingleRequest) -> V2NotificationSingleResponse:
+async def create_notification(request: V2NotificationPushRequest) -> V2NotificationPushResponse:
     """Create a notification.
 
     Args:
@@ -84,24 +88,21 @@ async def create_notification(request: V2NotificationSingleRequest) -> V2Notific
         dict[str, str]: the notification response data
 
     """
-    # request =
-    # {'mobile_app':VA_FLAGSHIP_APP,
-    #  'template_id':'2',
-    #  'recipient_identifier':'99999',
-    #  'personalisation':{'name': 'John'},
-    # }
+    icn = request.recipient_identifier
+    # TODO - 1 Build ARN from ICN
+    target_arn = await get_arn_from_icn(icn)
 
-    # TODO - 1 Get ARN for AWS using ICN
-    # Note - Do not implement call to VeText, instead return NotImplemented error
     # TODO - 2 Create Push Model with message, target_arn, and topic_arn
     # TODO - 3 Pass Push Model to ProviderAWS.send_notification(Push Model)
-    # TODO - 4 Return 201
+    # message = request.personalisation
+    # push_model = PushModel(message,target_arn)
+    # ProviderAWS.send_notification(push_model)
 
-    response = V2NotificationSingleResponse(
+    # TODO - 4 Return 201
+    response = V2NotificationPushResponse(
         id=uuid4(),
         created_at=datetime.now(timezone.utc),
         updated_at=datetime.now(timezone.utc),
         sent_at=None,
-        to=request.to,
     )
     return response

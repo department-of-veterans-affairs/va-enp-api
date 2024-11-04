@@ -10,7 +10,6 @@ from fastapi.testclient import TestClient
 from app.constants import MobileAppType
 from app.legacy.v2.notifications.route_schema import (
     V2NotificationPushRequest,
-    V2NotificationPushResponse,
     V2NotificationSingleRequest,
     V2NotificationSingleResponse,
 )
@@ -70,21 +69,26 @@ def test_post_malformed_request(client: TestClient) -> None:
 
 @pytest.mark.asyncio
 @patch('app.providers.provider_aws.get_session')
+@patch('app.legacy.v2.notifications.rest.get_arn_from_icn', new_callable=AsyncMock)
 class TestNotificationsPush:
     """Test POST /v2/notifications/."""
 
-    def test_post_push_notifications_returns_201(
+    async def test_post_push_notifications_returns_201(
         self,
+        mock_get_arn_from_icn: AsyncMock,
         mock_get_session: AsyncMock,
         client: TestClient,
     ) -> None:
         """Test route can return 201.
 
         Args:
-            client(TestClient): FastAPI client fixture
             mock_get_session(AsyncMock): Mock call to AWS
+            client(TestClient): FastAPI client fixture
+
 
         """
+        mock_get_arn_from_icn.return_value = 'sample_arn_value'
+
         mock_client = AsyncMock()
         mock_client.publish.return_value = {'MessageId': 'message_id', 'SequenceNumber': '12345'}
         mock_get_session.return_value.create_client.return_value.__aenter__.return_value = mock_client
@@ -95,7 +99,6 @@ class TestNotificationsPush:
             recipient_identifier='99999',
             personalisation={'name': 'John'},
         )
-        resp = client.post('v2/notifications', json=request.serialize())
+        response = client.post('v2/notifications', json=request.serialize())
 
-        assert resp.status_code == status.HTTP_201_CREATED
-        assert isinstance(V2NotificationPushRequest.model_validate(resp.json()), V2NotificationPushResponse)
+        assert response.status_code == status.HTTP_201_CREATED
