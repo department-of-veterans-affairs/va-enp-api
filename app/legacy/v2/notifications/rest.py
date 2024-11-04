@@ -84,6 +84,19 @@ async def create_notification(request: V2NotificationSingleRequest) -> V2Notific
         dict[str, str]: the notification response data
 
     """
+    # request =
+    # {'mobile_app':VA_FLAGSHIP_APP,
+    #  'template_id':'2',
+    #  'recipient_identifier':'99999',
+    #  'personalisation':{'name': 'John'},
+    # }
+
+    # TODO - 1 Get ARN for AWS using ICN
+    # Note - Do not implement call to VeText, instead return NotImplemented error
+    # TODO - 2 Create Push Model with message, target_arn, and topic_arn
+    # TODO - 3 Pass Push Model to ProviderAWS.send_notification(Push Model)
+    # TODO - 4 Return 201
+
     response = V2NotificationSingleResponse(
         id=uuid4(),
         created_at=datetime.now(timezone.utc),
