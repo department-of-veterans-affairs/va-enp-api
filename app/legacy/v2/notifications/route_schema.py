@@ -71,3 +71,4 @@ class V2NotificationPushResponse(BaseModel):
     created_at: AwareDatetime
     updated_at: AwareDatetime
     sent_at: None | AwareDatetime = None
+    reference_identifier: str

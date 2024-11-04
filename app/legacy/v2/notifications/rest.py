@@ -15,6 +15,8 @@ from app.legacy.v2.notifications.route_schema import (
     V2NotificationPushResponse,
 )
 from app.legacy.v2.notifications.utils import get_arn_from_icn
+from app.providers.provider_aws import ProviderAWS
+from app.providers.provider_schemas import PushModel
 from app.v3.notifications.rest import RESPONSE_400, RESPONSE_404, RESPONSE_500
 
 
@@ -88,15 +90,18 @@ async def create_notification(request: V2NotificationPushRequest) -> V2Notificat
         dict[str, str]: the notification response data
 
     """
-    icn = request.recipient_identifier
     # TODO - 1 Build ARN from ICN
+    icn = request.recipient_identifier
     target_arn = await get_arn_from_icn(icn)
 
     # TODO - 2 Create Push Model with message, target_arn, and topic_arn
+
     # TODO - 3 Pass Push Model to ProviderAWS.send_notification(Push Model)
-    # message = request.personalisation
-    # push_model = PushModel(message,target_arn)
-    # ProviderAWS.send_notification(push_model)
+    message = request.personalisation['name']
+    push_model = PushModel(message=message, target_arn=target_arn, topic_arn=None)
+
+    provider = ProviderAWS()
+    reference_identifier = provider.send_notification(model=push_model)
 
     # TODO - 4 Return 201
     response = V2NotificationPushResponse(
@@ -104,5 +109,6 @@ async def create_notification(request: V2NotificationPushRequest) -> V2Notificat
         created_at=datetime.now(timezone.utc),
         updated_at=datetime.now(timezone.utc),
         sent_at=None,
+        reference_identifier=reference_identifier, 
     )
     return response

@@ -56,6 +56,7 @@ class ProviderBase(ABC):
 
         """
         try:
+            breakpoint()
             return await self._send_push(model)
         except (ProviderRetryableError, ProviderNonRetryableError):
             logger.exception(
