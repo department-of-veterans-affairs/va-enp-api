@@ -99,7 +99,7 @@ class TestNotificationsPush:
 
         request = V2NotificationPushRequest(
             mobile_app=MobileAppType.VA_FLAGSHIP_APP,
-            template_id='2',
+            template_id='1',
             recipient_identifier='99999',
             personalization={'name': 'John'},
         )
