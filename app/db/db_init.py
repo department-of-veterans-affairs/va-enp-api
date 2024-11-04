@@ -16,41 +16,44 @@ from sqlalchemy.ext.asyncio import (
 from app.db import DB_READ_URI, DB_WRITE_URI
 from app.db.base import Base
 
-engine_read = None
-engine_write = None
+_engine_read = None
+_engine_write = None
 
 
 async def init_db() -> None:
     """Initialize the database engine."""
-    global engine_read, engine_write
+    global _engine_read, _engine_write
 
     logger.info('Initializing the database engines...')
 
-    # create the write database engine
-    # echo=True logs the queries that are executed, set to False to disable these logs
+    # Create the write database engine.
+    # echo=True logs the queries that are executed.  Set it to False to disable these logs.
     logger.debug('Initializing the write db engine with uri: {}', DB_WRITE_URI)
-    engine_write = create_async_engine(DB_WRITE_URI, echo=False)
+    _engine_write = create_async_engine(DB_WRITE_URI, echo=False)
 
-    async with engine_write.begin() as conn:
+    # Without this import, Base.metatable (used below) will not point to any tables, and the
+    # call to "run_sync" will not create anything.
+
+    async with _engine_write.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
 
     if DB_READ_URI:
-        # create the write database engine
-        # echo=True logs the queries that are executed, set to False to disable these logs
+        # Create the read database engine.
+        # echo=True logs the queries that are executed.  Set it to False to disable these logs.
         logger.debug('Initializing the read db engine with uri: {}', DB_READ_URI)
-        engine_read = create_async_engine(DB_READ_URI, echo=False)
+        _engine_read = create_async_engine(DB_READ_URI, echo=False)
 
-        async with engine_write.begin() as conn:
+        async with _engine_read.begin() as conn:
             await conn.run_sync(Base.metadata.create_all)
 
 
 async def close_db() -> None:
     """Close the database engines."""
-    if engine_read is not None:
-        await engine_read.dispose()
+    if _engine_read is not None:
+        await _engine_read.dispose()
 
-    if engine_write is not None:
-        await engine_write.dispose()
+    if _engine_write is not None:
+        await _engine_write.dispose()
 
 
 def get_db_session(db_engine: AsyncEngine | None, engine_type: str) -> async_sessionmaker[AsyncSession]:
@@ -83,7 +86,7 @@ async def get_read_session() -> AsyncIterator[async_scoped_session[AsyncSession]
 
     """
     session = async_scoped_session(
-        session_factory=get_db_session(engine_read, 'read'),
+        session_factory=get_db_session(_engine_read, 'read'),
         scopefunc=current_task,
     )
     try:
@@ -101,7 +104,7 @@ async def get_read_session_with_context() -> AsyncIterator[async_scoped_session[
 
     """
     session = async_scoped_session(
-        session_factory=get_db_session(engine_read, 'read'),
+        session_factory=get_db_session(_engine_read, 'read'),
         scopefunc=current_task,
     )
     try:
@@ -120,7 +123,7 @@ async def get_write_session() -> AsyncIterator[async_scoped_session[AsyncSession
 
     """
     session = async_scoped_session(
-        session_factory=get_db_session(engine_write, 'write'),
+        session_factory=get_db_session(_engine_write, 'write'),
         scopefunc=current_task,
     )
     try:
@@ -138,7 +141,7 @@ async def get_write_session_with_context() -> AsyncIterator[async_scoped_session
 
     """
     session = async_scoped_session(
-        session_factory=get_db_session(engine_write, 'write'),
+        session_factory=get_db_session(_engine_write, 'write'),
         scopefunc=current_task,
     )
     try:

@@ -40,8 +40,8 @@ async def test_init_db(mock_create_async_engine: Mock, read_uri_value: str) -> N
     # assert mock_conn.run_sync.call_count == 2 if DB_READ_URI else 1
 
 
-@patch('app.db.db_init.engine_write', spec=AsyncMock)
-@patch('app.db.db_init.engine_read', spec=AsyncMock)
+@patch('app.db.db_init._engine_write', spec=AsyncMock)
+@patch('app.db.db_init._engine_read', spec=AsyncMock)
 @pytest.mark.asyncio
 async def test_close_db(mock_engine_read: AsyncMock, mock_engine_write: AsyncMock) -> None:
     """Test the close_db function to ensure db engines are closed when called."""
@@ -70,8 +70,8 @@ def test_get_db_session_failure() -> None:
 
 
 @patch('app.db.db_init.async_scoped_session', return_value=Mock(spec=async_scoped_session))
-@patch('app.db.db_init.engine_read', Mock(spec=AsyncEngine))
-@patch('app.db.db_init.engine_write', Mock(spec=AsyncEngine))
+@patch('app.db.db_init._engine_read', Mock(spec=AsyncEngine))
+@patch('app.db.db_init._engine_write', Mock(spec=AsyncEngine))
 @pytest.mark.asyncio
 class TestReadWriteSessions:
     """Test the read and write session functions."""
@@ -105,8 +105,8 @@ class TestReadWriteSessions:
         mock_session.assert_called_once()
 
 
-@patch('app.db.db_init.engine_write', None)
-@patch('app.db.db_init.engine_read', None)
+@patch('app.db.db_init._engine_write', None)
+@patch('app.db.db_init._engine_read', None)
 @pytest.mark.asyncio
 class TestReadWriteSessionsFailure:
     """Test the read and write session functions."""

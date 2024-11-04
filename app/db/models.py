@@ -7,12 +7,47 @@ from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base import Base
+from app.db.model_mixins import TimestampMixin
 
 
-class Test(Base):
-    """The 'tests' table."""
+class Notification(TimestampMixin, Base):
+    """Database table for notifications sent to veterans."""
 
-    __tablename__ = 'tests'
+    __tablename__ = 'notifications'
 
     id: Mapped[UUID[str]] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid4)
-    data: Mapped[str] = mapped_column(String(255), nullable=True)
+    personalization: Mapped[str] = mapped_column(String, nullable=True)
+
+
+class Service(Base):
+    """Database table for VA services (business groups)."""
+
+    __tablename__ = 'services'
+
+    id: Mapped[UUID[str]] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid4)
+    name: Mapped[str] = mapped_column(String(255), unique=True)
+
+
+class Template(TimestampMixin, Base):
+    """Database table for templates of notifications sent to veterans."""
+
+    __tablename__ = 'templates'
+
+    id: Mapped[UUID[str]] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid4)
+    name: Mapped[str] = mapped_column(String(255))
+
+    def build_message(self, personalization: dict[str, str]) -> str:
+        """Return the template body populated with the personalized values.
+
+        Args:
+        ----
+            personalization: A dictionary of template placeholder names and their values
+
+        Returns:
+        -------
+            str: The template body populated with the personalized values
+
+        """
+        # This method supports #26.  When this class contains more columns, including the template
+        # body, finish this implementation, and remove any associated mocking in the tests for #26.
+        raise NotImplementedError
