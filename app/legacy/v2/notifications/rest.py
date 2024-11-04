@@ -144,13 +144,13 @@ async def create_notification(request: V2NotificationPushRequest) -> V2Notificat
 
     # TODO - 2 Create Push Model with message, target_arn, and topic_arn
     # Query the database and get template with ID
-    template_id = int(request.template_id)  # Convert template_id to int if required
+    template_id = int(request.template_id)
     template = Template.get_template_by_id(template_id)
 
     if template is None:
         raise HTTPException(status_code=404, detail='Template not found')
 
-    personalization = request.personalization or {}  # Ensure personalization is a dict
+    personalization = request.personalization or {}
     message = template.build_message(personalization)
     push_model = PushModel(message=message, target_arn=target_arn, topic_arn=None)
 
