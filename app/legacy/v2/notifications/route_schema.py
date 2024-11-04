@@ -50,7 +50,7 @@ class V2NotificationPushRequest(BaseModel):
     mobile_app: MobileAppType
     template_id: str
     recipient_identifier: str
-    personalisation: Optional[Dict[str, str]] = None
+    personalization: Optional[Dict[str, str]] = None
 
     def serialize(self) -> dict[str, Optional[str] | dict[str, str]]:
         """Serialize the Pydantic model.

@@ -101,8 +101,7 @@ class TestNotificationsPush:
             mobile_app=MobileAppType.VA_FLAGSHIP_APP,
             template_id='2',
             recipient_identifier='99999',
-            personalisation={'name': 'John'},
-            reference_identifier='12345',
+            personalization={'name': 'John'},
         )
 
         response = client.post('/v2/notifications', json=request.serialize())

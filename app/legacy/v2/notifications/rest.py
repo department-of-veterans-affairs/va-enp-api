@@ -95,10 +95,13 @@ async def create_notification(request: V2NotificationPushRequest) -> V2Notificat
     target_arn = await get_arn_from_icn(icn)
 
     # TODO - 2 Create Push Model with message, target_arn, and topic_arn
+    # Query the database and get template with ID
+    template_id = request.template_id
+    template = Template.get_template_by_id(template_id)
+    message = template.build_message(request.personalization)
+    push_model = PushModel(message=message, target_arn=target_arn, topic_arn=None)
 
     # TODO - 3 Pass Push Model to ProviderAWS.send_notification(Push Model)
-    message = request.personalisation['name']
-    push_model = PushModel(message=message, target_arn=target_arn, topic_arn=None)
 
     provider = ProviderAWS()
     reference_identifier = provider.send_notification(model=push_model)
@@ -109,6 +112,6 @@ async def create_notification(request: V2NotificationPushRequest) -> V2Notificat
         created_at=datetime.now(timezone.utc),
         updated_at=datetime.now(timezone.utc),
         sent_at=None,
-        reference_identifier=reference_identifier, 
+        reference_identifier=reference_identifier,
     )
     return response
