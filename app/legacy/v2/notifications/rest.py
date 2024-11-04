@@ -2,7 +2,7 @@
 
 from datetime import datetime, timezone
 from time import monotonic
-from typing import Any, Callable, Coroutine
+from typing import Any, Callable, Coroutine, Optional
 from uuid import uuid4
 
 from fastapi import APIRouter, HTTPException, Request, Response, status
@@ -77,17 +77,65 @@ v2_notification_router = APIRouter(
 )
 
 
+class Template:
+    """A mock representation of a Template model to simulate database retrieval."""
+
+    def __init__(self, template_id: int, name: str) -> None:
+        """Initialize a Template object.
+
+        Args:
+            template_id (int): The unique identifier of the template.
+            name (str): The name of the template.
+
+        """
+        self.id = template_id
+        self.name = name
+
+    @staticmethod
+    def build_message(personalization: dict[str, str]) -> str:
+        """Build a personalized message.
+
+        Args:
+            personalization (dict[str, str]): A dictionary containing personalization data.
+
+        Returns:
+            str: A personalized message.
+
+        """
+        return f'Personalized message with {personalization}'
+
+    @classmethod
+    def get_template_by_id(cls, template_id: int) -> Optional['Template']:
+        """Retrieve a template by its unique identifier.
+
+        Args:
+            template_id (int): The unique identifier of the template.
+
+        Returns:
+            Optional[Template]: A Template object if found, else None.
+
+        """
+        if template_id == 1:
+            return cls(template_id=template_id, name='Sample Template')
+        else:
+            return None
+
+
 @v2_notification_router.post('/', status_code=status.HTTP_201_CREATED)
 async def create_notification(request: V2NotificationPushRequest) -> V2NotificationPushResponse:
     """Create a notification.
 
     Args:
     ----
-        request (V2NotificationSingleRequest): the data necessary for the notification
+        request (V2NotificationSingleRequest): The data necessary for the notification.
 
     Returns:
     -------
-        dict[str, str]: the notification response data
+        V2NotificationPushResponse: The notification response data.
+
+    Raises:
+    ------
+        HTTPException: If the template with the provided ID is not found.
 
     """
     # TODO - 1 Build ARN from ICN
@@ -96,15 +144,19 @@ async def create_notification(request: V2NotificationPushRequest) -> V2Notificat
 
     # TODO - 2 Create Push Model with message, target_arn, and topic_arn
     # Query the database and get template with ID
-    template_id = request.template_id
+    template_id = int(request.template_id)  # Convert template_id to int if required
     template = Template.get_template_by_id(template_id)
-    message = template.build_message(request.personalization)
+
+    if template is None:
+        raise HTTPException(status_code=404, detail='Template not found')
+
+    personalization = request.personalization or {}  # Ensure personalization is a dict
+    message = template.build_message(personalization)
     push_model = PushModel(message=message, target_arn=target_arn, topic_arn=None)
 
     # TODO - 3 Pass Push Model to ProviderAWS.send_notification(Push Model)
-
     provider = ProviderAWS()
-    reference_identifier = provider.send_notification(model=push_model)
+    reference_identifier = await provider.send_notification(model=push_model)
 
     # TODO - 4 Return 201
     response = V2NotificationPushResponse(
