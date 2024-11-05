@@ -1,5 +1,6 @@
 """Test module for app/legacy/v2/notifications/rest.py."""
 
+from typing import Callable, Generator
 from unittest.mock import AsyncMock, patch
 from uuid import uuid4
 
@@ -8,6 +9,7 @@ from fastapi import status
 from fastapi.testclient import TestClient
 
 from app.constants import MobileAppType
+from app.db.models import Template
 from app.legacy.v2.notifications.route_schema import (
     V2NotificationPushRequest,
     V2NotificationSingleRequest,
@@ -78,7 +80,7 @@ class TestNotificationsPush:
         self,
         mock_get_arn_from_icn: AsyncMock,
         mock_get_session: AsyncMock,
-        create_template,
+        sample_template: Generator[Callable[[str], Template], None, None],
         client: TestClient,
     ) -> None:
         """Test route can return 201.
@@ -89,7 +91,7 @@ class TestNotificationsPush:
             client(TestClient): FastAPI client fixture
 
         """
-        template = create_template('test_template')
+        template = sample_template(name='test_template')
         mock_get_arn_from_icn.return_value = 'sample_arn_value'
 
         mock_client = AsyncMock()
@@ -132,7 +134,7 @@ class TestNotificationsPush:
             mobile_app=MobileAppType.VA_FLAGSHIP_APP, template_id='1', recipient_identifier='99999'
         )
 
-        response = client.post('/v2/notifications', json=request.serialize())
+        response = client.post('/v2/notifications', json=request.model_dump())
 
         assert response.status_code == status.HTTP_201_CREATED
 
@@ -216,7 +218,7 @@ class TestNotificationsPush:
             personalization={'name': 'John'},
         )
 
-        response = client.post('/v2/notifications', json=request.serialize())
+        response = client.post('/v2/notifications', json=request.model_dump())
 
         assert response.status_code == status.HTTP_400_BAD_REQUEST
         assert response.text == 'Template with template_id 9999 not found.'
@@ -248,7 +250,7 @@ class TestNotificationsPush:
             personalization={'name': 'John'},
         )
 
-        response = client.post('/v2/notifications', json=request.serialize())
+        response = client.post('/v2/notifications', json=request.model_dump())
 
         assert response.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
         assert response.text == 'Internal error. Failed to create notification.'

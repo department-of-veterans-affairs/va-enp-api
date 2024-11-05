@@ -4,7 +4,7 @@ from uuid import uuid4
 
 from sqlalchemy import String
 from sqlalchemy.dialects.postgresql import UUID
-from sqlalchemy.orm import Mapped, Session, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base import Base
 from app.db.model_mixins import TimestampMixin
@@ -36,22 +36,7 @@ class Template(TimestampMixin, Base):
     id: Mapped[UUID[str]] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid4)
     name: Mapped[str] = mapped_column(String(255))
 
-    def get_template_by_id(session: Session, template_id: UUID) -> 'Template':
-        """Retrieve a template by its ID from the database.
-
-        Args:
-        ----
-            session (Session): The database session to use for the query.
-            template_id (UUID): The ID of the template to retrieve.
-
-        Returns:
-        -------
-            Template: The retrieved template object, or None if not found.
-
-        """
-        return session.get(Template, template_id)
-
-    def build_message(self, personalization: dict[str, str]) -> str:
+    def build_message(self, personalization: dict[str, str] | None) -> str:
         """Return the template body populated with the personalized values.
 
         Args:

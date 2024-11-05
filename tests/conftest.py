@@ -1,12 +1,14 @@
 """Fixtures and setup to test the app."""
 
+from typing import Callable, Generator
+
 import pytest
 from fastapi.testclient import TestClient
-from jinja2 import Template
 from sqlalchemy import delete
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.db_init import get_write_session
+from app.db.models import Template
 from app.main import app
 
 
@@ -24,11 +26,11 @@ def client() -> TestClient:
 
 @pytest.fixture(scope='session')
 def db_session() -> AsyncSession:
-    return await get_write_session()
+    return get_write_session()
 
 
 @pytest.fixture
-def create_template(db_session):
+def sample_template(db_session) -> Generator[Callable[[str], Template], None, None]:
     template_ids = ['d5b6e67c-8e2a-11ee-8b8e-0242ac120002']
 
     def _create_template(name: str) -> Template:
@@ -40,6 +42,6 @@ def create_template(db_session):
 
     yield _create_template
 
-    stmt = delete(Template).where(Template.id._in(template_ids))
+    stmt = delete(Template).where(Template.id.in_(template_ids))
     db_session.execute(stmt)
     db_session.commit()
