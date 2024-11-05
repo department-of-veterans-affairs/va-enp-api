@@ -27,7 +27,7 @@ class ProviderBase(ABC):
 
     def __init__(self) -> None:
         """Log instantiations."""
-        logger.info('Initialized class {}.', type(self).__name__)
+        logger.info('Initialized provider class {}.', type(self).__name__)
 
     async def process_response(self) -> None:
         """Process the asynchronous response from a provider.
