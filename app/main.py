@@ -124,7 +124,7 @@ async def test_db_read(
 
     items = []
     async with db_session() as session:
-        results = await session.execute(select(Template))
+        results = await session.scalars(select(Template))
         for r in results:
-            items.append({'id': str(r[0].id), 'data': r[0].data})
+            items.append({'id': str(r.id), 'name': r.name})
     return items
