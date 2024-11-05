@@ -28,7 +28,6 @@ async def init_db() -> None:
 
     # Create the write database engine.
     # echo=True logs the queries that are executed.  Set it to False to disable these logs.
-    logger.debug('Initializing the write db engine with uri: {}', DB_WRITE_URI)
     _engine_write = create_async_engine(DB_WRITE_URI, echo=False)
 
     # Without this import, Base.metatable (used below) will not point to any tables, and the
@@ -41,7 +40,6 @@ async def init_db() -> None:
     if DB_READ_URI:
         # Create the read database engine.
         # echo=True logs the queries that are executed.  Set it to False to disable these logs.
-        logger.debug('Initializing the read db engine with uri: {}', DB_READ_URI)
         _engine_read = create_async_engine(DB_READ_URI, echo=False)
 
         async with _engine_read.begin() as conn:

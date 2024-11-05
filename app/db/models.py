@@ -11,7 +11,7 @@ from app.db.model_mixins import TimestampMixin
 
 
 class Notification(TimestampMixin, Base):
-    """Database table for notifications sent to veterans."""
+    """Database table for notifications."""
 
     __tablename__ = 'notifications'
 
@@ -29,7 +29,7 @@ class Service(Base):
 
 
 class Template(TimestampMixin, Base):
-    """Database table for templates of notifications sent to veterans."""
+    """Database table for templates."""
 
     __tablename__ = 'templates'
 
