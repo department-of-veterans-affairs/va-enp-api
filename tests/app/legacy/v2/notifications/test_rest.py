@@ -68,7 +68,7 @@ def test_post_malformed_request(client: TestClient) -> None:
 
 
 @pytest.mark.asyncio
-@patch('app.providers.provider_aws.get_session', new_callable=AsyncMock)
+@patch('app.providers.provider_aws.get_session')
 @patch('app.legacy.v2.notifications.rest.get_arn_from_icn', new_callable=AsyncMock)
 class TestNotificationsPush:
     """Test POST /v2/notifications/."""
@@ -92,10 +92,7 @@ class TestNotificationsPush:
 
         mock_client = AsyncMock()
         mock_client.publish.return_value = {'MessageId': 'message_id', 'SequenceNumber': '12345'}
-
-        mock_session = AsyncMock()
-        mock_session.create_client.return_value.__aenter__.return_value = mock_client
-        mock_get_session.return_value = mock_session
+        mock_get_session.return_value.create_client.return_value.__aenter__.return_value = mock_client
 
         request = V2NotificationPushRequest(
             mobile_app=MobileAppType.VA_FLAGSHIP_APP,
