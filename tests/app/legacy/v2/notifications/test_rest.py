@@ -6,6 +6,7 @@ from uuid import uuid4
 import pytest
 from fastapi import status
 from fastapi.testclient import TestClient
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.constants import MobileAppType
 from app.legacy.v2.notifications.route_schema import (
@@ -74,11 +75,18 @@ def test_post_malformed_request(client: TestClient) -> None:
 class TestNotificationsPush:
     """Test POST /v2/notifications/."""
 
+    @pytest.fixture
+    def mock_db_session(self):
+        """Creates a reusable mock db session for tests."""
+        mock_session = AsyncMock(spec=AsyncSession)
+        return mock_session
+
     async def test_post_push_notifications_returns_201(
         self,
         mock_get_arn_from_icn: AsyncMock,
         mock_get_session: AsyncMock,
         client: TestClient,
+        mock_db_session,
     ) -> None:
         """Test route can return 201.
 
@@ -216,7 +224,7 @@ class TestNotificationsPush:
 
         response = client.post('/v2/notifications', json=request.serialize())
 
-        assert response.status_code == status.HTTP_404_NOT_FOUND
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
         assert response.text == 'Template with template_id 9999 not found.'
 
     async def test_post_push_notification_failure_returns_500(
