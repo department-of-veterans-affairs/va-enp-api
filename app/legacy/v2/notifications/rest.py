@@ -121,7 +121,7 @@ class Template:
             return None
 
 
-@v2_notification_router.post('/', status_code=status.HTTP_201_CREATED)
+@v2_notification_router.post('/', status_code=status.HTTP_201_CREATED, response_model=None)
 async def create_notification(request: V2NotificationPushRequest) -> Union[V2NotificationPushResponse, Response]:
     """Create a notification.
 
