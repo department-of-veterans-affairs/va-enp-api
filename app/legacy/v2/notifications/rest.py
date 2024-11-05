@@ -2,14 +2,16 @@
 
 from datetime import datetime, timezone
 from time import monotonic
-from typing import Any, Callable, Coroutine, Union
+from typing import Annotated, Any, Callable, Coroutine, Union
 from uuid import uuid4
 
-from fastapi import APIRouter, HTTPException, Request, Response, status
+from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from fastapi.exceptions import RequestValidationError
 from fastapi.routing import APIRoute
 from loguru import logger
+from sqlalchemy.ext.asyncio import AsyncSession, async_scoped_session
 
+from app.db.db_init import get_read_session
 from app.db.models import Template
 from app.legacy.v2.notifications.route_schema import (
     V2NotificationPushRequest,
@@ -80,7 +82,10 @@ v2_notification_router = APIRouter(
 
 
 @v2_notification_router.post('/', status_code=status.HTTP_201_CREATED, response_model=None)
-async def create_notification(request: V2NotificationPushRequest) -> Union[V2NotificationPushResponse, Response]:
+async def create_notification(
+    db_session: Annotated[async_scoped_session[AsyncSession], Depends(get_read_session)],
+    request: V2NotificationPushRequest,
+) -> Union[V2NotificationPushResponse, Response]:
     """Create a notification.
 
     Args:
@@ -94,12 +99,15 @@ async def create_notification(request: V2NotificationPushRequest) -> Union[V2Not
 
     """
     icn = request.recipient_identifier
-    template_id = int(request.template_id)
+    template_id = request.template_id
 
     logger.info('Creating notification with recipent_identifier {} and template_id {}.', icn, template_id)
 
     target_arn = await get_arn_from_icn(icn)
+
     template = Template.get_template_by_id(template_id)
+
+    message = Template.build_message()
 
     if template is None:
         logger.info('Template with ID {} not found', template_id)

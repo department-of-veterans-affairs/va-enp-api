@@ -6,7 +6,6 @@ from uuid import uuid4
 import pytest
 from fastapi import status
 from fastapi.testclient import TestClient
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.constants import MobileAppType
 from app.legacy.v2.notifications.route_schema import (
@@ -75,18 +74,12 @@ def test_post_malformed_request(client: TestClient) -> None:
 class TestNotificationsPush:
     """Test POST /v2/notifications/."""
 
-    @pytest.fixture
-    def mock_db_session(self):
-        """Creates a reusable mock db session for tests."""
-        mock_session = AsyncMock(spec=AsyncSession)
-        return mock_session
-
     async def test_post_push_notifications_returns_201(
         self,
         mock_get_arn_from_icn: AsyncMock,
         mock_get_session: AsyncMock,
+        create_template,
         client: TestClient,
-        mock_db_session,
     ) -> None:
         """Test route can return 201.
 
@@ -96,6 +89,7 @@ class TestNotificationsPush:
             client(TestClient): FastAPI client fixture
 
         """
+        template = create_template('test_template')
         mock_get_arn_from_icn.return_value = 'sample_arn_value'
 
         mock_client = AsyncMock()
@@ -104,12 +98,12 @@ class TestNotificationsPush:
 
         request = V2NotificationPushRequest(
             mobile_app=MobileAppType.VA_FLAGSHIP_APP,
-            template_id='1',
+            template_id='d5b6e67c-8e2a-11ee-8b8e-0242ac120002',
             recipient_identifier='99999',
             personalization={'name': 'John'},
         )
 
-        response = client.post('/v2/notifications', json=request.serialize())
+        response = client.post('/v2/notifications', json=request.model_dump())
 
         assert response.status_code == status.HTTP_201_CREATED
 

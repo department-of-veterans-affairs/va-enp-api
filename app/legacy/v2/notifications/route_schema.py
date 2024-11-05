@@ -52,17 +52,6 @@ class V2NotificationPushRequest(BaseModel):
     recipient_identifier: str
     personalization: Optional[Dict[str, str]] = None
 
-    def serialize(self) -> dict[str, Optional[str] | dict[str, str]]:
-        """Serialize the Pydantic model.
-
-        Returns
-        -------
-            dict[str, None | str | dict[str, str]]: Serialized version of the model
-
-        """
-        serialized = self.model_dump()
-        return serialized
-
 
 class V2NotificationPushResponse(BaseModel):
     """Response for v2 notification endpoint Push Notifications."""
