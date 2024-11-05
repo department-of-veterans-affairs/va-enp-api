@@ -90,6 +90,7 @@ async def create_notification(
 
     Args:
     ----
+        db_session(db_session: Annotated[async_scoped_session[AsyncSession], Depends(get_read_session)]): Database instance.
         request (V2NotificationSingleRequest): The data necessary for the notification.
 
     Returns:
@@ -103,7 +104,7 @@ async def create_notification(
 
     logger.info('Creating notification with recipent_identifier {} and template_id {}.', icn, template_id)
 
-    template = db_session.get(Template, template_id)
+    template = await db_session.get(Template, template_id)
 
     if template is None:
         logger.info('Template with ID {} not found', template_id)
@@ -111,7 +112,7 @@ async def create_notification(
             status_code=status.HTTP_400_BAD_REQUEST, content=f'Template with template_id {template_id} not found.'
         )
 
-    message = Template.build_message(personalization=request.personalization)
+    message = template.build_message(personalization=request.personalization)
     target_arn = await get_arn_from_icn(icn)
     push_model = PushModel(message=message, target_arn=target_arn, topic_arn=None)
 

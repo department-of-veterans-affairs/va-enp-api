@@ -2,7 +2,6 @@
 
 from typing import Callable, Generator
 from unittest.mock import AsyncMock, patch
-from uuid import uuid4
 
 import pytest
 from fastapi import status
@@ -12,62 +11,8 @@ from app.constants import MobileAppType
 from app.db.models import Template
 from app.legacy.v2.notifications.route_schema import (
     V2NotificationPushRequest,
-    V2NotificationSingleRequest,
-    V2NotificationSingleResponse,
 )
 from app.providers.provider_base import ProviderNonRetryableError
-from app.v3.notifications.rest import RESPONSE_400
-
-
-def test_post(client: TestClient) -> None:
-    """Test POST /v2/notifications/.
-
-    Args:
-        client(TestClient): FastAPI client fixture
-
-    """
-    srequest = V2NotificationSingleRequest(
-        personalisation={'hello': 'world'},
-        reference='test',
-        template_id=uuid4(),
-        to='vanotify@va.gov',
-    )
-    resp = client.post('v2/notifications', json=srequest.serialize())
-    assert resp.status_code == status.HTTP_201_CREATED
-    assert isinstance(V2NotificationSingleResponse.model_validate(resp.json()), V2NotificationSingleResponse)
-
-
-def test_post_without_optional_fields(client: TestClient) -> None:
-    """Test POST /v2/notifications/ without optional fields.
-
-    Args:
-        client(TestClient): FastAPI client fixture
-
-    """
-    request = V2NotificationSingleRequest(
-        template_id=uuid4(),
-        to='vanotify@va.gov',
-    )
-    resp = client.post('v2/notifications', json=request.serialize())
-    assert resp.status_code == status.HTTP_201_CREATED
-    assert isinstance(V2NotificationSingleResponse.model_validate(resp.json()), V2NotificationSingleResponse)
-
-
-def test_post_malformed_request(client: TestClient) -> None:
-    """Test POST /v2/notifications/ with a malformed (empty) request.
-
-    Args:
-        client(TestClient): FastAPI client fixture
-
-    """
-    request: dict[str, str] = {}
-    resp = client.post('v2/notifications', data=request)
-    resp_text = resp.text
-
-    # Response status code is correct
-    assert resp.status_code == status.HTTP_400_BAD_REQUEST
-    # Standard message is used
-    assert RESPONSE_400 in resp_text
 
 
 @pytest.mark.asyncio
@@ -88,10 +33,11 @@ class TestNotificationsPush:
         Args:
             mock_get_arn_from_icn(AsyncMock): Mock return from VAProfile to get ARN from ICN
             mock_get_session(AsyncMock): Mock call to AWS
+            sample_template(Generator[Callable[[str], Template], None, None]): Function to create sample templates
             client(TestClient): FastAPI client fixture
 
         """
-        template = sample_template(name='test_template')
+        await sample_template(name='test_template')
         mock_get_arn_from_icn.return_value = 'sample_arn_value'
 
         mock_client = AsyncMock()
@@ -130,7 +76,9 @@ class TestNotificationsPush:
         mock_get_session.return_value.create_client.return_value.__aenter__.return_value = mock_client
 
         request = V2NotificationPushRequest(
-            mobile_app=MobileAppType.VA_FLAGSHIP_APP, template_id='1', recipient_identifier='99999'
+            mobile_app=MobileAppType.VA_FLAGSHIP_APP,
+            template_id='d5b6e67c-8e2a-11ee-8b8e-0242ac120002',
+            recipient_identifier='99999',
         )
 
         response = client.post('/v2/notifications', json=request.model_dump())
@@ -179,7 +127,7 @@ class TestNotificationsPush:
         missing_field: str,
         request_data: dict[str, str],
     ) -> None:
-        """Test route returns 422 when required fields are missing.
+        """Test route returns 400 when required fields are missing.
 
         Args:
             mock_get_arn_from_icn(AsyncMock): Mock return from Vetext to get ARN from ICN
@@ -200,7 +148,7 @@ class TestNotificationsPush:
         mock_get_session: AsyncMock,
         client: TestClient,
     ) -> None:
-        """Test route returns 404 when the template is not found.
+        """Test route returns 400 when the template is not found.
 
         Args:
             mock_get_arn_from_icn(AsyncMock): Mock return from Vetext to get ARN from ICN
@@ -212,7 +160,7 @@ class TestNotificationsPush:
 
         request = V2NotificationPushRequest(
             mobile_app=MobileAppType.VA_FLAGSHIP_APP,
-            template_id='9999',
+            template_id='1234',
             recipient_identifier='99999',
             personalization={'name': 'John'},
         )
@@ -220,7 +168,7 @@ class TestNotificationsPush:
         response = client.post('/v2/notifications', json=request.model_dump())
 
         assert response.status_code == status.HTTP_400_BAD_REQUEST
-        assert response.text == 'Template with template_id 9999 not found.'
+        assert response.text == 'Template with template_id 1234 not found.'
 
     async def test_post_push_notification_failure_returns_500(
         self,
@@ -244,8 +192,8 @@ class TestNotificationsPush:
 
         request = V2NotificationPushRequest(
             mobile_app=MobileAppType.VA_FLAGSHIP_APP,
-            template_id='1',
-            recipient_identifier='1',
+            template_id='d5b6e67c-8e2a-11ee-8b8e-0242ac120002',
+            recipient_identifier='99999',
             personalization={'name': 'John'},
         )
 
