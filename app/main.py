@@ -3,7 +3,6 @@
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from typing import Annotated, Never
-from uuid import uuid4
 
 from fastapi import Depends, FastAPI, status
 from loguru import logger
@@ -11,7 +10,6 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_scoped_session
 
 from app.db.db_init import close_db, get_read_session, get_write_session, init_db
-from app.db.models import Test
 from app.legacy.v2.notifications.rest import v2_notification_router
 from app.logging.logging_config import CustomizeLogger
 from app.providers.provider_aws import ProviderAWS
@@ -92,12 +90,19 @@ async def test_db_create(
         dict[str, str]: The inserted item
 
     """
-    item = {'id': str(uuid4()), 'data': data or 'test data'}
-    test_item = Test(**item)
+    from app.db.models import Template
+
+    template = Template(name='hello')
+
     async with db_session() as session:
-        session.add(test_item)
+        session.add(template)
         await session.commit()
-    return item
+    return {
+        'id': str(template.id),
+        'name': template.name,
+        'created_at': str(template.created_at),
+        'updated_at': str(template.updated_at),
+    }
 
 
 @app.get('/db/test', status_code=status.HTTP_200_OK)
@@ -115,9 +120,11 @@ async def test_db_read(
         list[dict[str,str]]: The items in the tests table
 
     """
+    from app.db.models import Template
+
     items = []
     async with db_session() as session:
-        results = await session.execute(select(Test))
+        results = await session.execute(select(Template))
         for r in results:
             items.append({'id': str(r[0].id), 'data': r[0].data})
     return items
