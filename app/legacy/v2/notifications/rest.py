@@ -145,7 +145,7 @@ async def create_notification(request: V2NotificationPushRequest) -> Union[V2Not
     template = Template.get_template_by_id(template_id)
 
     if template is None:
-        logger.warning('Template with ID {} not found', template_id)
+        logger.info('Template with ID {} not found', template_id)
         return Response(
             status_code=status.HTTP_404_NOT_FOUND, content=f'Template with template_id {template_id} not found.'
         )
@@ -158,7 +158,7 @@ async def create_notification(request: V2NotificationPushRequest) -> Union[V2Not
         provider = ProviderAWS()
         reference_identifier = await provider.send_notification(model=push_model)
     except (ProviderRetryableError, ProviderNonRetryableError) as error:
-        logger.error('Failed to send notification: {}', str(error))
+        logger.critical('Failed to send notification for recipient_identifier {}: {}', icn, str(error))
         return Response(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, content='Internal error. Failed to create notification.'
         )
@@ -171,5 +171,5 @@ async def create_notification(request: V2NotificationPushRequest) -> Union[V2Not
         reference_identifier=reference_identifier,
     )
 
-    logger.info('Sucessfully notification with reccipent_identifier {} and template_id {}.', icn, template_id)
+    logger.info('Successfully notification with reccipent_identifier {} and template_id {}.', icn, template_id)
     return response
