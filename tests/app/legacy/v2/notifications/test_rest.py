@@ -105,6 +105,63 @@ class TestNotificationsPush:
 
         assert response.status_code == status.HTTP_201_CREATED
 
+    @pytest.mark.parametrize(
+        ('missing_field', 'request_data'),
+        [
+            (
+                'template_id',
+                {
+                    'mobile_app': MobileAppType.VA_FLAGSHIP_APP,
+                    'recipient_identifier': '99999',
+                    'personalization': {'name': 'John'},
+                },
+            ),
+            (
+                'recipient_identifier',
+                {
+                    'mobile_app': MobileAppType.VA_FLAGSHIP_APP,
+                    'template_id': '1',
+                    'personalization': {'name': 'John'},
+                },
+            ),
+            (
+                'mobile_app',
+                {
+                    'template_id': '1',
+                    'recipient_identifier': '99999',
+                    'personalization': {'name': 'John'},
+                },
+            ),
+        ],
+        ids=(
+            'Missing template_id',
+            'Missing recipient_identifier',
+            'Missing mobile_app',
+        ),
+    )
+    async def test_post_push_notifications_missing_required_field(
+        self,
+        mock_get_arn_from_icn: AsyncMock,
+        mock_get_session: AsyncMock,
+        client: TestClient,
+        missing_field: str,
+        request_data: dict[str, str],
+    ) -> None:
+        """Test route returns 422 when required fields are missing.
+
+        Args:
+            mock_get_arn_from_icn(AsyncMock): Mock return from Vetext to get ARN from ICN
+            mock_get_session(AsyncMock): Mock call to AWS
+            client(TestClient): FastAPI client fixture
+            missing_field(str): The field that is missing from the request data
+            request_data(dict): The incomplete request data
+
+        """
+        response = client.post('/v2/notifications', json=request_data)
+
+        assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+        assert missing_field in response.text
+
     async def test_post_template_not_found(
         self,
         mock_get_arn_from_icn: AsyncMock,
