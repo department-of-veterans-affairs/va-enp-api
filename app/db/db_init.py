@@ -33,6 +33,7 @@ async def init_db() -> None:
 
     # Without this import, Base.metatable (used below) will not point to any tables, and the
     # call to "run_sync" will not create anything.
+    import app.db.models  # noqa
 
     async with _engine_write.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
