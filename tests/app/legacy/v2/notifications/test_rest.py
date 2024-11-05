@@ -13,6 +13,7 @@ from app.legacy.v2.notifications.route_schema import (
     V2NotificationSingleRequest,
     V2NotificationSingleResponse,
 )
+from app.providers.provider_base import ProviderNonRetryableError
 from app.v3.notifications.rest import RESPONSE_400
 
 
@@ -87,7 +88,6 @@ class TestNotificationsPush:
             client(TestClient): FastAPI client fixture
 
         """
-        # Mock the ARN return value
         mock_get_arn_from_icn.return_value = 'sample_arn_value'
 
         mock_client = AsyncMock()
@@ -131,4 +131,36 @@ class TestNotificationsPush:
         response = client.post('/v2/notifications', json=request.serialize())
 
         assert response.status_code == status.HTTP_404_NOT_FOUND
-        assert response.text == 'Template not found'
+        assert response.text == 'Template with template_id 9999 not found.'
+
+    async def test_post_push_notification_failure_returns_500(
+        self,
+        mock_get_arn_from_icn: AsyncMock,
+        mock_get_session: AsyncMock,
+        client: TestClient,
+    ) -> None:
+        """Test route returns 500 when sending notification fails.
+
+        Args:
+            mock_get_arn_from_icn(AsyncMock): Mock return from Vetext to get ARN from ICN
+            mock_get_session(AsyncMock): Mock call to AWS
+            client(TestClient): FastAPI client fixture
+
+        """
+        mock_get_arn_from_icn.return_value = 'sample_arn_value'
+
+        mock_client = AsyncMock()
+        mock_client.publish.side_effect = ProviderNonRetryableError()
+        mock_get_session.return_value.create_client.return_value.__aenter__.return_value = mock_client
+
+        request = V2NotificationPushRequest(
+            mobile_app=MobileAppType.VA_FLAGSHIP_APP,
+            template_id='1',
+            recipient_identifier='1',
+            personalization={'name': 'John'},
+        )
+
+        response = client.post('/v2/notifications', json=request.serialize())
+
+        assert response.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
+        assert response.text == 'Internal error. Failed to create notification.'

@@ -16,6 +16,7 @@ from app.legacy.v2.notifications.route_schema import (
 )
 from app.legacy.v2.notifications.utils import get_arn_from_icn
 from app.providers.provider_aws import ProviderAWS
+from app.providers.provider_base import ProviderNonRetryableError, ProviderRetryableError
 from app.providers.provider_schemas import PushModel
 from app.v3.notifications.rest import RESPONSE_400, RESPONSE_404, RESPONSE_500
 
@@ -145,14 +146,22 @@ async def create_notification(request: V2NotificationPushRequest) -> Union[V2Not
 
     if template is None:
         logger.warning('Template with ID {} not found', template_id)
-        return Response(status_code=status.HTTP_404_NOT_FOUND, content='Template not found')
+        return Response(
+            status_code=status.HTTP_404_NOT_FOUND, content=f'Template with template_id {template_id} not found.'
+        )
 
     personalization = request.personalization or {}
     message = template.build_message(personalization)
     push_model = PushModel(message=message, target_arn=target_arn, topic_arn=None)
 
-    provider = ProviderAWS()
-    reference_identifier = await provider.send_notification(model=push_model)
+    try:
+        provider = ProviderAWS()
+        reference_identifier = await provider.send_notification(model=push_model)
+    except (ProviderRetryableError, ProviderNonRetryableError) as error:
+        logger.error('Failed to send notification: {}', str(error))
+        return Response(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, content='Internal error. Failed to create notification.'
+        )
 
     response = V2NotificationPushResponse(
         id=uuid4(),
