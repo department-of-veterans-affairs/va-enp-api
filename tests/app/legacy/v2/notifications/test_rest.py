@@ -104,3 +104,31 @@ class TestNotificationsPush:
         response = client.post('/v2/notifications', json=request.serialize())
 
         assert response.status_code == status.HTTP_201_CREATED
+
+    async def test_post_template_not_found(
+        self,
+        mock_get_arn_from_icn: AsyncMock,
+        mock_get_session: AsyncMock,
+        client: TestClient,
+    ) -> None:
+        """Test route returns 404 when the template is not found.
+
+        Args:
+            mock_get_arn_from_icn(AsyncMock): Mock return from Vetext to get ARN from ICN
+            mock_get_session(AsyncMock): Mock call to AWS
+            client(TestClient): FastAPI client fixture
+
+        """
+        mock_get_arn_from_icn.return_value = 'sample_arn_value'
+
+        request = V2NotificationPushRequest(
+            mobile_app=MobileAppType.VA_FLAGSHIP_APP,
+            template_id='9999',
+            recipient_identifier='99999',
+            personalization={'name': 'John'},
+        )
+
+        response = client.post('/v2/notifications', json=request.serialize())
+
+        assert response.status_code == status.HTTP_404_NOT_FOUND
+        assert response.text == 'Template not found'

@@ -2,7 +2,7 @@
 
 from datetime import datetime, timezone
 from time import monotonic
-from typing import Any, Callable, Coroutine, Optional
+from typing import Any, Callable, Coroutine, Optional, Union
 from uuid import uuid4
 
 from fastapi import APIRouter, HTTPException, Request, Response, status
@@ -122,7 +122,7 @@ class Template:
 
 
 @v2_notification_router.post('/', status_code=status.HTTP_201_CREATED)
-async def create_notification(request: V2NotificationPushRequest) -> V2NotificationPushResponse:
+async def create_notification(request: V2NotificationPushRequest) -> Union[V2NotificationPushResponse, Response]:
     """Create a notification.
 
     Args:
@@ -133,32 +133,27 @@ async def create_notification(request: V2NotificationPushRequest) -> V2Notificat
     -------
         V2NotificationPushResponse: The notification response data.
 
-    Raises:
-    ------
-        HTTPException: If the template with the provided ID is not found.
 
     """
-    # TODO - 1 Build ARN from ICN
     icn = request.recipient_identifier
-    target_arn = await get_arn_from_icn(icn)
-
-    # TODO - 2 Create Push Model with message, target_arn, and topic_arn
-    # Query the database and get template with ID
     template_id = int(request.template_id)
+
+    logger.info('Creating notification with recipent_identifier {} and template_id {}.', icn, template_id)
+
+    target_arn = await get_arn_from_icn(icn)
     template = Template.get_template_by_id(template_id)
 
     if template is None:
-        raise HTTPException(status_code=404, detail='Template not found')
+        logger.warning('Template with ID {} not found', template_id)
+        return Response(status_code=status.HTTP_404_NOT_FOUND, content='Template not found')
 
     personalization = request.personalization or {}
     message = template.build_message(personalization)
     push_model = PushModel(message=message, target_arn=target_arn, topic_arn=None)
 
-    # TODO - 3 Pass Push Model to ProviderAWS.send_notification(Push Model)
     provider = ProviderAWS()
     reference_identifier = await provider.send_notification(model=push_model)
 
-    # TODO - 4 Return 201
     response = V2NotificationPushResponse(
         id=uuid4(),
         created_at=datetime.now(timezone.utc),
@@ -166,4 +161,6 @@ async def create_notification(request: V2NotificationPushRequest) -> V2Notificat
         sent_at=None,
         reference_identifier=reference_identifier,
     )
+
+    logger.info('Sucessfully notification with reccipent_identifier {} and template_id {}.', icn, template_id)
     return response
