@@ -2,7 +2,7 @@
 
 from datetime import datetime, timezone
 from time import monotonic
-from typing import Any, Callable, Coroutine, Optional, Union
+from typing import Any, Callable, Coroutine, Union
 from uuid import uuid4
 
 from fastapi import APIRouter, HTTPException, Request, Response, status
@@ -10,6 +10,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.routing import APIRoute
 from loguru import logger
 
+from app.db.models import Template
 from app.legacy.v2.notifications.route_schema import (
     V2NotificationPushRequest,
     V2NotificationPushResponse,
@@ -76,50 +77,6 @@ v2_notification_router = APIRouter(
     responses={404: {'description': RESPONSE_404}},
     route_class=NotificationV2Route,
 )
-
-
-class Template:
-    """A mock representation of a Template model to simulate database retrieval."""
-
-    def __init__(self, template_id: int, name: str) -> None:
-        """Initialize a Template object.
-
-        Args:
-            template_id (int): The unique identifier of the template.
-            name (str): The name of the template.
-
-        """
-        self.id = template_id
-        self.name = name
-
-    @staticmethod
-    def build_message(personalization: dict[str, str]) -> str:
-        """Build a personalized message.
-
-        Args:
-            personalization (dict[str, str]): A dictionary containing personalization data.
-
-        Returns:
-            str: A personalized message.
-
-        """
-        return f'Personalized message with {personalization}'
-
-    @classmethod
-    def get_template_by_id(cls, template_id: int) -> Optional['Template']:
-        """Retrieve a template by its unique identifier.
-
-        Args:
-            template_id (int): The unique identifier of the template.
-
-        Returns:
-            Optional[Template]: A Template object if found, else None.
-
-        """
-        if template_id == 1:
-            return cls(template_id=template_id, name='Sample Template')
-        else:
-            return None
 
 
 @v2_notification_router.post('/', status_code=status.HTTP_201_CREATED, response_model=None)
