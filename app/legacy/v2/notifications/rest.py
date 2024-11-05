@@ -103,11 +103,7 @@ async def create_notification(
 
     logger.info('Creating notification with recipent_identifier {} and template_id {}.', icn, template_id)
 
-    target_arn = await get_arn_from_icn(icn)
-
-    template = Template.get_template_by_id(template_id)
-
-    message = Template.build_message()
+    template = session.get(Template, template_id)
 
     if template is None:
         logger.info('Template with ID {} not found', template_id)
@@ -115,8 +111,8 @@ async def create_notification(
             status_code=status.HTTP_400_BAD_REQUEST, content=f'Template with template_id {template_id} not found.'
         )
 
-    personalization = request.personalization or {}
-    message = template.build_message(personalization)
+    message = Template.build_message()
+    target_arn = await get_arn_from_icn(icn)
     push_model = PushModel(message=message, target_arn=target_arn, topic_arn=None)
 
     try:
