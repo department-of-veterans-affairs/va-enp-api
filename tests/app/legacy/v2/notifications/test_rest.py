@@ -105,6 +105,35 @@ class TestNotificationsPush:
 
         assert response.status_code == status.HTTP_201_CREATED
 
+    async def test_post_push_notifications_without_personalization(
+        self,
+        mock_get_arn_from_icn: AsyncMock,
+        mock_get_session: AsyncMock,
+        client: TestClient,
+    ) -> None:
+        """Test route can return 201 without personalization field.
+
+        Args:
+            mock_get_arn_from_icn(AsyncMock): Mock return from Vetext to get ARN from ICN
+            mock_get_session(AsyncMock): Mock call to AWS
+            client(TestClient): FastAPI client fixture
+
+        """
+        mock_get_arn_from_icn.return_value = 'sample_arn_value'
+
+        mock_client = AsyncMock()
+        mock_client.publish.return_value = {'MessageId': 'message_id', 'SequenceNumber': '12345'}
+        mock_get_session.return_value.create_client.return_value.__aenter__.return_value = mock_client
+
+        # Request without personalization
+        request = V2NotificationPushRequest(
+            mobile_app=MobileAppType.VA_FLAGSHIP_APP, template_id='1', recipient_identifier='99999'
+        )
+
+        response = client.post('/v2/notifications', json=request.serialize())
+
+        assert response.status_code == status.HTTP_201_CREATED
+
     @pytest.mark.parametrize(
         ('missing_field', 'request_data'),
         [
@@ -159,7 +188,7 @@ class TestNotificationsPush:
         """
         response = client.post('/v2/notifications', json=request_data)
 
-        assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
         assert missing_field in response.text
 
     async def test_post_template_not_found(
