@@ -86,7 +86,7 @@ class TestNotificationsPush:
         """Test route can return 201.
 
         Args:
-            mock_get_arn_from_icn(AsyncMock): Mock return from Vetext to get ARN from ICN
+            mock_get_arn_from_icn(AsyncMock): Mock return from VAProfile to get ARN from ICN
             mock_get_session(AsyncMock): Mock call to AWS
             client(TestClient): FastAPI client fixture
 
@@ -129,7 +129,6 @@ class TestNotificationsPush:
         mock_client.publish.return_value = {'MessageId': 'message_id', 'SequenceNumber': '12345'}
         mock_get_session.return_value.create_client.return_value.__aenter__.return_value = mock_client
 
-        # Request without personalization
         request = V2NotificationPushRequest(
             mobile_app=MobileAppType.VA_FLAGSHIP_APP, template_id='1', recipient_identifier='99999'
         )

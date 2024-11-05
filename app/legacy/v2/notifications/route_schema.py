@@ -1,6 +1,6 @@
 """Request and Response bodies for v2/notifications."""
 
-from typing import Dict, Optional
+from typing import Dict
 
 from pydantic import UUID4, AwareDatetime, BaseModel
 
@@ -50,7 +50,7 @@ class V2NotificationPushRequest(BaseModel):
     mobile_app: MobileAppType
     template_id: str
     recipient_identifier: str
-    personalization: Optional[Dict[str, str]] = None
+    personalization: Dict[str, str] | None = None
 
 
 class V2NotificationPushResponse(BaseModel):

@@ -33,14 +33,14 @@ def db_session() -> AsyncSession:
 def sample_template(db_session) -> Generator[Callable[[str], Template], None, None]:
     template_ids = ['d5b6e67c-8e2a-11ee-8b8e-0242ac120002']
 
-    def _create_template(name: str) -> Template:
+    def _sample_template(name: str) -> Template:
         template = Template(name=name)
         db_session.add(template)
         db_session.commit()
         template_ids.append(template.id)
         return template
 
-    yield _create_template
+    yield _sample_template
 
     stmt = delete(Template).where(Template.id.in_(template_ids))
     db_session.execute(stmt)

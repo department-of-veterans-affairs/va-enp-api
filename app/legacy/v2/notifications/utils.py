@@ -2,7 +2,7 @@
 
 
 async def get_arn_from_icn(icn: str) -> str:
-    """Future method to get ARN from ICN from VEText.
+    """Future method to get ARN from ICN from VAProfile.
 
     Args:
     ----
