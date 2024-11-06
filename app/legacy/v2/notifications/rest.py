@@ -1,9 +1,7 @@
 """All endpoints for the v2/notifications route."""
 
-from datetime import datetime, timezone
 from time import monotonic
 from typing import Annotated, Any, Callable, Coroutine, Union
-from uuid import uuid4
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from fastapi.exceptions import RequestValidationError
@@ -126,10 +124,6 @@ async def create_notification(
         )
 
     response = V2NotificationPushResponse(
-        id=uuid4(),
-        created_at=datetime.now(timezone.utc),
-        updated_at=datetime.now(timezone.utc),
-        sent_at=None,
         reference_identifier=reference_identifier,
     )
 

@@ -56,8 +56,4 @@ class V2NotificationPushRequest(BaseModel):
 class V2NotificationPushResponse(BaseModel):
     """Response for v2 notification endpoint Push Notifications."""
 
-    id: UUID4
-    created_at: AwareDatetime
-    updated_at: AwareDatetime
-    sent_at: None | AwareDatetime = None
     reference_identifier: str
