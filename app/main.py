@@ -15,10 +15,6 @@ from app.logging.logging_config import CustomizeLogger
 from app.providers.provider_aws import ProviderAWS
 from app.v3.notifications.rest import notification_router
 
-# Route handlers should access this dictionary to send notifications using
-# various third-party services, such as AWS, Twilio, etc.
-providers = {}
-
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[Never]:
@@ -36,9 +32,13 @@ async def lifespan(app: FastAPI) -> AsyncIterator[Never]:
 
     """
     await init_db()
-    providers['aws'] = ProviderAWS()
+    # Route handlers should access this dictionary to send notifications using
+    # various third-party services, such as AWS, Twilio, etc.
+    app.state.providers = {'aws': ProviderAWS()}
+
     yield  # type: ignore
-    providers.clear()
+
+    app.state.providers.clear()
     await close_db()
 
 

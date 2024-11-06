@@ -1,7 +1,5 @@
 """Request and Response bodies for v2/notifications."""
 
-from typing import Dict
-
 from pydantic import UUID4, AwareDatetime, BaseModel
 
 from app.constants import MobileAppType
@@ -45,15 +43,15 @@ class V2NotificationSingleResponse(BaseModel):
 
 
 class V2NotificationPushRequest(BaseModel):
-    """Send a push notification to a mobile app."""
+    """The request model for the v2 push notification endpoint."""
 
     mobile_app: MobileAppType
     template_id: str
     recipient_identifier: str
-    personalization: Dict[str, str] | None = None
+    personalization: dict[str, str] | None = None
 
 
 class V2NotificationPushResponse(BaseModel):
-    """Response for v2 notification endpoint Push Notifications."""
+    """Response model for v2 push notification endpoint."""
 
-    reference_identifier: str
+    result: str = 'success'

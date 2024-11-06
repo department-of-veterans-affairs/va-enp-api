@@ -1,24 +1,20 @@
 """All endpoints for the v2/notifications route."""
 
 from time import monotonic
-from typing import Annotated, Any, Callable, Coroutine, Union
+from typing import Any, Callable, Coroutine
 
-from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
+from fastapi import APIRouter, BackgroundTasks, HTTPException, Request, Response, status
 from fastapi.exceptions import RequestValidationError
 from fastapi.routing import APIRoute
 from loguru import logger
-from sqlalchemy.ext.asyncio import AsyncSession, async_scoped_session
 
-from app.db.db_init import get_read_session
-from app.db.models import Template
+from app.dao.notifications_dao import create_notification
+from app.db.models import Notification, Template
 from app.legacy.v2.notifications.route_schema import (
     V2NotificationPushRequest,
     V2NotificationPushResponse,
 )
-from app.legacy.v2.notifications.utils import get_arn_from_icn
-from app.providers.provider_aws import ProviderAWS
-from app.providers.provider_base import ProviderNonRetryableError, ProviderRetryableError
-from app.providers.provider_schemas import PushModel
+from app.legacy.v2.notifications.utils import send_push_notification_helper, validate_template
 from app.v3.notifications.rest import RESPONSE_400, RESPONSE_404, RESPONSE_500
 
 
@@ -79,53 +75,48 @@ v2_notification_router = APIRouter(
 )
 
 
-@v2_notification_router.post('/', status_code=status.HTTP_201_CREATED, response_model=None)
-async def create_notification(
-    db_session: Annotated[async_scoped_session[AsyncSession], Depends(get_read_session)],
-    request: V2NotificationPushRequest,
-) -> Union[V2NotificationPushResponse, Response]:
-    """Create a notification.
+@v2_notification_router.post('/push', status_code=status.HTTP_201_CREATED, response_model=None)
+async def create_push_notification(
+    request_data: V2NotificationPushRequest,
+    request: Request,
+    background_tasks: BackgroundTasks,
+) -> V2NotificationPushResponse:
+    """Create a push notification.
 
     Args:
     ----
-        db_session(db_session: Annotated[async_scoped_session[AsyncSession], Depends(get_read_session)]): Database instance.
-        request (V2NotificationSingleRequest): The data necessary for the notification.
+        request_data (V2NotificationSingleRequest): The data necessary for the notification.
+        request (Request): The FastAPI request object.
+        background_tasks (BackgroundTasks): The FastAPI background tasks object.
+
+    Raises:
+    ------
+        HTTPException: If the template with the given template_id is not found.
 
     Returns:
     -------
         V2NotificationPushResponse: The notification response data.
 
-
     """
-    icn = request.recipient_identifier
-    template_id = request.template_id
+    icn = request_data.recipient_identifier
+    template_id = request_data.template_id
 
     logger.info('Creating notification with recipent_identifier {} and template_id {}.', icn, template_id)
 
-    template = await db_session.get(Template, template_id)
+    template: Template | None = await validate_template(template_id)
 
     if template is None:
-        logger.info('Template with ID {} not found', template_id)
-        return Response(
-            status_code=status.HTTP_400_BAD_REQUEST, content=f'Template with template_id {template_id} not found.'
+        logger.warning('Template with ID {} not found', template_id)
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f'Template with template_id {template_id} not found.',
         )
 
-    message = template.build_message(personalization=request.personalization)
-    target_arn = await get_arn_from_icn(icn)
-    push_model = PushModel(message=message, target_arn=target_arn, topic_arn=None)
+    await create_notification(Notification(personalization=request_data.personalization))
 
-    try:
-        provider = ProviderAWS()
-        reference_identifier = await provider.send_notification(model=push_model)
-    except (ProviderRetryableError, ProviderNonRetryableError) as error:
-        logger.critical('Failed to send notification for recipient_identifier {}: {}', icn, str(error))
-        return Response(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, content='Internal error. Failed to create notification.'
-        )
-
-    response = V2NotificationPushResponse(
-        reference_identifier=reference_identifier,
+    background_tasks.add_task(
+        send_push_notification_helper, request_data.personalization, icn, template, request.app.state.providers['aws']
     )
 
-    logger.info('Successfully notification with reccipent_identifier {} and template_id {}.', icn, template_id)
-    return response
+    logger.info('Successful notification with reccipent_identifier {} and template_id {}.', icn, template_id)
+    return V2NotificationPushResponse()
