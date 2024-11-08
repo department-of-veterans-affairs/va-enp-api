@@ -9,7 +9,7 @@ from app.providers.provider_schemas import PushModel
 
 
 async def send_push_notification_helper(
-    personalization: dict[str, str] | None,
+    personalization: dict[str, str | int | float] | None,
     recipient_identifier: str,
     template: Template,
     provider: ProviderAWS,

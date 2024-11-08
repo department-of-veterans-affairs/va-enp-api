@@ -76,7 +76,7 @@ v2_notification_router = APIRouter(
 )
 
 
-@v2_notification_router.post('/push', status_code=status.HTTP_201_CREATED, response_model=None)
+@v2_notification_router.post('/push', status_code=status.HTTP_201_CREATED)
 async def create_push_notification(
     request_data: V2NotificationPushRequest,
     request: Request,
@@ -101,24 +101,25 @@ async def create_push_notification(
     """
     icn = request_data.recipient_identifier.id_value
     template_id = str(request_data.template_id)
-    personalization = request_data.personalization
+    personalisation = request_data.personalisation
 
     logger.info('Creating notification with recipent_identifier {} and template_id {}.', icn, template_id)
 
     try:
         template: Template = await validate_template(template_id)
     except Exception:
+        # we could use a more specific exception here
         logger.warning('Template not found with ID {}', template_id)
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f'Undeliverable - Validation failed. Template not found with template_id {template_id}',
         )
 
-    await dao_create_notification(Notification(personalization=json.dumps(personalization)))
+    await dao_create_notification(Notification(personalization=json.dumps(personalisation)))
 
     background_tasks.add_task(
-        send_push_notification_helper, personalization, icn, template, request.app.state.providers['aws']
+        send_push_notification_helper, personalisation, icn, template, request.app.state.providers['aws']
     )
 
-    logger.info('Successful notification with reccipent_identifier {} and template_id {}.', icn, template_id)
+    logger.info('Successful notification with recipient_identifer {} and template_id {}.', icn, template_id)
     return V2NotificationPushResponse()

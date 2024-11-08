@@ -6,11 +6,11 @@ from enum import StrEnum
 class IdentifierType(StrEnum):
     """Types of Identifiers that can be used."""
 
-    VA_PROFILE_ID = 'VAPROFILEID'
-    PID = 'PID'
-    ICN = 'ICN'
     BIRLSID = 'BIRLSID'
     EDIPI = 'EDIPI'
+    ICN = 'ICN'
+    PID = 'PID'
+    VA_PROFILE_ID = 'VAPROFILEID'
 
     @staticmethod
     def values() -> list[str]:
@@ -33,5 +33,5 @@ class IdentifierTypeICN(StrEnum):
 class MobileAppType(StrEnum):
     """Mobile App Types available."""
 
-    VETEXT = 'VETEXT'
     VA_FLAGSHIP_APP = 'VA_FLAGSHIP_APP'
+    VETEXT = 'VETEXT'

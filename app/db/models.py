@@ -36,7 +36,7 @@ class Template(TimestampMixin, Base):
     id: Mapped[UUID[str]] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid4)
     name: Mapped[str] = mapped_column(String(255))
 
-    def build_message(self, personalization: dict[str, str] | None) -> str:
+    def build_message(self, personalization: dict[str, str | int | float] | None) -> str:
         """Return the template body populated with the personalized values.
 
         Args:

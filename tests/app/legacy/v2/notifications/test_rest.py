@@ -233,13 +233,13 @@ class TestPush:
                 id_type=IdentifierTypeICN.ICN,
                 id_value='12345',
             ),
-            personalization={'name': 'John'},
+            personalisation={'name': 'John'},
         )
 
         response = client.post('/v2/notifications/push', json=request.model_dump())
 
         assert response.status_code == status.HTTP_201_CREATED
-        assert response.json() == V2NotificationPushResponse().model_dump()
+        assert response.json() == {'result': 'success'} == V2NotificationPushResponse().model_dump()
 
     async def test_post_push_returns_400_with_invalid_request_data(
         self,
@@ -296,7 +296,7 @@ class TestPush:
                 id_type=IdentifierTypeICN.ICN,
                 id_value='12345',
             ),
-            personalization={'name': 'John'},
+            personalisation={'name': 'John'},
         )
 
         response = client.post('/v2/notifications/push', json=request.model_dump())
@@ -329,7 +329,7 @@ class TestPush:
                 id_type=IdentifierTypeICN.ICN,
                 id_value='12345',
             ),
-            personalization={'name': 'John'},
+            personalisation={'name': 'John'},
         )
 
         response = client.post('/v2/notifications/push', json=request.model_dump())

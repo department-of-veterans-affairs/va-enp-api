@@ -4,6 +4,7 @@ from app.db.db_init import get_write_session_with_context
 from app.db.models import Notification
 
 
+# there are not tests for this yet because we have not included the database in our tests
 async def dao_create_notification(notification: Notification) -> Notification:
     """Create a notification in the database.
 

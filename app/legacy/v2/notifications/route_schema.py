@@ -52,9 +52,9 @@ class V2NotificationPushRequest(BaseModel):
         id_value: str
 
     mobile_app: MobileAppType
-    template_id: str  # this is a string in the API
+    template_id: str  # this is a string in the flask API, though it should be UUID4 in v3
     recipient_identifier: ICNRecipientIdentifier
-    personalization: dict[str, str] | None = None
+    personalisation: dict[str, str | int | float] | None = None
 
 
 class V2NotificationPushResponse(BaseModel):
