@@ -9,7 +9,7 @@ from loguru import logger
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_scoped_session
 
-from app.db.db_init import close_db, get_read_session, get_write_session, init_db
+from app.db.db_init import close_db, get_read_session_with_depends, get_write_session_with_depends, init_db
 from app.legacy.v2.notifications.rest import v2_notification_router
 from app.logging.logging_config import CustomizeLogger
 from app.providers.provider_aws import ProviderAWS
@@ -76,7 +76,7 @@ def simple_route() -> dict[str, str]:
 async def test_db_create(
     *,
     data: str | None = None,
-    db_session: Annotated[async_scoped_session[AsyncSession], Depends(get_write_session)],
+    db_session: Annotated[async_scoped_session[AsyncSession], Depends(get_write_session_with_depends)],
 ) -> dict[str, str]:
     """Test inserting into the database. This is a temporary test endpoint.
 
@@ -107,7 +107,7 @@ async def test_db_create(
 
 @app.get('/db/test', status_code=status.HTTP_200_OK)
 async def test_db_read(
-    db_session: Annotated[async_scoped_session[AsyncSession], Depends(get_read_session)],
+    db_session: Annotated[async_scoped_session[AsyncSession], Depends(get_read_session_with_depends)],
 ) -> list[dict[str, str]]:
     """Test getting items from the database. This is a temporary test endpoint.
 

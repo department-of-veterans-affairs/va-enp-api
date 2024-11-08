@@ -4,19 +4,19 @@ from app.db.db_init import get_write_session_with_context
 from app.db.models import Notification
 
 
-async def create_notification(notification: Notification) -> Notification:
+async def dao_create_notification(notification: Notification) -> Notification:
     """Create a notification in the database.
 
     Args:
         notification (Notification): The notification to create
-        db_session (async_scoped_session[AsyncSession]): The database session
 
     Returns:
-        Notification: The created notification
+        Notification: The notification that was added to the database
 
     """
     async with get_write_session_with_context() as session:
         session.add(notification)
         await session.commit()
         await session.refresh(notification)
+
     return notification

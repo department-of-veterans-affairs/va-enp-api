@@ -2,7 +2,7 @@
 
 from pydantic import UUID4, AwareDatetime, BaseModel
 
-from app.constants import MobileAppType
+from app.constants import IdentifierTypeICN, MobileAppType
 
 
 class V2NotificationSingleRequest(BaseModel):
@@ -43,11 +43,17 @@ class V2NotificationSingleResponse(BaseModel):
 
 
 class V2NotificationPushRequest(BaseModel):
-    """The request model for the v2 push notification endpoint."""
+    """Request model for the v2 push notification endpoint."""
+
+    class ICNRecipientIdentifier(BaseModel):  # are we using pydantic models or dataclasses for stuff like this?
+        """Model for ICN recipient identifier."""
+
+        id_type: IdentifierTypeICN  # made specific enum for ICN so api spec is clear
+        id_value: str
 
     mobile_app: MobileAppType
-    template_id: str
-    recipient_identifier: str
+    template_id: str  # this is a string in the API
+    recipient_identifier: ICNRecipientIdentifier
     personalization: dict[str, str] | None = None
 
 

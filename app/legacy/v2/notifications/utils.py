@@ -1,4 +1,4 @@
-"""Utilies to aid the REST Notification routes."""
+"""Utilities to aid the REST Notification routes."""
 
 from loguru import logger
 
@@ -30,11 +30,14 @@ async def send_push_notification_helper(
 
     try:
         await provider.send_notification(model=push_model)
-    except (ProviderRetryableError, ProviderNonRetryableError) as error:
+    except (
+        ProviderRetryableError,
+        ProviderNonRetryableError,
+    ) as error:  # when these are raised we want to set the message | include status reason and log message
         logger.critical('Failed to send notification for recipient_identifier {}: {}', recipient_identifier, str(error))
 
 
-async def validate_template(template_id: str) -> Template | None:
+async def validate_template(template_id: str) -> Template:
     """Future method to validate the template.
 
     Args:
