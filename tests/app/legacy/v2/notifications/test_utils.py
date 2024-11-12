@@ -38,7 +38,7 @@ class TestSendPushNotificationHelper:
         mock_template = AsyncMock(spec=Template)
         mock_template.build_message.return_value = 'test_message'
         mock_provider = AsyncMock(spec=ProviderAWS)
-        personalization = {'name': 'John'}
+        personalization: dict[str, str | int | float] = {'name': 'John'}
 
         await send_push_notification_helper(personalization, '12345', mock_template, mock_provider)
 
@@ -54,14 +54,16 @@ class TestSendPushNotificationHelper:
         mock_template.build_message.return_value = 'test_message'
         mock_provider = AsyncMock(spec=ProviderAWS)
         mock_provider.send_notification.side_effect = ProviderNonRetryableError
-        personalization = {'name': 'John'}
+        personalization: dict[str, str | int | float] = {'name': 'John'}
 
         await send_push_notification_helper(personalization, '12345', mock_template, mock_provider)
 
         mock_logger.assert_called_once()
 
     async def test_send_push_notification_helper_throws_not_implemented(self) -> None:
-        """Test send_push_notification_helper."""
+        """Test send_push_notification_helper, which currently throws a not implemented error."""
+        mock_provider = AsyncMock(spec=ProviderAWS)
         template = Template(name='test_template')
+
         with pytest.raises(NotImplementedError):
-            await send_push_notification_helper(None, '12345', template, None)
+            await send_push_notification_helper(None, '12345', template, mock_provider)
