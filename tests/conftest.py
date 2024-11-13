@@ -18,8 +18,8 @@ def client() -> TestClient:
         TestClient: A test client to test with
 
     """
+    app.state.providers = {'aws': Mock(spec=ProviderAWS)}
     test_client = TestClient(app)
-    test_client.app.state.providers = {'aws': Mock(spec=ProviderAWS)}
     return test_client
 
 

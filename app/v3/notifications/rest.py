@@ -121,5 +121,3 @@ def test_cov_helper() -> None:
 async def cov_route() -> None:
     """Cover the conditions of the custom router while testing."""
     test_cov_helper()
-
-    return None

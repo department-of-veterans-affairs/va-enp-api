@@ -14,10 +14,9 @@ async def send_push_notification_helper(
     template: Template,
     provider: ProviderAWS,
 ) -> None:
-    """Send notification in the background. Function for sending a push notification.
+    """Send push notification in the background.
 
     Args:
-    ----
         personalization (dict[str, str] | None): The personalization data from the request
         recipient_identifier (str): The recipient's identifier from the request
         template (Template): The template to use for the notification's message
@@ -53,7 +52,6 @@ async def get_arn_from_icn(icn: str) -> str:
     """Future method to get ARN from ICN from VAProfile.
 
     Args:
-    ----
         icn (str): Recipient's ICN Value
 
     """

@@ -78,7 +78,7 @@ async def test_db_create(
     data: str | None = None,
     db_session: Annotated[async_scoped_session[AsyncSession], Depends(get_write_session_with_depends)],
 ) -> dict[str, str]:
-    """Test inserting into the database. This is a temporary test endpoint.
+    """Test inserting Templates into the database. This is a temporary test endpoint.
 
     Args:
     ----
@@ -92,7 +92,7 @@ async def test_db_create(
     """
     from app.db.models import Template
 
-    template = Template(name='hello')
+    template = Template(name=data or 'hello')
 
     async with db_session() as session:
         session.add(template)

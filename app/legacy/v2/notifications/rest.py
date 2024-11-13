@@ -108,7 +108,7 @@ async def create_push_notification(
     try:
         template: Template = await validate_template(template_id)
     except Exception:
-        # we could use a more specific exception here
+        # catch a more specific exception here when validate_template is implemented
         logger.warning('Template not found with ID {}', template_id)
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,

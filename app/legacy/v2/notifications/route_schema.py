@@ -45,14 +45,15 @@ class V2NotificationSingleResponse(BaseModel):
 class V2NotificationPushRequest(BaseModel):
     """Request model for the v2 push notification endpoint."""
 
-    class ICNRecipientIdentifier(BaseModel):  # are we using pydantic models or dataclasses for stuff like this?
+    class ICNRecipientIdentifier(BaseModel):
         """Model for ICN recipient identifier."""
 
-        id_type: IdentifierTypeICN  # made specific enum for ICN so api spec is clear
+        # created a specific enum for ICN so api spec is clear, and only "ICN" is allowed
+        id_type: IdentifierTypeICN
         id_value: str
 
     mobile_app: MobileAppType
-    template_id: str  # this is a string in the flask API, though it should be UUID4 in v3
+    template_id: str  # this is a string in the flask API, it will be UUID4 in v3
     recipient_identifier: ICNRecipientIdentifier
     personalisation: dict[str, str | int | float] | None = None
 
