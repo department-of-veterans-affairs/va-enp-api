@@ -12,7 +12,7 @@ from loguru import logger
 
 from app.providers import sns_publish_retriable_exceptions_set
 from app.providers.provider_base import ProviderBase, ProviderNonRetryableError, ProviderRetryableError
-from app.providers.provider_schemas import PushModel, PushRegistrationModel
+from app.providers.provider_schemas import DeviceRegistrationModel, PushModel, PushRegistrationModel
 
 
 class ProviderAWS(ProviderBase):
@@ -62,6 +62,11 @@ class ProviderAWS(ProviderBase):
 
         logger.debug(response)
         return response['MessageId']
+
+    async def register_device(self, device_registration_model: DeviceRegistrationModel) -> str:
+        """Register a mobile app user. Build the app ARN, then send to SNS using Boto3's create_platform_endpoint
+        """
+        raise NotImplementedError('This method is not implemented.')
 
     async def register_push_endpoint(self, push_registration_model: PushRegistrationModel) -> str:
         """Register a mobile app user.
