@@ -1,4 +1,4 @@
-"""Generate the code reference pages."""
+"""Script to automatically generate MkDocs for modules located in app/ directory."""
 
 from pathlib import Path
 
