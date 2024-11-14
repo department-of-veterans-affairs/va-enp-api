@@ -132,7 +132,7 @@ class TestPush:
         mock_background_task: AsyncMock,
         client: TestClient,
     ) -> None:
-        """Test route can return 400.
+        """Test route returns 400 when there is an exception thrown trying to validate the template.
 
         Args:
             mock_validate_template (AsyncMock): Mock call to validate_template

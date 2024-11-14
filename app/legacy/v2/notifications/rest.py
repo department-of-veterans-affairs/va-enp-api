@@ -115,11 +115,16 @@ async def create_push_notification(
 
     logger.info('Creating notification with recipent_identifier {} and template_id {}.', icn, template_id)
 
-    await dao_create_notification(Notification(personalization=json.dumps(personalization)))
+    notification = await dao_create_notification(Notification(personalization=json.dumps(personalization)))
 
     background_tasks.add_task(
         send_push_notification_helper, personalization, icn, template, request.app.state.providers['aws']
     )
 
-    logger.info('Successful notification with recipient_identifer {} and template_id {}.', icn, template_id)
+    logger.info(
+        'Successful notification {} created with recipient_identifer {} and template_id {}.',
+        notification.id,
+        icn,
+        template_id,
+    )
     return V2NotificationPushResponse()
