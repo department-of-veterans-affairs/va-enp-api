@@ -1,6 +1,7 @@
 # Code Reference
 
-Welcome to the project documentation. Below, you can find the navigation to the code reference pages:
+- [How to use MkDocs fo this project](https://github.com/department-of-veterans-affairs/va-enp-api/wiki)
+Below, you can find the navigation to the code reference pages:
 
 * [constants](constants.md)
 * dao
@@ -27,7 +28,3 @@ Welcome to the project documentation. Below, you can find the navigation to the 
     * notifications
         * [rest](v3/notifications/rest.md)
         * [route_schema](v3/notifications/route_schema.md)
-
-
-### Additional Resources
-- [Wiki Documentation on GitHub](https://github.com/department-of-veterans-affairs/va-enp-api/wiki)
