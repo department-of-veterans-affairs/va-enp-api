@@ -76,12 +76,10 @@ async def create_notification(request: V2NotificationSingleRequest) -> V2Notific
     """Create a notification.
 
     Args:
-    ----
-        request (V2NotificationSingleRequest): the data necessary for the notification
+        request (V2NotificationSingleRequest): the data necessary for the notification.
 
     Returns:
-    -------
-        dict[str, str]: the notification response data
+        dict[str, str]: the notification response data.
 
     """
     response = V2NotificationSingleResponse(

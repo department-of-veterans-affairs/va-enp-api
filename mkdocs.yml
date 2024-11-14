@@ -1,0 +1,29 @@
+site_name: "ENP Documentation"
+
+theme:
+  name: material
+
+  palette:
+    # Light mode palette with a bit more character
+    - scheme: default
+      toggle:
+        icon: material/weather-sunny
+        name: Switch to dark mode
+
+    # Dark mode palette with a sleek vibe
+    - scheme: slate
+      toggle:
+        icon: material/weather-night
+        name: Switch to light mode
+
+  font:
+    text: Roboto
+    code: "Fira Code"
+
+  features:
+    - navigation.indexes
+    - toc.integrate
+
+plugins:
+  - search
+  - mkdocstrings
