@@ -25,7 +25,7 @@ class NotificationRoute(APIRoute):
     def get_route_handler(self) -> Callable[[Request], Coroutine[Any, Any, Response]]:
         """Override default handler.
 
-        Returns
+        Returns:
         -------
             Callable: the route handler
 

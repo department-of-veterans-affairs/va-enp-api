@@ -97,6 +97,9 @@ line-ending = "auto"
 quote-style = "single"
 skip-magic-trailing-comma = false
 
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
 [tool.ruff.lint]
 # Replace pydocstrings with pydoclint when it is ready: https://github.com/astral-sh/ruff/issues/12434
 # D417 will not raise an error if there is no arg/param section: https://github.com/astral-sh/ruff/issues/2310

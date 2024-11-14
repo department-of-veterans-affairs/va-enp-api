@@ -10,7 +10,7 @@ from app.main import app
 def client() -> TestClient:
     """Return a test client.
 
-    Returns
+    Returns:
     -------
         TestClient: A test client to test with
 

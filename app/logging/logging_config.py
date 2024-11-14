@@ -34,9 +34,7 @@ class InterceptHandler(logging.Handler):
         """Emit a standard log record using Loguru.
 
         Args:
-        ----
-        record : logging.LogRecord
-            The log record to be emitted through Loguru.
+            record : logging.LogRecord. The log record to be emitted through Loguru.
 
         """
         try:
@@ -78,9 +76,7 @@ class CustomizeLogger:
     ) -> loguru.Logger:
         """Create sinks for sys.stdout and sys.stderr with Loguru.
 
-        Returns
-        -------
-        logger
+        Returns:
             The Loguru logger instance, bound with additional context such as request_id and method.
 
         """

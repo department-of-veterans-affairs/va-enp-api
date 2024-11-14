@@ -17,8 +17,7 @@ class V2NotificationSingleRequest(BaseModel):
     def serialize(self) -> dict[str, None | str | dict[str, str]]:
         """Serialize the pydantic model.
 
-        Returns
-        -------
+        Returns:
             dict[str, None | str | dict[str, str]]: Serialized version of the model
 
         """

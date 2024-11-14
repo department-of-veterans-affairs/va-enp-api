@@ -18,11 +18,11 @@ class PushModel(BaseModel):
     def check_arn(self) -> Self:
         """One, and only one, of topic_arn or target_arn must not be None.
 
-        Raises
+        Raises:
         ------
             ValueError: Bad input
 
-        Returns
+        Returns:
         -------
             Self: this instance
 

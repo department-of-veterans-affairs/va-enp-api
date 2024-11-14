@@ -63,7 +63,7 @@ app: FastAPI = create_app()
 def simple_route() -> dict[str, str]:
     """Return a hello world.
 
-    Returns
+    Returns:
     -------
         dict[str, str]: Hello World
 
