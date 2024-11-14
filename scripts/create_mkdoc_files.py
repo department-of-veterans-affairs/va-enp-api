@@ -34,4 +34,12 @@ for path in sorted(src.rglob('*.py')):
     mkdocs_gen_files.set_edit_path(full_doc_path, Path('../') / path)
 
 with mkdocs_gen_files.open('index.md', 'w') as nav_file:
+    nav_file.write('# Code Reference\n\n')
+    nav_file.write(
+        'Welcome to the project documentation. Below, you can find the navigation to the code reference pages:\n\n'
+    )
     nav_file.writelines(nav.build_literate_nav())
+    nav_file.write('\n\n### Additional Resources\n')
+    nav_file.write(
+        '- [Wiki Documentation on GitHub](https://github.com/department-of-veterans-affairs/va-enp-api/wiki)\n'
+    )
