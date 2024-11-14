@@ -64,9 +64,8 @@ class ProviderAWS(ProviderBase):
         return response['MessageId']
 
     async def register_device(self, device_registration_model: DeviceRegistrationModel) -> str:
-        """Register a mobile app user. Build the app ARN, then send to SNS using Boto3's create_platform_endpoint
-        """
-        raise NotImplementedError('This method is not implemented.')
+        """Register a mobile app user. Build the app ARN, then send to SNS using Boto3's create_platform_endpoint"""
+        pass
 
     async def register_push_endpoint(self, push_registration_model: PushRegistrationModel) -> str:
         """Register a mobile app user.
