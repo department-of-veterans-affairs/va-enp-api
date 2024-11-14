@@ -1,60 +1,158 @@
 """Test module for app/legacy/v2/notifications/rest.py."""
 
-from uuid import uuid4
+from unittest.mock import AsyncMock, patch
 
-from fastapi import status
+import pytest
+from fastapi import BackgroundTasks, status
 from fastapi.testclient import TestClient
 
-from app.legacy.v2.notifications.route_schema import V2NotificationSingleRequest, V2NotificationSingleResponse
-from app.v3.notifications.rest import RESPONSE_400
+from app.constants import IdentifierTypeICN, MobileAppType
+from app.db.models import Template
+from app.legacy.v2.notifications.route_schema import (
+    V2NotificationPushRequest,
+    V2NotificationPushResponse,
+)
 
 
-def test_post(client: TestClient) -> None:
-    """Test POST /v2/notifications/.
+@pytest.mark.asyncio
+@patch.object(BackgroundTasks, 'add_task')
+@patch('app.legacy.v2.notifications.rest.dao_create_notification')
+@patch('app.legacy.v2.notifications.rest.validate_template')
+class TestRouter:
+    """Test the v2 notifications router."""
 
-    Args:
-        client(TestClient): FastAPI client fixture
+    async def test_router_returns_400_with_invalid_request_data(
+        self,
+        mock_validate_template: AsyncMock,
+        mock_dao_create_notification: AsyncMock,
+        mock_background_task: AsyncMock,
+        client: TestClient,
+    ) -> None:
+        """Test route can return 400.
 
-    """
-    srequest = V2NotificationSingleRequest(
-        personalisation={'hello': 'world'},
-        reference='test',
-        template_id=uuid4(),
-        to='vanotify@va.gov',
-    )
-    resp = client.post('v2/notifications', json=srequest.serialize())
-    assert resp.status_code == status.HTTP_201_CREATED
-    assert isinstance(V2NotificationSingleResponse.model_validate(resp.json()), V2NotificationSingleResponse)
+        Args:
+            mock_validate_template (AsyncMock): Mock call to validate_template
+            mock_dao_create_notification (AsyncMock): Mock call to create notification in the database
+            mock_background_task (AsyncMock): Mock call to add a background task
+            client (TestClient): FastAPI client fixture
+
+        """
+        invalid_request = {
+            'mobile_app': 'fake_app',
+            'template_id': 'not_a_uuid',
+            'recipient_identifier': {
+                'id_type': 'not_ICN',
+                'id_value': r'¯\_(ツ)_/¯',
+            },
+            'personalization': 'not_a_dict',
+        }
+
+        response = client.post('/v2/notifications/push', json=invalid_request)
+
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+
+    async def test_router_returns_500_when_other_exception_thrown(
+        self,
+        mock_validate_template: AsyncMock,
+        mock_dao_create_notification: AsyncMock,
+        mock_background_task: AsyncMock,
+        client: TestClient,
+    ) -> None:
+        """Test route can return 500.
+
+        Args:
+            mock_validate_template (AsyncMock): Mock call to validate_template
+            mock_dao_create_notification (AsyncMock): Mock call to create notification in the database
+            mock_background_task (AsyncMock): Mock call to add a background task
+            client (TestClient): FastAPI client fixture
+
+        """
+        mock_validate_template.return_value = Template(name='test_template')
+        mock_dao_create_notification.side_effect = Exception()
+
+        request = V2NotificationPushRequest(
+            mobile_app=MobileAppType.VA_FLAGSHIP_APP,
+            template_id='d5b6e67c-8e2a-11ee-8b8e-0242ac120002',
+            recipient_identifier=V2NotificationPushRequest.ICNRecipientIdentifier(
+                id_type=IdentifierTypeICN.ICN,
+                id_value='12345',
+            ),
+            personalisation={'name': 'John'},
+        )
+
+        response = client.post('/v2/notifications/push', json=request.model_dump())
+
+        assert response.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
 
 
-def test_post_without_optional_fields(client: TestClient) -> None:
-    """Test POST /v2/notifications/ without optional fields.
+@pytest.mark.asyncio
+@patch.object(BackgroundTasks, 'add_task')
+@patch('app.legacy.v2.notifications.rest.dao_create_notification')
+@patch('app.legacy.v2.notifications.rest.validate_template')
+class TestPush:
+    """Test POST /v2/notifications/push."""
 
-    Args:
-        client(TestClient): FastAPI client fixture
+    async def test_post_push_returns_201(
+        self,
+        mock_validate_template: AsyncMock,
+        mock_dao_create_notification: AsyncMock,
+        mock_background_task: AsyncMock,
+        client: TestClient,
+    ) -> None:
+        """Test route can return 201.
 
-    """
-    request = V2NotificationSingleRequest(
-        template_id=uuid4(),
-        to='vanotify@va.gov',
-    )
-    resp = client.post('v2/notifications', json=request.serialize())
-    assert resp.status_code == status.HTTP_201_CREATED
-    assert isinstance(V2NotificationSingleResponse.model_validate(resp.json()), V2NotificationSingleResponse)
+        Args:
+            mock_validate_template (AsyncMock): Mock call to validate_template
+            mock_dao_create_notification (AsyncMock): Mock call to create notification in the database
+            mock_background_task (AsyncMock): Mock call to add a background task
+            client (TestClient): FastAPI client fixture
 
+        """
+        mock_validate_template.return_value = Template(name='test_template')
 
-def test_post_malformed_request(client: TestClient) -> None:
-    """Test POST /v2/notifications/ with a malformed (empty) request.
+        request = V2NotificationPushRequest(
+            mobile_app=MobileAppType.VA_FLAGSHIP_APP,
+            template_id='d5b6e67c-8e2a-11ee-8b8e-0242ac120002',
+            recipient_identifier=V2NotificationPushRequest.ICNRecipientIdentifier(
+                id_type=IdentifierTypeICN.ICN,
+                id_value='12345',
+            ),
+            personalisation={'name': 'John'},
+        )
 
-    Args:
-        client(TestClient): FastAPI client fixture
+        response = client.post('/v2/notifications/push', json=request.model_dump())
 
-    """
-    request: dict[str, str] = {}
-    resp = client.post('v2/notifications', data=request)
-    resp_text = resp.text
+        assert response.status_code == status.HTTP_201_CREATED
+        assert response.json() == {'result': 'success'} == V2NotificationPushResponse().model_dump()
 
-    # Response status code is correct
-    assert resp.status_code == status.HTTP_400_BAD_REQUEST
-    # Standard message is used
-    assert RESPONSE_400 in resp_text
+    async def test_post_push_returns_400_when_unable_to_validate_template(
+        self,
+        mock_validate_template: AsyncMock,
+        mock_dao_create_notification: AsyncMock,
+        mock_background_task: AsyncMock,
+        client: TestClient,
+    ) -> None:
+        """Test route returns 400 when there is an exception thrown trying to validate the template.
+
+        Args:
+            mock_validate_template (AsyncMock): Mock call to validate_template
+            mock_dao_create_notification (AsyncMock): Mock call to create notification in the database
+            mock_background_task (AsyncMock): Mock call to add a background task
+            client (TestClient): FastAPI client fixture
+
+        """
+        mock_validate_template.side_effect = Exception()
+
+        request = V2NotificationPushRequest(
+            mobile_app=MobileAppType.VA_FLAGSHIP_APP,
+            template_id='d5b6e67c-8e2a-11ee-8b8e-0242ac120002',
+            recipient_identifier=V2NotificationPushRequest.ICNRecipientIdentifier(
+                id_type=IdentifierTypeICN.ICN,
+                id_value='12345',
+            ),
+            personalisation={'name': 'John'},
+        )
+
+        response = client.post('/v2/notifications/push', json=request.model_dump())
+
+        assert response.status_code == status.HTTP_400_BAD_REQUEST

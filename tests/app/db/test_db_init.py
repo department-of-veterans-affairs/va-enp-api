@@ -9,10 +9,10 @@ from sqlalchemy.ext.asyncio import AsyncEngine, async_scoped_session
 from app.db.db_init import (
     close_db,
     get_db_session,
-    get_read_session,
     get_read_session_with_context,
-    get_write_session,
+    get_read_session_with_depends,
     get_write_session_with_context,
+    get_write_session_with_depends,
     init_db,
 )
 
@@ -78,7 +78,7 @@ class TestReadWriteSessions:
 
     async def test_get_read_session(self, mock_session: Mock) -> None:
         """Test the get_read_session function."""
-        async for _session in get_read_session():
+        async for _session in get_read_session_with_depends():
             ...
 
         mock_session.assert_called_once()
@@ -92,7 +92,7 @@ class TestReadWriteSessions:
 
     async def test_get_write_session(self, mock_session: Mock) -> None:
         """Test the get_write_session function."""
-        async for _session in get_write_session():
+        async for _session in get_write_session_with_depends():
             ...
 
         mock_session.assert_called_once()
@@ -114,7 +114,7 @@ class TestReadWriteSessionsFailure:
     async def test_get_read_session_failure(self) -> None:
         """Test the get_read_session function raises a ValueError when the db engine is None."""
         with pytest.raises(ValueError, match='The db read engine has not been initialized. None type received.'):  # noqa: PT012
-            async for _session in get_read_session():
+            async for _session in get_read_session_with_depends():
                 ...
 
     async def test_get_read_session_with_context_failure(self) -> None:
@@ -126,7 +126,7 @@ class TestReadWriteSessionsFailure:
     async def test_get_write_session_failure(self) -> None:
         """Test the get_write_session function raises a ValueError when the db engine is None."""
         with pytest.raises(ValueError, match='The db write engine has not been initialized. None type received.'):  # noqa: PT012
-            async for _session in get_write_session():
+            async for _session in get_write_session_with_depends():
                 ...
 
     async def test_get_write_session_with_context_failure(self) -> None:

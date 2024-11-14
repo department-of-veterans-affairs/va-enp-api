@@ -1,16 +1,21 @@
 """All endpoints for the v2/notifications route."""
 
-from datetime import datetime, timezone
+import json
 from time import monotonic
 from typing import Any, Callable, Coroutine
-from uuid import uuid4
 
-from fastapi import APIRouter, HTTPException, Request, Response, status
+from fastapi import APIRouter, BackgroundTasks, HTTPException, Request, Response, status
 from fastapi.exceptions import RequestValidationError
 from fastapi.routing import APIRoute
 from loguru import logger
 
-from app.legacy.v2.notifications.route_schema import V2NotificationSingleRequest, V2NotificationSingleResponse
+from app.dao.notifications_dao import dao_create_notification
+from app.db.models import Notification, Template
+from app.legacy.v2.notifications.route_schema import (
+    V2NotificationPushRequest,
+    V2NotificationPushResponse,
+)
+from app.legacy.v2.notifications.utils import send_push_notification_helper, validate_template
 from app.v3.notifications.rest import RESPONSE_400, RESPONSE_404, RESPONSE_500
 
 
@@ -46,17 +51,17 @@ class NotificationV2Route(APIRoute):
                 status_code = resp.status_code
                 return resp
             except RequestValidationError as exc:
-                status_code = 400
                 logger.warning(
                     'Request: {} Failed validation: {}',
                     request,
                     exc,
                 )
-                raise HTTPException(400, f'{RESPONSE_400} - {exc}')
+                raise HTTPException(status.HTTP_400_BAD_REQUEST, f'{RESPONSE_400} - {exc}')
+            except HTTPException:
+                raise
             except Exception as exc:
-                status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
                 logger.exception('{}: {}', RESPONSE_500, type(exc).__name__)
-                raise HTTPException(status_code, RESPONSE_500)
+                raise HTTPException(status.HTTP_500_INTERNAL_SERVER_ERROR, RESPONSE_500)
             finally:
                 logger.info('{} {} {} {}s', request.method, request.url, status_code, f'{(monotonic() - start):6f}')
 
@@ -71,24 +76,55 @@ v2_notification_router = APIRouter(
 )
 
 
-@v2_notification_router.post('/', status_code=status.HTTP_201_CREATED)
-async def create_notification(request: V2NotificationSingleRequest) -> V2NotificationSingleResponse:
-    """Create a notification.
+@v2_notification_router.post('/push', status_code=status.HTTP_201_CREATED)
+async def create_push_notification(
+    request_data: V2NotificationPushRequest,
+    request: Request,
+    background_tasks: BackgroundTasks,
+) -> V2NotificationPushResponse:
+    """Create a push notification.
 
     Args:
     ----
-        request (V2NotificationSingleRequest): the data necessary for the notification
+        request_data (V2NotificationPushRequest): The data necessary for the notification.
+        request (Request): The FastAPI request object.
+        background_tasks (BackgroundTasks): The FastAPI background tasks object.
+
+    Raises:
+    ------
+        HTTPException: If the template with the given template_id is not found.
 
     Returns:
     -------
-        dict[str, str]: the notification response data
+        V2NotificationPushResponse: The notification response data.
 
     """
-    response = V2NotificationSingleResponse(
-        id=uuid4(),
-        created_at=datetime.now(timezone.utc),
-        updated_at=datetime.now(timezone.utc),
-        sent_at=None,
-        to=request.to,
+    icn = request_data.recipient_identifier.id_value
+    template_id = str(request_data.template_id)
+    personalization = request_data.personalisation
+
+    try:
+        template: Template = await validate_template(template_id)
+    except Exception:
+        # TODO: catch a more specific exception here when validate_template is implemented
+        logger.info('Template not found with ID {}', template_id)
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f'Undeliverable - Validation failed. Template not found with template_id {template_id}',
+        )
+
+    logger.info('Creating notification with recipent_identifier {} and template_id {}.', icn, template_id)
+
+    notification = await dao_create_notification(Notification(personalization=json.dumps(personalization)))
+
+    background_tasks.add_task(
+        send_push_notification_helper, personalization, icn, template, request.app.state.providers['aws']
     )
-    return response
+
+    logger.info(
+        'Successful notification {} created with recipient_identifer {} and template_id {}.',
+        notification.id,
+        icn,
+        template_id,
+    )
+    return V2NotificationPushResponse()

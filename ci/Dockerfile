@@ -8,9 +8,13 @@ ENV POETRY_NO_INTERACTION=1 \
 
 WORKDIR /app
 
+RUN adduser -h /app -D vanotify
+
 RUN pip install --upgrade pip 
 RUN pip install poetry==1.8.3
 
-COPY pyproject.toml poetry.lock ./app /app/
+USER vanotify
+
+COPY pyproject.toml poetry.lock ./app ./tests /app/
 
 RUN poetry install --no-root --with static_tools,test && rm -rf $POETRY_CACHE_DIR
