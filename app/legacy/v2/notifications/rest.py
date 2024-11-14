@@ -95,7 +95,6 @@ async def create_push_notification(
     Raises:
         HTTPException: If the template with the given template_id is not found.
 
-
     """
     icn = request_data.recipient_identifier.id_value
     template_id = str(request_data.template_id)

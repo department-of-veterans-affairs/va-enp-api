@@ -23,11 +23,9 @@ async def lifespan(app: FastAPI) -> AsyncIterator[Never]:
     https://fastapi.tiangolo.com/advanced/events/?h=life#lifespan
 
     Args:
-    ----
         app: the app
 
     Yields:
-    ------
         None: nothing
 
     """
@@ -64,7 +62,6 @@ def simple_route() -> dict[str, str]:
     """Return a hello world.
 
     Returns:
-    -------
         dict[str, str]: Hello World
 
     """
@@ -81,12 +78,10 @@ async def test_db_create(
     """Test inserting Templates into the database. This is a temporary test endpoint.
 
     Args:
-    ----
         data (str): The data to insert
         db_session: The database session
 
     Returns:
-    -------
         dict[str, str]: The inserted item
 
     """
@@ -112,11 +107,9 @@ async def test_db_read(
     """Test getting items from the database. This is a temporary test endpoint.
 
     Args:
-    ----
         db_session: The database session
 
     Returns:
-    -------
         list[dict[str,str]]: The items in the tests table
 
     """

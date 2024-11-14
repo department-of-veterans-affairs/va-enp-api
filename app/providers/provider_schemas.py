@@ -19,11 +19,9 @@ class PushModel(BaseModel):
         """One, and only one, of topic_arn or target_arn must not be None.
 
         Raises:
-        ------
             ValueError: Bad input
 
         Returns:
-        -------
             Self: this instance
 
         """

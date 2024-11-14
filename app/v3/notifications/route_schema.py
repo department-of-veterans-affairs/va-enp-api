@@ -14,7 +14,6 @@ class NotificationSingleRequest(BaseModel):
         """Serialize the pydantic model.
 
         Returns:
-        -------
             dict[str, None | str | dict[str, str]]: Serialized version of the model
 
         """

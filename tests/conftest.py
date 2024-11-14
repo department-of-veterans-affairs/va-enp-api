@@ -14,7 +14,6 @@ def client() -> TestClient:
     """Return a test client.
 
     Returns:
-    -------
         TestClient: A test client to test with
 
     """
