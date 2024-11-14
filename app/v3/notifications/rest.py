@@ -110,14 +110,3 @@ async def create_notification(request: NotificationSingleRequest) -> Notificatio
         to=request.to,
     )
     return response
-
-
-def test_cov_helper() -> None:
-    """Function used to help cover the router in testing until we have real route functions here."""
-    ...
-
-
-@notification_router.post('/not-implemented', status_code=status.HTTP_200_OK)
-async def cov_route() -> None:
-    """Cover the conditions of the custom router while testing."""
-    test_cov_helper()

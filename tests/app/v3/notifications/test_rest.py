@@ -1,9 +1,8 @@
 """Test module for app/v3/notifications/rest.py."""
 
-from unittest.mock import Mock, patch
 from uuid import uuid4
 
-from fastapi import HTTPException, status
+from fastapi import status
 from fastapi.testclient import TestClient
 
 from app.v3.notifications.rest import RESPONSE_400
@@ -104,49 +103,3 @@ def test_post_malformed_request(client: TestClient) -> None:
     assert resp.status_code == status.HTTP_400_BAD_REQUEST
     # Standard message is used
     assert RESPONSE_400 in resp_text
-
-
-def test_post_returns_200(client: TestClient) -> None:
-    """Test POST /v3/notifications/not-implemented with no personalization.
-
-    Args:
-    ----
-        client(TestClient): FastAPI client fixture
-
-    """
-    resp = client.post('v3/notifications/not-implemented')
-
-    assert resp.status_code == status.HTTP_200_OK
-
-
-@patch('app.v3.notifications.rest.test_cov_helper', side_effect=NotImplementedError)
-def test_post_returns_500(test_cov_helper: Mock, client: TestClient) -> None:
-    """Test POST /v3/notifications/not-implemented with no personalization.
-
-    Args:
-    ----
-        test_cov_helper (Mock): Mocked function that raises a NotImplementedError
-        client (TestClient): FastAPI client fixture
-
-    """
-    resp = client.post('v3/notifications/not-implemented')
-
-    assert resp.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
-
-
-@patch(
-    'app.v3.notifications.rest.test_cov_helper',
-    side_effect=HTTPException(status.HTTP_404_NOT_FOUND, detail='Item not found'),
-)
-def test_post_returns_404(test_cov_helper: Mock, client: TestClient) -> None:
-    """Test POST /v3/notifications/not-implemented with no personalization.
-
-    Args:
-    ----
-        test_cov_helper (Mock): Mocked function that raises an HTTPException
-        client (TestClient): FastAPI client fixture
-
-    """
-    resp = client.post('v3/notifications/not-implemented')
-
-    assert resp.status_code == status.HTTP_404_NOT_FOUND

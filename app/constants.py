@@ -12,16 +12,6 @@ class IdentifierType(StrEnum):
     PID = 'PID'
     VA_PROFILE_ID = 'VAPROFILEID'
 
-    @staticmethod
-    def values() -> list[str]:
-        """Get the values of the Enum.
-
-        Returns:
-            list[str]: The values of the Enum
-
-        """
-        return list(x.value for x in IdentifierType)
-
 
 # made specific enum for ICN so api spec is clear
 class IdentifierTypeICN(StrEnum):

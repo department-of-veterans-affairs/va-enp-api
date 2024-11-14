@@ -44,7 +44,7 @@ class TestSendPushNotificationHelper:
 
         mock_provider.send_notification.assert_called_once()
 
-    @patch('app.legacy.v2.notifications.utils.logger.critical')
+    @patch('app.legacy.v2.notifications.utils.logger.exception')
     @patch('app.legacy.v2.notifications.utils.get_arn_from_icn', return_value='test_arn')
     async def test_send_push_notification_helper_logs_exception(
         self, mock_get_arn_from_icn: AsyncMock | None, mock_logger: AsyncMock

@@ -75,14 +75,14 @@ def simple_route() -> dict[str, str]:
 @app.post('/db/test', status_code=status.HTTP_201_CREATED)
 async def test_db_create(
     *,
-    data: str | None = None,
+    data: str = 'hello',
     db_session: Annotated[async_scoped_session[AsyncSession], Depends(get_write_session_with_depends)],
 ) -> dict[str, str]:
     """Test inserting Templates into the database. This is a temporary test endpoint.
 
     Args:
     ----
-        data (str | None): The data to insert
+        data (str): The data to insert
         db_session: The database session
 
     Returns:
@@ -92,7 +92,7 @@ async def test_db_create(
     """
     from app.db.models import Template
 
-    template = Template(name=data or 'hello')
+    template = Template(name=data)
 
     async with db_session() as session:
         session.add(template)

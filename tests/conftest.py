@@ -19,8 +19,7 @@ def client() -> TestClient:
 
     """
     app.state.providers = {'aws': Mock(spec=ProviderAWS)}
-    test_client = TestClient(app)
-    return test_client
+    return TestClient(app)
 
 
 # the following code is commented out because it is not going to be used until we include the database in our tests

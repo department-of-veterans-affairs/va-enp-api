@@ -116,7 +116,7 @@ class TestPush:
 
         assert response.status_code == status.HTTP_400_BAD_REQUEST
 
-    async def test_post_push_returns_500_when_dao_create_notification_fails(
+    async def test_post_push_returns_500_when_other_exception_thrown(
         self,
         mock_validate_template: AsyncMock,
         mock_dao_create_notification: AsyncMock,
