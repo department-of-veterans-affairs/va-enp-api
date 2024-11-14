@@ -1,3 +1,10 @@
+# Code Reference
+
+Welcome to the project documentation. Below, you can find the navigation to the code reference pages:
+
+* [constants](constants.md)
+* dao
+    * [notifications_dao](dao/notifications_dao.md)
 * db
     * [base](db/base.md)
     * [db_init](db/db_init.md)
@@ -8,6 +15,7 @@
         * notifications
             * [rest](legacy/v2/notifications/rest.md)
             * [route_schema](legacy/v2/notifications/route_schema.md)
+            * [utils](legacy/v2/notifications/utils.md)
 * logging
     * [logging_config](logging/logging_config.md)
 * [main](main.md)
@@ -19,3 +27,7 @@
     * notifications
         * [rest](v3/notifications/rest.md)
         * [route_schema](v3/notifications/route_schema.md)
+
+
+### Additional Resources
+- [Wiki Documentation on GitHub](https://github.com/department-of-veterans-affairs/va-enp-api/wiki)
