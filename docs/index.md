@@ -1,6 +1,9 @@
 # Code Reference
+## How to use MkDocs
 
-- [How to use MkDocs fo this project](https://github.com/department-of-veterans-affairs/va-enp-api/wiki)
+Please view documentation on how to use MkDocs for this project [here.](https://github.com/department-of-veterans-affairs/va-enp-api/wiki)
+
+## Navigation
 Below, you can find the navigation to the code reference pages:
 
 * [constants](constants.md)
