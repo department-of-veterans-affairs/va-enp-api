@@ -5,8 +5,9 @@ from app.db.models import Notification
 
 
 # there are not tests for this yet because we have not included the database in our tests
+# Note: We might be heading in a different direction regarding database access. This should be considered a placeholder.
 async def dao_create_notification(notification: Notification) -> Notification:
-    """Create a notification in the database.
+    """Create a notification in the database. This should be considered a placeholder.
 
     Args:
         notification (Notification): The notification to create
