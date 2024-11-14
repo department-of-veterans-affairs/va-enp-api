@@ -89,11 +89,11 @@ async def create_push_notification(
         request (Request): The FastAPI request object.
         background_tasks (BackgroundTasks): The FastAPI background tasks object.
 
-    Returns:
-        dict[str, str]: the notification response data.
-
     Raises:
         HTTPException: If the template with the given template_id is not found.
+
+    Returns:
+        V2NotificationPushResponse: The notification response data.
 
     """
     icn = request_data.recipient_identifier.id_value
