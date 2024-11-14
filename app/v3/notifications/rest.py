@@ -47,6 +47,8 @@ class NotificationRoute(APIRoute):
                     exc,
                 )
                 raise HTTPException(400, f'{RESPONSE_400} - {exc}')
+            except HTTPException:
+                raise
             except Exception as exc:
                 status_code = 500
                 logger.exception('{}: {}', RESPONSE_500, type(exc).__name__)
