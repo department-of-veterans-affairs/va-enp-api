@@ -85,13 +85,12 @@ async def create_push_notification(
     """Create a push notification.
 
     Args:
-        request (V2NotificationSingleRequest): the data necessary for the notification.
-
-    Returns:
-        dict[str, str]: the notification response data.
         request_data (V2NotificationPushRequest): The data necessary for the notification.
         request (Request): The FastAPI request object.
         background_tasks (BackgroundTasks): The FastAPI background tasks object.
+
+    Returns:
+        dict[str, str]: the notification response data.
 
     Raises:
         HTTPException: If the template with the given template_id is not found.
