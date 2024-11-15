@@ -77,7 +77,7 @@ def get_db_session(db_engine: AsyncEngine | None, engine_type: str) -> async_ses
 
 # I believe @asynccontextmanager is not needed here as long as we are using it as a dependency with Depends
 # https://fastapi.tiangolo.com/tutorial/dependencies/dependencies-with-yield/
-async def get_read_session() -> AsyncIterator[async_scoped_session[AsyncSession]]:
+async def get_read_session_with_depends() -> AsyncIterator[async_scoped_session[AsyncSession]]:
     """Retrieve an async read session context that self-closes.
 
     Yields:
@@ -114,7 +114,7 @@ async def get_read_session_with_context() -> AsyncIterator[async_scoped_session[
 
 # I believe @asynccontextmanager is not needed here as long as we are using it as a dependency with Depends
 # https://fastapi.tiangolo.com/tutorial/dependencies/dependencies-with-yield/
-async def get_write_session() -> AsyncIterator[async_scoped_session[AsyncSession]]:
+async def get_write_session_with_depends() -> AsyncIterator[async_scoped_session[AsyncSession]]:
     """Retrieve an async write session context that self-closes. This should be used when using FastAPI's Depends.
 
     Yields:

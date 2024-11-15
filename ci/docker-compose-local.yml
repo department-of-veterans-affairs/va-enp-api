@@ -11,6 +11,7 @@ services:
       - .env.local
     volumes:
       - "../app/:/app/app/:rw"
+      - "../tests/:/app/tests/:rw"
 
   enp-db:
     image: postgres:16
