@@ -1,3 +1,5 @@
+"""Schema for device registration endpoints."""
+
 from pydantic import AliasChoices, BaseModel, Field
 
 
