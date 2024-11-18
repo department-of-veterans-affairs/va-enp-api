@@ -19,12 +19,11 @@ COPY pyproject.toml poetry.lock /app/
 
 RUN poetry install --no-root --with static_tools,test,mkdocs && rm -rf $POETRY_CACHE_DIR
 
-
-COPY docs /app/docs
 COPY mkdocs.yml /app/mkdocs.yml
 COPY app /app/app
 COPY scripts /app/scripts
 
+RUN poetry run python scripts/create_mkdoc_files.py
 RUN poetry run mkdocs build
 
 
