@@ -5,6 +5,7 @@ from contextlib import asynccontextmanager
 from typing import Annotated, Never
 
 from fastapi import Depends, FastAPI, status
+from fastapi.staticfiles import StaticFiles
 from loguru import logger
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_scoped_session
@@ -14,6 +15,8 @@ from app.legacy.v2.notifications.rest import v2_notification_router
 from app.logging.logging_config import CustomizeLogger
 from app.providers.provider_aws import ProviderAWS
 from app.v3.notifications.rest import notification_router
+
+MKDOCS_DIRECTORY = 'site'
 
 
 @asynccontextmanager
@@ -51,6 +54,9 @@ def create_app() -> FastAPI:
     app = FastAPI(lifespan=lifespan)
     app.include_router(notification_router)
     app.include_router(v2_notification_router)
+
+    app.mount('/mkdocs', StaticFiles(directory=MKDOCS_DIRECTORY, html=True), name='mkdocs')
+
     return app
 
 
