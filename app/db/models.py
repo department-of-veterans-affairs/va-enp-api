@@ -40,11 +40,9 @@ class Template(TimestampMixin, Base):
         """Return the template body populated with the personalized values.
 
         Args:
-        ----
             personalization: A dictionary of template placeholder names and their values
 
         Returns:
-        -------
             str: The template body populated with the personalized values
 
         """

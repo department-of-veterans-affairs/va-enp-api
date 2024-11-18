@@ -42,16 +42,13 @@ class ProviderBase(ABC):
         Facilitates update and log consistency regardless of notification.
 
         Args:
-        ----
             model: the parameters to pass to SNS.Client.publish
 
         Raises:
-        ------
             ProviderNonRetryableError: Don't retry the request
             ProviderRetryableError: Retry the request
 
         Returns:
-        -------
             str: A reference identifier for the sent notification
 
         """
@@ -87,11 +84,9 @@ class ProviderBase(ABC):
         Return a reference string.
 
         Args:
-        ----
             push_model: the parameters to pass to SNS.Client.publish
 
         Returns:
-        -------
             str: A reference identifier for the sent notification
 
         """

@@ -25,8 +25,7 @@ class NotificationRoute(APIRoute):
     def get_route_handler(self) -> Callable[[Request], Coroutine[Any, Any, Response]]:
         """Override default handler.
 
-        Returns
-        -------
+        Returns:
             Callable: the route handler
 
         """
@@ -79,11 +78,9 @@ async def get_notification(notification_id: UUID4) -> UUID4:
     """Get a notification.
 
     Args:
-    ----
         notification_id (UUID4): The notification to get
 
     Returns:
-    -------
         UUID4: The notification object
 
     """
@@ -95,11 +92,9 @@ async def create_notification(request: NotificationSingleRequest) -> Notificatio
     """Return app status.
 
     Args:
-    ----
         request (NotificationSingleRequest): Data for the request
 
     Returns:
-    -------
         UUID4: The notification object
 
     """

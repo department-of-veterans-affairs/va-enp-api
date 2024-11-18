@@ -37,6 +37,15 @@ pre-commit = "*"
 ruff = "*"
 types-aiobotocore = {extras = ["essential"], version = "*"}
 
+[tool.poetry.group.mkdocs]
+optional = true
+
+[tool.poetry.group.mkdocs.dependencies]
+mkdocs = "*"
+mkdocstrings = {extras = ["python"], version = "*"}
+mkdocs-material = "*"
+mkdocs-gen-files = "*"
+
 [tool.bandit]
 exclude_dirs = ["tests"]
 skips = ["B101"]  # https://bandit.readthedocs.io/en/latest/plugins/b101_assert_used.html
@@ -92,6 +101,9 @@ indent-style = "space"
 line-ending = "auto"
 quote-style = "single"
 skip-magic-trailing-comma = false
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
 
 [tool.ruff.lint]
 # Replace pydocstrings with pydoclint when it is ready: https://github.com/astral-sh/ruff/issues/12434

@@ -10,7 +10,6 @@ def test_simple_route(client: TestClient) -> None:
     """Test GET / to return Hello World.
 
     Args:
-    ----
         client (TestClient): FastAPI client fixture
 
     """
@@ -24,7 +23,6 @@ def test_simple_route_logs_hello_world(mock_logger: Mock, client: TestClient) ->
     """Test that GET / logs 'Hello World' as an info log.
 
     Args:
-    ----
         mock_logger (Mock): Mocked logger for capturing log calls.
         client (TestClient): FastAPI client fixture
 

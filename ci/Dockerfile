@@ -15,6 +15,15 @@ RUN pip install poetry==1.8.3
 
 USER vanotify
 
-COPY pyproject.toml poetry.lock ./app ./tests /app/
+COPY pyproject.toml poetry.lock /app/
 
-RUN poetry install --no-root --with static_tools,test && rm -rf $POETRY_CACHE_DIR
+RUN poetry install --no-root --with static_tools,test,mkdocs && rm -rf $POETRY_CACHE_DIR
+
+COPY mkdocs.yml /app/mkdocs.yml
+COPY app /app/app
+COPY scripts /app/scripts
+
+RUN poetry run python scripts/create_mkdoc_files.py
+RUN poetry run mkdocs build
+
+
