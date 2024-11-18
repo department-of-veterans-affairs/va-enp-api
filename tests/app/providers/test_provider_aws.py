@@ -12,7 +12,7 @@ import pytest
 from app.providers import sns_publish_retriable_exceptions_set
 from app.providers.provider_aws import ProviderAWS
 from app.providers.provider_base import ProviderNonRetryableError, ProviderRetryableError
-from app.providers.provider_schemas import PushModel, PushRegistrationModel
+from app.providers.provider_schemas import DeviceRegistrationModel, PushModel, PushRegistrationModel
 from tests.app.providers import botocore_exceptions_kwargs
 
 
@@ -145,3 +145,18 @@ class TestProviderAWS:
         push_registration_model = PushRegistrationModel(platform_application_arn='123', token='456')
         assert await self.provider.register_push_endpoint(push_registration_model) == '12345'
         mock_client.create_platform_endpoint.assert_called_once()
+
+    async def test_get_platform_application_arn(self, mock_get_session: AsyncMock) -> None:
+        """Test with various mocked environments."""
+        # mock the os.getenv calls
+        with patch(
+            'os.getenv',
+            side_effect=[
+                'us-east-1',
+                '000000000000',
+                'APNS',
+            ],
+        ):
+            assert (
+                self.provider.get_platform_application_arn('foo') == 'arn:aws:sns:us-east-1:000000000000:app/APNS/foo'
+            )

@@ -10,7 +10,7 @@ class DeviceRegistrationModel(BaseModel):
     As currently implemented, this class is idiosyncratic to AWS SNS and includes only required parameters.
     """
 
-    platform_application_arn: str
+    platform_application_name: str
     token: str
 
 

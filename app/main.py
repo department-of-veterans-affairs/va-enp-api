@@ -13,8 +13,8 @@ from app.db.db_init import close_db, get_read_session_with_depends, get_write_se
 from app.legacy.v2.notifications.rest import v2_notification_router
 from app.logging.logging_config import CustomizeLogger
 from app.providers.provider_aws import ProviderAWS
-from app.v3.notifications.rest import notification_router
 from app.v3.device_registrations.rest import api_router as device_registration_router
+from app.v3.notifications.rest import notification_router
 
 
 @asynccontextmanager
