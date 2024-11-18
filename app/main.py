@@ -56,7 +56,8 @@ def create_app() -> FastAPI:
     app.include_router(notification_router)
     app.include_router(v2_notification_router)
 
-    # Static site for MkDocs. If unavailable, Run `mkdocs build` to create the site locally.
+    # Static site for MkDocs. If unavailable locally, run `mkdocs build` to create the site files
+    # Or run the application locally with Docker.
     if os.path.exists(MKDOCS_DIRECTORY):
         app.mount('/mkdocs', StaticFiles(directory=MKDOCS_DIRECTORY, html=True), name='mkdocs')
 
