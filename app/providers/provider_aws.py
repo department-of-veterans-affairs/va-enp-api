@@ -122,6 +122,8 @@ class ProviderAWS(ProviderBase):
         Returns:
             str: The endpoint ARN needed to send a push notification to the registered device
 
+        Raises:
+            ProviderNonRetryableError: Don't retry the request
         """
         try:
             session = get_session()
@@ -135,9 +137,9 @@ class ProviderAWS(ProviderBase):
                     PlatformApplicationArn=push_registration_model.platform_application_arn,
                     Token=push_registration_model.token,
                 )
-        except Exception:
+        except Exception as ex:
             logger.exception('Failed to register a push client with AWS SNS: {}', push_registration_model)
-            raise
+            raise ProviderNonRetryableError('Failed to register a push client with AWS SNS') from ex
 
         logger.info(
             'Created push endpoint ARN {} for device {} on application {}.',
