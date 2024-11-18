@@ -16,7 +16,7 @@ from app.legacy.v2.notifications.route_schema import (
     V2NotificationPushResponse,
 )
 from app.legacy.v2.notifications.utils import send_push_notification_helper, validate_template
-from app.v3.notifications.rest import RESPONSE_400, RESPONSE_404, RESPONSE_500
+from app.v3 import RESPONSE_400, RESPONSE_404, RESPONSE_500
 
 
 class NotificationV2Route(APIRoute):

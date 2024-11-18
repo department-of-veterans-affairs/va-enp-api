@@ -5,7 +5,7 @@ from uuid import uuid4
 from fastapi import status
 from fastapi.testclient import TestClient
 
-from app.v3.notifications.rest import RESPONSE_400
+from app.v3 import RESPONSE_400
 from app.v3.notifications.route_schema import NotificationSingleRequest
 
 
