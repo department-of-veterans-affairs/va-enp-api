@@ -14,7 +14,6 @@ def test_post(client: TestClient) -> None:
     the endpoint sid.
 
     Args:
-    ----
         client(TestClient): FastAPI client fixture
 
     """
@@ -36,7 +35,6 @@ def test_post_with_camel_casing(client: TestClient) -> None:
     """Test POST /v3/device-registration with camel casing.
 
     Args:
-    ----
         client(TestClient): FastAPI client fixture
 
     """
@@ -68,7 +66,6 @@ def test_post_missing_data(client: TestClient, request_json: dict[str, str]) -> 
     The endpoint should return a 400 status code.
 
     Args:
-    ----
         client(TestClient): FastAPI client fixture
         request_json(dict): JSON request, from the parametrize decorator
 
