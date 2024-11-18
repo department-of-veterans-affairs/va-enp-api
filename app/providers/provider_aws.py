@@ -51,16 +51,13 @@ class ProviderAWS(ProviderBase):
         https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/sns/client/publish.html
 
         Args:
-        ----
             push_model: the parameters to pass to SNS.Client.publish
 
         Raises:
-        ------
             ProviderNonRetryableError: Don't retry the request
             ProviderRetryableError: Retry the request
 
         Returns:
-        -------
             str: A reference identifier for the sent notification
 
         """
@@ -120,11 +117,9 @@ class ProviderAWS(ProviderBase):
         https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/sns/client/create_platform_endpoint.html
 
         Args:
-        ----
             push_registration_model: the parameters to pass to SNS.Client.create_platform_endpoint
 
         Returns:
-        -------
             str: The endpoint ARN needed to send a push notification to the registered device
 
         """

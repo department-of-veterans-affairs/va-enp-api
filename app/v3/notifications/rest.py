@@ -23,11 +23,9 @@ async def get_notification(notification_id: UUID4) -> UUID4:
     """Get a notification.
 
     Args:
-    ----
         notification_id (UUID4): The notification to get
 
     Returns:
-    -------
         UUID4: The notification object
 
     """
@@ -39,11 +37,9 @@ async def create_notification(request: NotificationSingleRequest) -> Notificatio
     """Return app status.
 
     Args:
-    ----
         request (NotificationSingleRequest): Data for the request
 
     Returns:
-    -------
         UUID4: The notification object
 
     """

@@ -1,10 +1,12 @@
 """App entrypoint."""
 
+import os
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from typing import Annotated, Never
 
 from fastapi import Depends, FastAPI, status
+from fastapi.staticfiles import StaticFiles
 from loguru import logger
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_scoped_session
@@ -16,6 +18,8 @@ from app.providers.provider_aws import ProviderAWS
 from app.v3.device_registrations.rest import api_router as device_registration_router
 from app.v3.notifications.rest import notification_router
 
+MKDOCS_DIRECTORY = 'site'
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[Never]:
@@ -24,11 +28,9 @@ async def lifespan(app: FastAPI) -> AsyncIterator[Never]:
     https://fastapi.tiangolo.com/advanced/events/?h=life#lifespan
 
     Args:
-    ----
         app: the app
 
     Yields:
-    ------
         None: nothing
 
     """
@@ -56,6 +58,11 @@ def create_app() -> FastAPI:
     app.include_router(v2_notification_router)
     app.include_router(device_registration_router)
 
+    # Static site for MkDocs. If unavailable locally, run `mkdocs build` to create the site files
+    # Or run the application locally with Docker.
+    if os.path.exists(MKDOCS_DIRECTORY):
+        app.mount('/mkdocs', StaticFiles(directory=MKDOCS_DIRECTORY, html=True), name='mkdocs')
+
     return app
 
 
@@ -66,8 +73,7 @@ app: FastAPI = create_app()
 def simple_route() -> dict[str, str]:
     """Return a hello world.
 
-    Returns
-    -------
+    Returns:
         dict[str, str]: Hello World
 
     """
@@ -84,12 +90,10 @@ async def test_db_create(
     """Test inserting Templates into the database. This is a temporary test endpoint.
 
     Args:
-    ----
         data (str): The data to insert
         db_session: The database session
 
     Returns:
-    -------
         dict[str, str]: The inserted item
 
     """
@@ -115,11 +119,9 @@ async def test_db_read(
     """Test getting items from the database. This is a temporary test endpoint.
 
     Args:
-    ----
         db_session: The database session
 
     Returns:
-    -------
         list[dict[str,str]]: The items in the tests table
 
     """

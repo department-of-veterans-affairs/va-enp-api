@@ -13,8 +13,7 @@ from app.providers.provider_aws import ProviderAWS
 def client() -> TestClient:
     """Return a test client.
 
-    Returns
-    -------
+    Returns:
         TestClient: A test client to test with
 
     """

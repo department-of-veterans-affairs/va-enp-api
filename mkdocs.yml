@@ -1,0 +1,27 @@
+site_name: "VANotify ENP Documentation"
+
+theme:
+  name: material
+
+  palette:
+    - scheme: default
+      toggle:
+        icon: material/weather-sunny
+        name: Switch to dark mode
+
+    - scheme: slate
+      toggle:
+        icon: material/weather-night
+        name: Switch to light mode
+
+  font:
+    text: Roboto
+    code: "Fira Code"
+
+  features:
+    - navigation.indexes
+    - toc.integrate
+
+plugins:
+  - search
+  - mkdocstrings

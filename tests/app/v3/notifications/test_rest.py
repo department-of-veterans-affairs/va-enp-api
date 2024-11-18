@@ -13,7 +13,6 @@ def test_get(client: TestClient) -> None:
     """Test GET /v3/notifications/.
 
     Args:
-    ----
         client(TestClient): FastAPI client fixture
 
     """
@@ -25,7 +24,6 @@ def test_get_missing_uuid(client: TestClient) -> None:
     """Test GET /v3/notifications/ with a missing uuid.
 
     Args:
-    ----
         client(TestClient): FastAPI client fixture
 
     """
@@ -38,7 +36,6 @@ def test_get_malformed_request(client: TestClient) -> None:
     """Test GET /v3/notifications/ with a malformed request.
 
     Args:
-    ----
         client(TestClient): FastAPI client fixture
 
     """
@@ -58,7 +55,6 @@ def test_post(client: TestClient) -> None:
     """Test POST /v3/notifications/.
 
     Args:
-    ----
         client(TestClient): FastAPI client fixture
 
     """
@@ -75,7 +71,6 @@ def test_post_no_personalization(client: TestClient) -> None:
     """Test POST /v3/notifications/ with no personalization.
 
     Args:
-    ----
         client(TestClient): FastAPI client fixture
 
     """
@@ -91,7 +86,6 @@ def test_post_malformed_request(client: TestClient) -> None:
     """Test POST /v3/notifications/ with a malformed request.
 
     Args:
-    ----
         client(TestClient): FastAPI client fixture
 
     """
