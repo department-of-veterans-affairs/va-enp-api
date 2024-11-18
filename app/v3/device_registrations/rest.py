@@ -22,14 +22,16 @@ async def create_device_registration(
     fastapi_request: Request,
     background_tasks: BackgroundTasks,
 ) -> DeviceRegistrationSingleResponse:
-    """Create a device registration, from a mobile app.
+    """Create a device registration.
 
     Args:
+    ----
         request (DeviceRegistrationSingleRequest): Data for the request
         fastapi_request (Request): The FastAP:I request object
         background_tasks (BackgroundTasks): The FastAPI background tasks object
 
     Returns:
+    -------
         Upon success, a DeviceRegistrationSingleResponse object is returned.
 
     """

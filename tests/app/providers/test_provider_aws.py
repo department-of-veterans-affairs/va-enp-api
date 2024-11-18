@@ -160,3 +160,8 @@ class TestProviderAWS:
             assert (
                 self.provider.get_platform_application_arn('foo') == 'arn:aws:sns:us-east-1:000000000000:app/APNS/foo'
             )
+
+    async def test_str(self, mock_get_session: AsyncMock) -> None:
+        """Test the string representation of the class."""
+        provider = ProviderAWS()
+        assert str(provider) == 'AWS Provider'
