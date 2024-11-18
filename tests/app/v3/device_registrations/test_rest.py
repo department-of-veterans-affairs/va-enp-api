@@ -18,7 +18,8 @@ def test_post(client: TestClient) -> None:
         client(TestClient): FastAPI client fixture
 
     """
-    client.app.state.providers['aws'].register_device.return_value = 'arn:aws:sns:endpoint_sid'
+    if hasattr(client.app, 'state'):
+        client.app.state.providers['aws'].register_device.return_value = 'arn:aws:sns:endpoint_sid'
 
     request = DeviceRegistrationSingleRequest(
         device_name='test',
@@ -39,7 +40,9 @@ def test_post_with_camel_casing(client: TestClient) -> None:
         client(TestClient): FastAPI client fixture
 
     """
-    client.app.state.providers['aws'].register_device.return_value = 'arn:aws:sns:endpoint_sid'
+    if hasattr(client.app, 'state'):
+        client.app.state.providers['aws'].register_device.return_value = 'arn:aws:sns:endpoint_sid'
+
     request = {
         'deviceName': 'test',
         'deviceToken': 'test',
