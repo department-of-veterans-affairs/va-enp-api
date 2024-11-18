@@ -91,11 +91,14 @@ class ProviderAWS(ProviderBase):
         logger.debug(response)
         return response['MessageId']
 
-    async def register_device(self, device_registration_model: DeviceRegistrationModel) -> None:
+    async def register_device(self, device_registration_model: DeviceRegistrationModel) -> str:
         """Register a mobile app user. Calls the public method register_push_endpoint, after building the arn.
 
         Args:
             device_registration_model: the parameters to pass to register
+
+        Returns:
+            str: The endpoint ARN needed to send a push notification to the registered device
 
         """
         platform_application_arn = self.get_platform_application_arn(

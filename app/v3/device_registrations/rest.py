@@ -9,9 +9,9 @@ from fastapi.responses import Response
 from fastapi.routing import APIRoute
 from loguru import logger
 
+from app.clients.va_profile import register_device_with_vaprofile
 from app.providers.provider_schemas import DeviceRegistrationModel
 from app.v3.device_registrations.route_schema import DeviceRegistrationSingleRequest, DeviceRegistrationSingleResponse
-from app.v3.device_registrations.tasks import register_device_with_vaprofile
 
 RESPONSE_400 = 'Request body failed validation'
 RESPONSE_404 = 'Not found'
@@ -93,7 +93,6 @@ async def create_device_registration(
     logger.debug('Loaded provider: {}', provider)
 
     device_registration_model = DeviceRegistrationModel(
-        device_name=request.device_name,
         token=request.device_token,
         platform_application_name=request.app_name,
     )
@@ -108,6 +107,8 @@ async def create_device_registration(
         endpoint_sid,
         request.device_name,
         request.os_name,
+        request.app_name,
+        request.device_token,
     )
 
     return DeviceRegistrationSingleResponse(

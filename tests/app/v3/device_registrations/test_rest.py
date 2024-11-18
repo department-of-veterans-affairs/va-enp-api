@@ -61,7 +61,7 @@ def test_post_with_camel_casing(client: TestClient) -> None:
         {'device_token': 'test', 'app_name': 'test', 'os_name': 'test'},
     ],
 )
-def test_post_missing_data(client: TestClient, request_json: dict) -> None:
+def test_post_missing_data(client: TestClient, request_json: dict[str, str]) -> None:
     """Test POST /v3/device-registration with missing data.
 
     The endpoint should return a 400 status code.
