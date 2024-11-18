@@ -2,7 +2,6 @@
 
 from time import monotonic
 from typing import Any, Callable, Coroutine
-from uuid import uuid4
 
 from fastapi import APIRouter, BackgroundTasks, HTTPException, Request, status
 from fastapi.exceptions import RequestValidationError

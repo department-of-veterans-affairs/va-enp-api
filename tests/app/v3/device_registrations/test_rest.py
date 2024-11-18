@@ -1,3 +1,5 @@
+"""Test cases for the device-registrations REST API."""
+
 from unittest import mock
 
 import pytest
@@ -18,6 +20,8 @@ def test_post(client: TestClient) -> None:
         client(TestClient): FastAPI client fixture
 
     """
+    client.app.state.providers['aws'].register_device = mock.AsyncMock(return_value='arn:aws:sns:endpoint_sid')
+
     request = DeviceRegistrationSingleRequest(
         device_name='test',
         device_token='test',
@@ -37,6 +41,7 @@ def test_post_with_camel_casing(client: TestClient) -> None:
         client(TestClient): FastAPI client fixture
 
     """
+    client.app.state.providers['aws'].register_device = mock.AsyncMock(return_value='arn:aws:sns:endpoint_sid')
     request = {
         'deviceName': 'test',
         'deviceToken': 'test',

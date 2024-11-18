@@ -18,9 +18,6 @@ def register_device_with_vaprofile(
         app_name (str): The app name
         token (str): The token
 
-    Raises:
-        NotImplementedError: This function is not yet implemented.
-
     """
     logger.info(
         'Registering device with VA Profile: endpoint_sid={}, device_name={}, device_os={}, app_name={}, token={}',
@@ -30,5 +27,4 @@ def register_device_with_vaprofile(
         app_name,
         token,
     )
-
-    raise NotImplementedError('register_device_with_vaprofile is not yet implemented.')
+    return True

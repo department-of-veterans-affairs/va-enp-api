@@ -12,7 +12,7 @@ import pytest
 from app.providers import sns_publish_retriable_exceptions_set
 from app.providers.provider_aws import ProviderAWS
 from app.providers.provider_base import ProviderNonRetryableError, ProviderRetryableError
-from app.providers.provider_schemas import DeviceRegistrationModel, PushModel, PushRegistrationModel
+from app.providers.provider_schemas import PushModel, PushRegistrationModel
 from tests.app.providers import botocore_exceptions_kwargs
 
 

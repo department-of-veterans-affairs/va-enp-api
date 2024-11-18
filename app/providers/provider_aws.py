@@ -21,7 +21,7 @@ class ProviderAWS(ProviderBase):
     def __str__(self) -> str:
         """Return the name of the provider.
 
-        Returns:
+        Returns
         -------
             str: The name of the provider
 
