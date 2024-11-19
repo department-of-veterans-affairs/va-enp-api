@@ -5,7 +5,7 @@ from pydantic import AliasChoices, BaseModel, Field
 from app.constants import MobileAppType, OSPlatformType
 
 
-class DeviceRegistrationSingleRequest(BaseModel):
+class DeviceRegistrationRequest(BaseModel):
     """Request model for register endpoint."""
 
     device_name: str = Field(validation_alias=AliasChoices('device_name', 'deviceName'))

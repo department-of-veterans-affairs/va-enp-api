@@ -4,7 +4,7 @@ import pytest
 from fastapi import status
 from fastapi.testclient import TestClient
 
-from app.v3.device_registrations.route_schema import DeviceRegistrationSingleRequest
+from app.v3.device_registrations.route_schema import DeviceRegistrationRequest
 
 
 # Valid applications are VA_FLAGSHIP_APP, VETEXT.  Valid platforms are IOS, ANDROID.
@@ -32,7 +32,7 @@ def test_post(client: TestClient, application: str, platform: str) -> None:
     if hasattr(client.app, 'state'):
         client.app.state.providers['aws'].register_device.return_value = 'arn:aws:sns:endpoint_sid'
 
-    request = DeviceRegistrationSingleRequest(
+    request = DeviceRegistrationRequest(
         device_name='test',
         device_token='test',
         app_name=application,

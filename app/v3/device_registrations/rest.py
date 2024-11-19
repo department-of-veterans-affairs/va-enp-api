@@ -7,7 +7,7 @@ from app.clients.va_profile import register_device_with_vaprofile
 from app.constants import RESPONSE_404
 from app.providers.provider_schemas import DeviceRegistrationModel
 from app.routers import TimedAPIRoute
-from app.v3.device_registrations.route_schema import DeviceRegistrationSingleRequest, DeviceRegistrationSingleResponse
+from app.v3.device_registrations.route_schema import DeviceRegistrationRequest, DeviceRegistrationSingleResponse
 
 api_router = APIRouter(
     prefix='/device-registrations',
@@ -19,7 +19,7 @@ api_router = APIRouter(
 
 @api_router.post('/', status_code=status.HTTP_201_CREATED)
 async def create_device_registration(
-    request: DeviceRegistrationSingleRequest,
+    request: DeviceRegistrationRequest,
     fastapi_request: Request,
     background_tasks: BackgroundTasks,
 ) -> DeviceRegistrationSingleResponse:
