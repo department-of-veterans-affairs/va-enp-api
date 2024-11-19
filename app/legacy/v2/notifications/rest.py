@@ -5,7 +5,6 @@ import json
 from fastapi import APIRouter, BackgroundTasks, HTTPException, Request, status
 from loguru import logger
 
-from app.constants import RESPONSE_404
 from app.dao.notifications_dao import dao_create_notification
 from app.db.models import Notification, Template
 from app.legacy.v2.notifications.route_schema import (
@@ -18,7 +17,6 @@ from app.routers import TimedAPIRoute
 v2_notification_router = APIRouter(
     prefix='/v2/notifications',
     tags=['v2 Notification Endpoints'],
-    responses={404: {'description': RESPONSE_404}},
     route_class=TimedAPIRoute,
 )
 

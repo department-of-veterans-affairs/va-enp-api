@@ -4,14 +4,12 @@ from fastapi import APIRouter, BackgroundTasks, Request, status
 from loguru import logger
 
 from app.clients.va_profile import register_device_with_vaprofile
-from app.constants import RESPONSE_404
 from app.providers.provider_schemas import DeviceRegistrationModel
 from app.routers import TimedAPIRoute
 from app.v3.device_registrations.route_schema import DeviceRegistrationRequest, DeviceRegistrationResponse
 
 api_router = APIRouter(
     prefix='/device-registrations',
-    responses={404: {'description': RESPONSE_404}},
     route_class=TimedAPIRoute,
 )
 
@@ -35,7 +33,7 @@ async def create_device_registration(
     """
     logger.debug('Received device registration request: {}', request)
 
-    provider = fastapi_request.app.state.providers.get('aws')
+    provider = fastapi_request.app.state.providers['aws']
     logger.debug('Loaded provider: {}', provider)
 
     device_registration_model = DeviceRegistrationModel(

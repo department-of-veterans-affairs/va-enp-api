@@ -6,13 +6,11 @@ from uuid import uuid4
 from fastapi import APIRouter, status
 from pydantic import UUID4
 
-from app.constants import RESPONSE_404
 from app.routers import TimedAPIRoute
 from app.v3.notifications.route_schema import NotificationSingleRequest, NotificationSingleResponse
 
 api_router = APIRouter(
     prefix='/notifications',
-    responses={404: {'description': RESPONSE_404}},
     route_class=TimedAPIRoute,
 )
 
