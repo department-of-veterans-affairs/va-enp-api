@@ -53,7 +53,7 @@ class TimedAPIRoute(APIRoute):
                 raise HTTPException(status_code, RESPONSE_500)
             finally:
                 logger.info(
-                    '{} {} {} {}',
+                    '{} {} {} {}s',
                     request.method,
                     request.url,
                     status_code,
