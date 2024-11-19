@@ -7,7 +7,7 @@ from app.clients.va_profile import register_device_with_vaprofile
 from app.constants import RESPONSE_404
 from app.providers.provider_schemas import DeviceRegistrationModel
 from app.routers import TimedAPIRoute
-from app.v3.device_registrations.route_schema import DeviceRegistrationRequest, DeviceRegistrationSingleResponse
+from app.v3.device_registrations.route_schema import DeviceRegistrationRequest, DeviceRegistrationResponse
 
 api_router = APIRouter(
     prefix='/device-registrations',
@@ -21,7 +21,7 @@ async def create_device_registration(
     request: DeviceRegistrationRequest,
     fastapi_request: Request,
     background_tasks: BackgroundTasks,
-) -> DeviceRegistrationSingleResponse:
+) -> DeviceRegistrationResponse:
     """Create a device registration.
 
     Args:
@@ -57,6 +57,6 @@ async def create_device_registration(
         request.device_token,
     )
 
-    return DeviceRegistrationSingleResponse(
+    return DeviceRegistrationResponse(
         endpoint_sid=endpoint_sid,
     )

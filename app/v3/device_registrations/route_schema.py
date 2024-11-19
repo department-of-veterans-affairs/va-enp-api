@@ -14,7 +14,7 @@ class DeviceRegistrationRequest(BaseModel):
     os_name: OSPlatformType = Field(validation_alias=AliasChoices('os_name', 'osName'))
 
 
-class DeviceRegistrationSingleResponse(BaseModel):
+class DeviceRegistrationResponse(BaseModel):
     """Response model for register endpoint."""
 
     endpoint_sid: str
