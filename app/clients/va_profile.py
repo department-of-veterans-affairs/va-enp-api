@@ -28,12 +28,12 @@ def register_device_with_vaprofile(
         bool: True always, for now
 
     """
+    logger.info('Registering device with VA Profile: endpoint_sid={}, app_name={}', endpoint_sid, app_name)
     logger.debug(
-        'Registering device with VA Profile: endpoint_sid={}, device_name={}, device_os={}, app_name={}, token={}',
+        'Registering device with VA Profile: endpoint_sid={}, device_name={}, device_os={}, app_name={}',
         endpoint_sid,
         device_name,
         device_os,
         app_name,
-        token,
     )
     return True
