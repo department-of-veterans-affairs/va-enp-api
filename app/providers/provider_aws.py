@@ -12,11 +12,37 @@ from loguru import logger
 
 from app.providers import sns_publish_retriable_exceptions_set
 from app.providers.provider_base import ProviderBase, ProviderNonRetryableError, ProviderRetryableError
-from app.providers.provider_schemas import PushModel, PushRegistrationModel
+from app.providers.provider_schemas import DeviceRegistrationModel, PushModel, PushRegistrationModel
 
 
 class ProviderAWS(ProviderBase):
     """Provider interface for Amazon Web Services (AWS)."""
+
+    def __str__(self) -> str:
+        """Return the name of the provider.
+
+        Returns:
+            str: The name of the provider
+
+        """
+        return 'AWS Provider'
+
+    @staticmethod
+    def get_platform_application_arn(platform_application_id: str) -> str:
+        """Build the platform application ARN.
+
+        Args:
+            platform_application_id: The ID of the platform application
+
+        Returns:
+            str: The platform application ARN
+
+        """
+        region_name = os.getenv('AWS_REGION_NAME', 'us-east-1')
+        account_id = os.getenv('AWS_ACCOUNT_ID', '000000000000')
+        platform = os.getenv('AWS_PLATFORM', 'APNS')
+
+        return f'arn:aws:sns:{region_name}:{account_id}:app/{platform}/{platform_application_id}'
 
     async def _send_push(self, push_model: PushModel) -> str:
         """Send a message to an Amazon SNS topic.
@@ -60,6 +86,30 @@ class ProviderAWS(ProviderBase):
         logger.debug(response)
         return response['MessageId']
 
+    async def register_device(self, device_registration_model: DeviceRegistrationModel) -> str:
+        """Register a mobile app user. Calls the public method register_push_endpoint, after building the arn.
+
+        Args:
+            device_registration_model: the parameters to pass to register
+
+        Returns:
+            str: The endpoint ARN needed to send a push notification to the registered device
+
+        """
+        platform_application_arn = self.get_platform_application_arn(
+            device_registration_model.platform_application_name,
+        )
+        logger.debug('Registering device with platform application ARN {}', platform_application_arn)
+
+        push_registration_model = PushRegistrationModel(
+            platform_application_arn=platform_application_arn,
+            token=device_registration_model.token,
+        )
+        response = await self.register_push_endpoint(push_registration_model)
+        logger.debug('Registered device with endpoint ARN {}', response)
+
+        return response
+
     async def register_push_endpoint(self, push_registration_model: PushRegistrationModel) -> str:
         """Register a mobile app user.
 
@@ -71,6 +121,8 @@ class ProviderAWS(ProviderBase):
         Returns:
             str: The endpoint ARN needed to send a push notification to the registered device
 
+        Raises:
+            ProviderNonRetryableError: Don't retry the request
         """
         try:
             session = get_session()
@@ -84,12 +136,14 @@ class ProviderAWS(ProviderBase):
                     PlatformApplicationArn=push_registration_model.platform_application_arn,
                     Token=push_registration_model.token,
                 )
-        except Exception:
-            logger.exception('Failed to register a push client with AWS SNS: %s', push_registration_model)
-            raise
+        except Exception as e:
+            logger.exception(
+                'Failed to register a push client with AWS SNS: {}', push_registration_model.platform_application_arn
+            )
+            raise ProviderNonRetryableError('Failed to register a push client with AWS SNS') from e
 
         logger.info(
-            'Created push endpoint ARN %s for device %s on application %s.',
+            'Created push endpoint ARN {} for device {} on application {}.',
             response['EndpointArn'],
             push_registration_model.token,
             push_registration_model.platform_application_arn,

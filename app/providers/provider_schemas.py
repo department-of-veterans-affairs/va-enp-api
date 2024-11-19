@@ -3,6 +3,18 @@
 from pydantic import BaseModel, model_validator
 from typing_extensions import Self
 
+from app.constants import MobileAppType
+
+
+class DeviceRegistrationModel(BaseModel):
+    """Define the input to register a device that will receive push notifications.
+
+    As currently implemented, this class is idiosyncratic to AWS SNS and includes only required parameters.
+    """
+
+    platform_application_name: MobileAppType
+    token: str
+
 
 class PushModel(BaseModel):
     """Define the input to send a push notification.

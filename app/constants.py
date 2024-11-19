@@ -2,6 +2,10 @@
 
 from enum import StrEnum
 
+RESPONSE_400 = 'Bad request'
+RESPONSE_404 = 'Not found'
+RESPONSE_500 = 'Server error'
+
 
 class IdentifierType(StrEnum):
     """Types of Identifiers that can be used."""
@@ -25,3 +29,10 @@ class MobileAppType(StrEnum):
 
     VA_FLAGSHIP_APP = 'VA_FLAGSHIP_APP'
     VETEXT = 'VETEXT'
+
+
+class OSPlatformType(StrEnum):
+    """OS Platform Types available."""
+
+    ANDROID = 'ANDROID'
+    IOS = 'IOS'

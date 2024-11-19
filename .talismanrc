@@ -8,7 +8,7 @@ fileignoreconfig:
 - filename: app/providers/provider_aws.py
   checksum: f345ea8dea997d72c8d40a0cac2a2b1aacacef8959088ba5cc2ea9e5df57c9fd
 - filename: ci/.env.local
-  checksum: dcdc621473581160f135b93be027bfebee8d34da2bade87bd225271a1804b8a2
+  checksum: 259e29eba56b509f1473614384b8a8f1b56e34bcacf3412c95d0e3c06b22a52f
 - filename: ci/.local.env
   checksum: 47e9f19fdfb3655ceb51cfee25242e87d45bb05618a1cca6ac2bc8a709e0cdf9
 - filename: ci/docker-compose-local.yml
@@ -18,5 +18,5 @@ fileignoreconfig:
 - filename: tests/app/providers/__init__.py
   checksum: 0e3ae2fd3a50245a8c143d31c4316b164b51161d2db6e660aa956b78eda1b4d8
 - filename: tests/app/providers/test_provider_aws.py
-  checksum: 80b0eda070e642900a348299f5e0023f42bbf39e9e6c8db2deeabf1f1a93bb45
+  checksum: be32718974ccec221e6e05857960cd970e01ad07193bbd037ea1d3a034dad781
 version: "1.0"

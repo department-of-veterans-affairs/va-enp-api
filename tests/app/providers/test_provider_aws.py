@@ -9,10 +9,11 @@ from unittest.mock import AsyncMock, patch
 import botocore.exceptions
 import pytest
 
+from app.constants import MobileAppType
 from app.providers import sns_publish_retriable_exceptions_set
 from app.providers.provider_aws import ProviderAWS
 from app.providers.provider_base import ProviderNonRetryableError, ProviderRetryableError
-from app.providers.provider_schemas import PushModel, PushRegistrationModel
+from app.providers.provider_schemas import DeviceRegistrationModel, PushModel, PushRegistrationModel
 from tests.app.providers import botocore_exceptions_kwargs
 
 
@@ -145,3 +146,44 @@ class TestProviderAWS:
         push_registration_model = PushRegistrationModel(platform_application_arn='123', token='456')
         assert await self.provider.register_push_endpoint(push_registration_model) == '12345'
         mock_client.create_platform_endpoint.assert_called_once()
+
+    async def test_get_platform_application_arn(
+        self, mock_get_session: AsyncMock, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Test with various mocked environments."""
+        monkeypatch.setenv('AWS_REGION_NAME', 'us-west-1')
+        monkeypatch.setenv('AWS_ACCOUNT_ID', '999999999999')
+        monkeypatch.setenv('AWS_PLATFORM', 'APNS')
+
+        assert self.provider.get_platform_application_arn('foo') == 'arn:aws:sns:us-west-1:999999999999:app/APNS/foo'
+
+    async def test_str(self, mock_get_session: AsyncMock) -> None:
+        """Test the string representation of the class."""
+        assert str(self.provider) == 'AWS Provider'
+
+    async def test_register_push_endpoint_with_non_retryable_exceptions(self, mock_get_session: AsyncMock) -> None:
+        """Test handling of non-retryable exceptions."""
+        mock_get_session.side_effect = botocore.exceptions.ClientError(
+            {'Error': {'Code': 'InvalidParameterException'}},
+            'sns',
+        )
+
+        push_registration_model = PushRegistrationModel(platform_application_arn='123', token='456')
+        with pytest.raises(ProviderNonRetryableError):
+            await self.provider.register_push_endpoint(push_registration_model)
+
+    async def test_register_device(self, mock_get_session: AsyncMock) -> None:
+        """Test the happy path."""
+        mock_client = AsyncMock()
+        mock_client.create_platform_endpoint.return_value = {
+            'EndpointArn': 'arn:aws:sns:us-east-1:000000000000:app/APNS/12345',
+        }
+        mock_get_session.return_value.create_client.return_value.__aenter__.return_value = mock_client
+
+        actual = await self.provider.register_device(
+            DeviceRegistrationModel(
+                platform_application_name=MobileAppType.VA_FLAGSHIP_APP,
+                token='bar',
+            )
+        )
+        assert actual == 'arn:aws:sns:us-east-1:000000000000:app/APNS/12345'
