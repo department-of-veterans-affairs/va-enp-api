@@ -161,8 +161,8 @@ class TestProviderAWS:
         """Test the string representation of the class."""
         assert str(self.provider) == 'AWS Provider'
 
-    async def test_register_push_endpoint_with_exceptions(self, mock_get_session: AsyncMock) -> None:
-        """Test exception handling."""
+    async def test_register_push_endpoint_with_non_retryable_exceptions(self, mock_get_session: AsyncMock) -> None:
+        """Test handling of non-retryable exceptions."""
         mock_get_session.side_effect = botocore.exceptions.ClientError(
             {'Error': {'Code': 'InvalidParameterException'}},
             'sns',
