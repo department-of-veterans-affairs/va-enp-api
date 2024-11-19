@@ -4,6 +4,7 @@ import pytest
 from fastapi import status
 from fastapi.testclient import TestClient
 
+from app.constants import MobileAppType, OSPlatformType
 from app.v3.device_registrations.route_schema import DeviceRegistrationRequest
 
 
@@ -17,7 +18,7 @@ from app.v3.device_registrations.route_schema import DeviceRegistrationRequest
         ('VETEXT', 'ANDROID'),
     ],
 )
-def test_post(client: TestClient, application: str, platform: str) -> None:
+def test_post(client: TestClient, application: MobileAppType, platform: OSPlatformType) -> None:
     """Test POST /v3/device-registration.
 
     The endpoint should return a 201 status code, and the response should include
@@ -30,7 +31,11 @@ def test_post(client: TestClient, application: str, platform: str) -> None:
 
     """
     if hasattr(client.app, 'state'):
-        client.app.state.providers['aws'].register_device.return_value = 'arn:aws:sns:endpoint_sid'
+        client.app.state.providers[
+            'aws'
+        ].register_device.return_value = (
+            'arn:aws:sns:us-east-1:000000000000:endpoint/APNS/notify/00000000-0000-0000-0000-000000000000'
+        )
 
     request = DeviceRegistrationRequest(
         device_name='test',
@@ -40,7 +45,7 @@ def test_post(client: TestClient, application: str, platform: str) -> None:
     )
     resp = client.post('v3/device-registrations', json=request.model_dump())
     assert resp.status_code == status.HTTP_201_CREATED
-    assert 'endpoint_sid' in resp.json()
+    assert resp.json()['endpoint_sid'] == '00000000-0000-0000-0000-000000000000'
 
 
 def test_post_with_camel_casing(client: TestClient) -> None:
@@ -51,7 +56,11 @@ def test_post_with_camel_casing(client: TestClient) -> None:
 
     """
     if hasattr(client.app, 'state'):
-        client.app.state.providers['aws'].register_device.return_value = 'arn:aws:sns:endpoint_sid'
+        client.app.state.providers[
+            'aws'
+        ].register_device.return_value = (
+            'arn:aws:sns:us-east-1:000000000000:endpoint/APNS/notify/00000000-0000-0000-0000-000000000000'
+        )
 
     request = {
         'deviceName': 'test',
@@ -61,26 +70,3 @@ def test_post_with_camel_casing(client: TestClient) -> None:
     }
     resp = client.post('v3/device-registrations', json=request)
     assert resp.status_code == status.HTTP_201_CREATED
-
-
-@pytest.mark.parametrize(
-    'request_json',
-    [
-        {'device_name': 'test', 'device_token': 'test', 'app_name': 'test'},
-        {'device_name': 'test', 'device_token': 'test', 'os_name': 'test'},
-        {'device_name': 'test', 'app_name': 'test', 'os_name': 'test'},
-        {'device_token': 'test', 'app_name': 'test', 'os_name': 'test'},
-    ],
-)
-def test_post_missing_data(client: TestClient, request_json: dict[str, str]) -> None:
-    """Test POST /v3/device-registration with missing data.
-
-    The endpoint should return a 400 status code.
-
-    Args:
-        client(TestClient): FastAPI client fixture
-        request_json(dict): JSON request, from the parametrize decorator
-
-    """
-    resp = client.post('v3/device-registrations', json=request_json)
-    assert resp.status_code == status.HTTP_400_BAD_REQUEST

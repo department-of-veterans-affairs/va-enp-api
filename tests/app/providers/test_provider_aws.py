@@ -163,18 +163,10 @@ class TestProviderAWS:
 
     async def test_str(self, mock_get_session: AsyncMock) -> None:
         """Test the string representation of the class."""
-        provider = ProviderAWS()
-        assert str(provider) == 'AWS Provider'
+        assert str(self.provider) == 'AWS Provider'
 
     async def test_register_push_endpoint_with_exceptions(self, mock_get_session: AsyncMock) -> None:
         """Test exception handling."""
-        push_registration_model = PushRegistrationModel(
-            platform_application_arn='arn:aws:sns:us-east-1:000000000000:app/APNS/foo',
-            token='foobar',
-        )
-
-        mock_client = AsyncMock()
-        mock_client.create_platform_endpoint.return_value = {'EndpointArn': '12345'}
         mock_get_session.side_effect = botocore.exceptions.ClientError(
             {'Error': {'Code': 'InvalidParameterException'}},
             'sns',
@@ -198,5 +190,4 @@ class TestProviderAWS:
                 token='bar',
             )
         )
-        expected = 'arn:aws:sns:us-east-1:000000000000:endpoint/12345'
-        assert actual == expected
+        assert actual == 'arn:aws:sns:us-east-1:000000000000:endpoint/12345'
