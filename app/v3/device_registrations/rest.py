@@ -1,4 +1,4 @@
-"""All endpoints for the v3/notifications route."""
+"""All endpoints for the v3/device-registrations route."""
 
 from fastapi import APIRouter, BackgroundTasks, Request, status
 from loguru import logger
