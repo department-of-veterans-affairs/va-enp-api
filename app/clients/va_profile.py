@@ -1,6 +1,6 @@
-"""Contains helpers for the VA Profile client.
+"""Contains helpers for VA Profile.
 
-- register_device_with_vaprofile: Register a device with the VA Profile.
+- register_device_with_vaprofile: Register a device with VA Profile.
 """
 
 from loguru import logger
@@ -9,7 +9,7 @@ from loguru import logger
 def register_device_with_vaprofile(
     endpoint_sid: str, device_name: str, device_os: str, app_name: str, token: str
 ) -> bool:
-    """Register a device with the VA Profile.
+    """Register a device with VA Profile.
 
     Args:
         endpoint_sid (str): The endpoint SID,
