@@ -7,7 +7,17 @@ from fastapi.testclient import TestClient
 from app.v3.device_registrations.route_schema import DeviceRegistrationSingleRequest
 
 
-def test_post(client: TestClient) -> None:
+# Valid applications are VA_FLAGSHIP_APP, VETEXT.  Valid platforms are IOS, ANDROID.
+@pytest.mark.parametrize(
+    ('application', 'platform'),
+    [
+        ('VA_FLAGSHIP_APP', 'IOS'),
+        ('VA_FLAGSHIP_APP', 'ANDROID'),
+        ('VETEXT', 'IOS'),
+        ('VETEXT', 'ANDROID'),
+    ],
+)
+def test_post(client: TestClient, application: str, platform: str) -> None:
     """Test POST /v3/device-registration.
 
     The endpoint should return a 201 status code, and the response should include
@@ -15,6 +25,8 @@ def test_post(client: TestClient) -> None:
 
     Args:
         client(TestClient): FastAPI client fixture
+        application(str): The application name, either VA_FLAGSHIP_APP or VETEXT
+        platform(str): The platform name, either IOS or ANDROID
 
     """
     if hasattr(client.app, 'state'):
@@ -23,8 +35,8 @@ def test_post(client: TestClient) -> None:
     request = DeviceRegistrationSingleRequest(
         device_name='test',
         device_token='test',
-        app_name='test',
-        os_name='test',
+        app_name=application,
+        os_name=platform,
     )
     resp = client.post('v3/device-registrations', json=request.model_dump())
     assert resp.status_code == status.HTTP_201_CREATED
@@ -44,8 +56,8 @@ def test_post_with_camel_casing(client: TestClient) -> None:
     request = {
         'deviceName': 'test',
         'deviceToken': 'test',
-        'appName': 'test',
-        'osName': 'test',
+        'appName': 'VETEXT',
+        'osName': 'IOS',
     }
     resp = client.post('v3/device-registrations', json=request)
     assert resp.status_code == status.HTTP_201_CREATED

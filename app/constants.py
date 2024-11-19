@@ -29,3 +29,10 @@ class MobileAppType(StrEnum):
 
     VA_FLAGSHIP_APP = 'VA_FLAGSHIP_APP'
     VETEXT = 'VETEXT'
+
+
+class OSPlatformType(StrEnum):
+    """OS Platform Types available."""
+
+    ANDROID = 'ANDROID'
+    IOS = 'IOS'
