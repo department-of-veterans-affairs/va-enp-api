@@ -4,15 +4,16 @@ from fastapi import APIRouter, BackgroundTasks, Request, status
 from loguru import logger
 
 from app.clients.va_profile import register_device_with_vaprofile
+from app.constants import RESPONSE_404
 from app.providers.provider_schemas import DeviceRegistrationModel
-from app.v3 import RESPONSE_404, V3APIRoute
+from app.routers import TimedAPIRoute
 from app.v3.device_registrations.route_schema import DeviceRegistrationSingleRequest, DeviceRegistrationSingleResponse
 
 api_router = APIRouter(
     prefix='/v3/device-registrations',
     tags=['v3 Device Registration Endpoints'],
     responses={404: {'description': RESPONSE_404}},
-    route_class=V3APIRoute,
+    route_class=TimedAPIRoute,
 )
 
 

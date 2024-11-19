@@ -2,6 +2,10 @@
 
 from enum import StrEnum
 
+RESPONSE_400 = 'Request body failed validation'
+RESPONSE_404 = 'Not found'
+RESPONSE_500 = 'Unhandled VA Notify exception'
+
 
 class IdentifierType(StrEnum):
     """Types of Identifiers that can be used."""

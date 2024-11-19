@@ -6,7 +6,8 @@ from uuid import uuid4
 from fastapi import APIRouter, status
 from pydantic import UUID4
 
-from app.v3 import RESPONSE_404, V3APIRoute
+from app.constants import RESPONSE_404
+from app.routers import TimedAPIRoute
 from app.v3.notifications.route_schema import NotificationSingleRequest, NotificationSingleResponse
 
 # https://fastapi.tiangolo.com/reference/apirouter/
@@ -14,7 +15,7 @@ notification_router = APIRouter(
     prefix='/v3/notifications',
     tags=['v3 Notification Endpoints'],
     responses={404: {'description': RESPONSE_404}},
-    route_class=V3APIRoute,
+    route_class=TimedAPIRoute,
 )
 
 
