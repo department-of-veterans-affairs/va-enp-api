@@ -8,7 +8,7 @@ fileignoreconfig:
 - filename: app/providers/provider_aws.py
   checksum: f345ea8dea997d72c8d40a0cac2a2b1aacacef8959088ba5cc2ea9e5df57c9fd
 - filename: ci/.env.local
-  checksum: dcdc621473581160f135b93be027bfebee8d34da2bade87bd225271a1804b8a2
+  checksum: 259e29eba56b509f1473614384b8a8f1b56e34bcacf3412c95d0e3c06b22a52f
 - filename: ci/.local.env
   checksum: 47e9f19fdfb3655ceb51cfee25242e87d45bb05618a1cca6ac2bc8a709e0cdf9
 - filename: ci/docker-compose-local.yml

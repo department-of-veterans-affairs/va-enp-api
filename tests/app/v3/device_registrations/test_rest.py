@@ -17,6 +17,12 @@ from app.v3.device_registrations.route_schema import DeviceRegistrationRequest
         ('VETEXT', 'IOS', {'device_name': 'test', 'device_token': 'test'}),
         ('VETEXT', 'ANDROID', {'device_name': 'test', 'deviceToken': 'test'}),
     ],
+    ids=[
+        'VA_FLAGSHIP_APP_IOS',
+        'VA_FLAGSHIP_APP_ANDROID',
+        'VETEXT_IOS',
+        'VETEXT_ANDROID',
+    ],
 )
 def test_post(
     client: TestClient,
@@ -36,12 +42,11 @@ def test_post(
         payload(dict): The request payload
 
     """
-    if hasattr(client.app, 'state'):
-        client.app.state.providers[
-            'aws'
-        ].register_device.return_value = (
-            'arn:aws:sns:us-east-1:000000000000:endpoint/APNS/notify/00000000-0000-0000-0000-000000000000'
-        )
+    client.app.state.providers[  # type: ignore
+        'aws'
+    ].register_device.return_value = (
+        'arn:aws:sns:us-east-1:000000000000:endpoint/APNS/notify/00000000-0000-0000-0000-000000000000'
+    )
 
     request = DeviceRegistrationRequest(**payload, app_name=application, os_name=platform)
     resp = client.post('v3/device-registrations', json=request.model_dump())
