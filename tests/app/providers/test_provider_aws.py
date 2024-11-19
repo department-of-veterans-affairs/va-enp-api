@@ -9,6 +9,7 @@ from unittest.mock import AsyncMock, patch
 import botocore.exceptions
 import pytest
 
+from app.constants import MobileAppType
 from app.providers import sns_publish_retriable_exceptions_set
 from app.providers.provider_aws import ProviderAWS
 from app.providers.provider_base import ProviderNonRetryableError, ProviderRetryableError
@@ -146,20 +147,15 @@ class TestProviderAWS:
         assert await self.provider.register_push_endpoint(push_registration_model) == '12345'
         mock_client.create_platform_endpoint.assert_called_once()
 
-    async def test_get_platform_application_arn(self, mock_get_session: AsyncMock) -> None:
+    async def test_get_platform_application_arn(
+        self, mock_get_session: AsyncMock, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         """Test with various mocked environments."""
-        # mock the os.getenv calls
-        with patch(
-            'os.getenv',
-            side_effect=[
-                'us-east-1',
-                '000000000000',
-                'APNS',
-            ],
-        ):
-            assert (
-                self.provider.get_platform_application_arn('foo') == 'arn:aws:sns:us-east-1:000000000000:app/APNS/foo'
-            )
+        monkeypatch.setenv('AWS_REGION_NAME', 'us-west-1')
+        monkeypatch.setenv('AWS_ACCOUNT_ID', '999999999999')
+        monkeypatch.setenv('AWS_PLATFORM', 'APNS')
+
+        assert self.provider.get_platform_application_arn('foo') == 'arn:aws:sns:us-west-1:999999999999:app/APNS/foo'
 
     async def test_str(self, mock_get_session: AsyncMock) -> None:
         """Test the string representation of the class."""
@@ -186,7 +182,7 @@ class TestProviderAWS:
 
         actual = await self.provider.register_device(
             DeviceRegistrationModel(
-                platform_application_name='VETEXT',
+                platform_application_name=MobileAppType.VA_FLAGSHIP_APP,
                 token='bar',
             )
         )
