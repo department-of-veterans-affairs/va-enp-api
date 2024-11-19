@@ -12,7 +12,7 @@ import pytest
 from app.providers import sns_publish_retriable_exceptions_set
 from app.providers.provider_aws import ProviderAWS
 from app.providers.provider_base import ProviderNonRetryableError, ProviderRetryableError
-from app.providers.provider_schemas import PushModel, PushRegistrationModel
+from app.providers.provider_schemas import DeviceRegistrationModel, PushModel, PushRegistrationModel
 from tests.app.providers import botocore_exceptions_kwargs
 
 
@@ -183,3 +183,20 @@ class TestProviderAWS:
         push_registration_model = PushRegistrationModel(platform_application_arn='123', token='456')
         with pytest.raises(ProviderNonRetryableError):
             await self.provider.register_push_endpoint(push_registration_model)
+
+    async def test_register_device(self, mock_get_session: AsyncMock) -> None:
+        """Test the happy path."""
+        mock_client = AsyncMock()
+        mock_client.create_platform_endpoint.return_value = {
+            'EndpointArn': 'arn:aws:sns:us-east-1:000000000000:endpoint/12345',
+        }
+        mock_get_session.return_value.create_client.return_value.__aenter__.return_value = mock_client
+
+        actual = await self.provider.register_device(
+            DeviceRegistrationModel(
+                platform_application_name='foo',
+                token='bar',
+            )
+        )
+        expected = 'arn:aws:sns:us-east-1:000000000000:endpoint/12345'
+        assert actual == expected
