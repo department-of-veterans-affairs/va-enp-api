@@ -20,8 +20,8 @@ def register_device_with_vaprofile(
     Args:
         endpoint_sid (str): The endpoint SID,
         device_name (str): The device name
-        device_os (str): The device OS
-        app_name (str): The app name
+        device_os (OSPlatformType): The device OS
+        app_name (MobileAppType): The app name
         token (str): The token
 
     Returns:
