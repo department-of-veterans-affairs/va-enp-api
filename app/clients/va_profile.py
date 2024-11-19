@@ -7,7 +7,11 @@ from loguru import logger
 
 
 def register_device_with_vaprofile(
-    endpoint_sid: str, device_name: str, device_os: str, app_name: str, token: str
+    endpoint_sid: str,
+    device_name: str,
+    device_os: str,
+    app_name: str,
+    token: str,
 ) -> bool:
     """Register a device with VA Profile.
 
@@ -22,7 +26,7 @@ def register_device_with_vaprofile(
         bool: True always, for now
 
     """
-    logger.info(
+    logger.debug(
         'Registering device with VA Profile: endpoint_sid={}, device_name={}, device_os={}, app_name={}, token={}',
         endpoint_sid,
         device_name,
