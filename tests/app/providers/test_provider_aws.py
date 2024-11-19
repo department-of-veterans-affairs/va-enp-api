@@ -176,7 +176,7 @@ class TestProviderAWS:
         """Test the happy path."""
         mock_client = AsyncMock()
         mock_client.create_platform_endpoint.return_value = {
-            'EndpointArn': 'arn:aws:sns:us-east-1:000000000000:endpoint/12345',
+            'EndpointArn': 'arn:aws:sns:us-east-1:000000000000:app/APNS/12345',
         }
         mock_get_session.return_value.create_client.return_value.__aenter__.return_value = mock_client
 
@@ -186,4 +186,4 @@ class TestProviderAWS:
                 token='bar',
             )
         )
-        assert actual == 'arn:aws:sns:us-east-1:000000000000:endpoint/12345'
+        assert actual == 'arn:aws:sns:us-east-1:000000000000:app/APNS/12345'
