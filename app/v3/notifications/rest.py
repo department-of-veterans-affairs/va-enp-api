@@ -18,7 +18,7 @@ api_router = APIRouter(
 
 
 @api_router.get('/{notification_id}', status_code=status.HTTP_200_OK)
-def get_notification(notification_id: UUID4) -> UUID4:
+async def get_notification(notification_id: UUID4) -> UUID4:
     """Get a notification.
 
     Args:
@@ -32,7 +32,7 @@ def get_notification(notification_id: UUID4) -> UUID4:
 
 
 @api_router.post('/', status_code=status.HTTP_202_ACCEPTED)
-def create_notification(request: NotificationSingleRequest) -> NotificationSingleResponse:
+async def create_notification(request: NotificationSingleRequest) -> NotificationSingleResponse:
     """Return app status.
 
     Args:
