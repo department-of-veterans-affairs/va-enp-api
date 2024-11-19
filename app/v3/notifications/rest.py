@@ -10,17 +10,16 @@ from app.constants import RESPONSE_404
 from app.routers import TimedAPIRoute
 from app.v3.notifications.route_schema import NotificationSingleRequest, NotificationSingleResponse
 
-# https://fastapi.tiangolo.com/reference/apirouter/
-notification_router = APIRouter(
-    prefix='/v3/notifications',
+api_router = APIRouter(
+    prefix='/notifications',
     tags=['v3 Notification Endpoints'],
     responses={404: {'description': RESPONSE_404}},
     route_class=TimedAPIRoute,
 )
 
 
-@notification_router.get('/{notification_id}', status_code=status.HTTP_200_OK)
-async def get_notification(notification_id: UUID4) -> UUID4:
+@api_router.get('/{notification_id}', status_code=status.HTTP_200_OK)
+def get_notification(notification_id: UUID4) -> UUID4:
     """Get a notification.
 
     Args:
@@ -33,8 +32,8 @@ async def get_notification(notification_id: UUID4) -> UUID4:
     return notification_id
 
 
-@notification_router.post('/', status_code=status.HTTP_202_ACCEPTED)
-async def create_notification(request: NotificationSingleRequest) -> NotificationSingleResponse:
+@api_router.post('/', status_code=status.HTTP_202_ACCEPTED)
+def create_notification(request: NotificationSingleRequest) -> NotificationSingleResponse:
     """Return app status.
 
     Args:

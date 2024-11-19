@@ -10,7 +10,7 @@ from app.routers import TimedAPIRoute
 from app.v3.device_registrations.route_schema import DeviceRegistrationSingleRequest, DeviceRegistrationSingleResponse
 
 api_router = APIRouter(
-    prefix='/v3/device-registrations',
+    prefix='/device-registrations',
     tags=['v3 Device Registration Endpoints'],
     responses={404: {'description': RESPONSE_404}},
     route_class=TimedAPIRoute,

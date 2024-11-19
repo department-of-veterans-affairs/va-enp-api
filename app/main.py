@@ -15,8 +15,7 @@ from app.db.db_init import close_db, get_read_session_with_depends, get_write_se
 from app.legacy.v2.notifications.rest import v2_notification_router
 from app.logging.logging_config import CustomizeLogger
 from app.providers.provider_aws import ProviderAWS
-from app.v3.device_registrations.rest import api_router as device_registration_router
-from app.v3.notifications.rest import notification_router
+from app.v3 import api_router as v3_router
 
 MKDOCS_DIRECTORY = 'site'
 
@@ -54,9 +53,8 @@ def create_app() -> FastAPI:
     """
     CustomizeLogger.make_logger()
     app = FastAPI(lifespan=lifespan)
-    app.include_router(notification_router)
+    app.include_router(v3_router)
     app.include_router(v2_notification_router)
-    app.include_router(device_registration_router)
 
     # Static site for MkDocs. If unavailable locally, run `mkdocs build` to create the site files
     # Or run the application locally with Docker.
