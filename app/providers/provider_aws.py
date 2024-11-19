@@ -137,7 +137,9 @@ class ProviderAWS(ProviderBase):
                     Token=push_registration_model.token,
                 )
         except Exception as e:
-            logger.exception('Failed to register a push client with AWS SNS: {}', push_registration_model)
+            logger.exception(
+                'Failed to register a push client with AWS SNS: {}', push_registration_model.platform_application_arn
+            )
             raise ProviderNonRetryableError('Failed to register a push client with AWS SNS') from e
 
         logger.info(
