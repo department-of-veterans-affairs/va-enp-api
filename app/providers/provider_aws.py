@@ -32,7 +32,6 @@ class ProviderAWS(ProviderBase):
         """Build the platform application ARN.
 
         Args:
-            platform_application_name: The name of the platform application
             platform_application_id: The ID of the platform application
 
         Returns:
@@ -137,9 +136,9 @@ class ProviderAWS(ProviderBase):
                     PlatformApplicationArn=push_registration_model.platform_application_arn,
                     Token=push_registration_model.token,
                 )
-        except Exception as ex:
+        except Exception as e:
             logger.exception('Failed to register a push client with AWS SNS: {}', push_registration_model)
-            raise ProviderNonRetryableError('Failed to register a push client with AWS SNS') from ex
+            raise ProviderNonRetryableError('Failed to register a push client with AWS SNS') from e
 
         logger.info(
             'Created push endpoint ARN {} for device {} on application {}.',
