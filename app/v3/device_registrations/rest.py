@@ -24,7 +24,7 @@ async def create_device_registration(
 
     Args:
         request (DeviceRegistrationSingleRequest): Data for the request
-        fastapi_request (Request): The FastAP request object
+        fastapi_request (Request): The FastAPI request object
         background_tasks (BackgroundTasks): The FastAPI background tasks object
 
     Returns:
