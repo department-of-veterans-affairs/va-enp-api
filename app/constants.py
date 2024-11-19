@@ -2,7 +2,7 @@
 
 from enum import StrEnum
 
-RESPONSE_400 = 'Request body failed validation'
+RESPONSE_400 = 'Bad request'
 RESPONSE_404 = 'Not found'
 RESPONSE_500 = 'Server error'
 
