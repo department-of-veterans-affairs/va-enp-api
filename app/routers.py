@@ -31,25 +31,25 @@ class TimedAPIRoute(APIRoute):
                 resp = await original_route_handler(request)
                 status_code = resp.status_code
                 return resp
-            except RequestValidationError as exc:
+            except RequestValidationError as e:
                 status_code = 400
                 logger.warning(
                     'Request: {} Failed validation: {}',
                     request,
-                    exc,
+                    e,
                 )
-                raise HTTPException(400, f'{RESPONSE_400} - {exc}')
-            except HTTPException as exc:
-                status_code = exc.status_code
+                raise HTTPException(400, f'{RESPONSE_400} - {e}')
+            except HTTPException as e:
+                status_code = e.status_code
                 logger.warning(
                     'Request: {} Failed with HTTPException: {}',
                     request,
-                    exc,
+                    e,
                 )
-                raise exc
-            except Exception as exc:
+                raise e
+            except Exception as e:
                 status_code = 500
-                logger.exception('{}: {}', RESPONSE_500, type(exc).__name__)
+                logger.exception('{}: {}', RESPONSE_500, type(e).__name__)
                 raise HTTPException(status_code, RESPONSE_500)
             finally:
                 logger.info(
