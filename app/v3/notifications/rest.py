@@ -12,7 +12,6 @@ from app.v3.notifications.route_schema import NotificationSingleRequest, Notific
 
 api_router = APIRouter(
     prefix='/notifications',
-    tags=['v3 Notification Endpoints'],
     responses={404: {'description': RESPONSE_404}},
     route_class=TimedAPIRoute,
 )
