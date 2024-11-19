@@ -5,13 +5,13 @@
 
 from loguru import logger
 
-from app.constants import MobileAppType
+from app.constants import MobileAppType, OSPlatformType
 
 
 def register_device_with_vaprofile(
     endpoint_sid: str,
     device_name: str,
-    device_os: str,
+    device_os: OSPlatformType,
     app_name: MobileAppType,
     token: str,
 ) -> bool:
