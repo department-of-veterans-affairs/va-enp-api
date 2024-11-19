@@ -186,7 +186,7 @@ class TestProviderAWS:
 
         actual = await self.provider.register_device(
             DeviceRegistrationModel(
-                platform_application_name='foo',
+                platform_application_name='VETEXT',
                 token='bar',
             )
         )
