@@ -2,6 +2,11 @@
 
 from enum import StrEnum
 
+EMAIL_TYPE = 'email'
+PUSH_TYPE = 'push'
+SMS_TYPE = 'sms'
+NOTIFICATION_TYPE = (EMAIL_TYPE, PUSH_TYPE, SMS_TYPE)
+
 RESPONSE_400 = 'Bad request'
 RESPONSE_404 = 'Not found'
 RESPONSE_500 = 'Server error'
