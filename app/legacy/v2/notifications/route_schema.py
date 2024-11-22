@@ -6,7 +6,7 @@ from typing import Literal
 from pydantic import UUID4, BaseModel, EmailStr, Field, HttpUrl, model_validator
 from typing_extensions import Self
 
-from app.constants import EMAIL_TYPE, IdentifierTypeICN, MobileAppType, PUSH_TYPE, SMS_TYPE
+from app.constants import EMAIL_TYPE, PUSH_TYPE, SMS_TYPE, IdentifierTypeICN, MobileAppType
 
 
 class V2Template(BaseModel):
@@ -19,6 +19,7 @@ class V2Template(BaseModel):
 
 class RecipientIdentifierModel(BaseModel):
     """Used to look up contact information from VA Profile or MPI."""
+
     id_type: str
     id_value: str
 
@@ -60,9 +61,9 @@ class V2GetNotificationResponseModel(BaseModel):
     """Common attributes for the GET /v2/notifications/<:id> route response."""
 
     id: UUID4
-    billing_code: str | None
+    billing_code: str | None = Field(max_length=256, default=None)
     body: str
-    callback_url: HttpUrl | None
+    callback_url: HttpUrl | None = Field(max_length=255, default=None)
     completed_at: datetime | None
     cost_in_millicents: float
     created_at: datetime
@@ -105,8 +106,9 @@ class V2GetSmsNotificationModel(V2GetNotificationResponseModel):
 
 class V2PostNotificationRequestModel(BaseModel):
     """Common attributes for the POST /v2/notifications/<:notification_type> routes request."""
+
     billing_code: str | None = Field(max_length=256, default=None)
-    callback_url: HttpUrl | None = None
+    callback_url: HttpUrl | None = Field(max_length=255, default=None)
     personalisation: dict[str, str | int | float] | None = None
     recipient_identifier: RecipientIdentifierModel | None = None
     reference: str | None = None
@@ -115,7 +117,8 @@ class V2PostNotificationRequestModel(BaseModel):
 
 class V2PostEmailRequestModel(V2PostNotificationRequestModel):
     """Attributes specific to requests to send e-mail notifications."""
-    email_address: EmailStr
+
+    email_address: EmailStr | None = None
     email_reply_to_id: UUID4
 
     @model_validator(mode='after')
@@ -132,15 +135,14 @@ class V2PostEmailRequestModel(V2PostNotificationRequestModel):
         if (self.email_address is None and self.recipient_identifier is None) or (
             self.email_address is not None and self.recipient_identifier is not None
         ):
-            raise ValueError(
-                'You must specify an e-mail address or recipient identifier; not both.'
-            )
+            raise ValueError('You must specify one of "email_address" or "recipient identifier".')
         return self
 
 
 class V2PostSmsRequestModel(V2PostNotificationRequestModel):
     """Attributes specific to requests to send SMS notifications."""
-    phone_number: str
+
+    phone_number: str | None = None
     sms_sender_id: UUID4
 
     @model_validator(mode='after')
@@ -157,9 +159,7 @@ class V2PostSmsRequestModel(V2PostNotificationRequestModel):
         if (self.phone_number is None and self.recipient_identifier is None) or (
             self.phone_number is not None and self.recipient_identifier is not None
         ):
-            raise ValueError(
-                'You must specify a phone number or recipient identifier; not both.'
-            )
+            raise ValueError('You must specify one of "phone_number" or "recipient identifier".')
         return self
 
 
@@ -172,8 +172,8 @@ class V2PostNotificationResponseModel(BaseModel):
     """Common attributes for the POST /v2/notifications/<:notification_type> routes response."""
 
     id: UUID4
-    billing_code: str | None
-    callback_url: HttpUrl | None
+    billing_code: str | None = Field(max_length=256, default=None)
+    callback_url: HttpUrl | None = Field(max_length=255, default=None)
     reference: str | None
     template: V2Template
     uri: HttpUrl
@@ -181,21 +181,25 @@ class V2PostNotificationResponseModel(BaseModel):
 
 class V2EmailContentModel(BaseModel):
     """The content body of a response for sending an e-mail notification."""
+
     body: str
     subject: str
 
 
 class V2PostEmailResponseModel(V2PostNotificationResponseModel):
     """Attributes specific to responses for sending e-mail notifications."""
+
     content: V2EmailContentModel
 
 
 class V2SmsContentModel(BaseModel):
     """The content body of a response for sending an SMS notification."""
+
     body: str
     from_number: str
 
 
 class V2PostSmsResponseModel(V2PostNotificationResponseModel):
     """Attributes specific to responses for sending SMS notifications."""
+
     content: V2SmsContentModel
