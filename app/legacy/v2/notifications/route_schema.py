@@ -78,7 +78,7 @@ class V2GetNotificationResponseModel(BaseModel):
     type: NotificationType  # type: ignore
 
 
-class V2GetEmailNotificationModel(V2GetNotificationResponseModel):
+class V2GetEmailNotificationResponseModel(V2GetNotificationResponseModel):
     """Additional attributes when getting an e-mail notification."""
 
     email_address: EmailStr
@@ -87,7 +87,7 @@ class V2GetEmailNotificationModel(V2GetNotificationResponseModel):
     subject: str
 
 
-class V2GetSmsNotificationModel(V2GetNotificationResponseModel):
+class V2GetSmsNotificationResponseModel(V2GetNotificationResponseModel):
     """Additional attributes when getting an SMS notification."""
 
     email_address: None
