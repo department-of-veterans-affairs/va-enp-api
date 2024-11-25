@@ -1,6 +1,7 @@
 """Request and Response bodies for /v2/notifications."""
 
 from pydantic import UUID4, AwareDatetime, BaseModel, EmailStr, Field, HttpUrl, model_validator
+from pydantic_extra_types.phone_numbers import PhoneNumber
 from typing_extensions import Self
 
 from app.constants import IdentifierTypeICN, MobileAppType, NotificationType
@@ -91,7 +92,7 @@ class V2GetSmsNotificationResponseModel(V2GetNotificationResponseModel):
     """Additional attributes when getting an SMS notification."""
 
     email_address: None
-    phone_number: str
+    phone_number: PhoneNumber
     sms_sender_id: UUID4
     subject: None
 

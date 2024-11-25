@@ -14,8 +14,10 @@ botocore = "*"
 fastapi = {extras = ["standard"], version = "*"}
 gunicorn = "*"
 loguru = "*"
+phonenumbers = "*"
 psycopg = {extras = ["binary"], version = "*"}
 pydantic = "*"
+pydantic_extra_types = "*"
 sqlalchemy = {extras = ["asyncio"], version = "*"}
 uvicorn-worker = "*"
 
