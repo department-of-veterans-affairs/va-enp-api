@@ -46,5 +46,5 @@ class OSPlatformType(StrEnum):
 class USNumberType(PhoneNumber):
     """Annotated type for US phone numbers."""
 
-    supported_regions: ClassVar[list[str]] = ['US']
+    supported_regions: ClassVar[list[str]] = ['US']  # type: ignore
     phone_format: str = PhoneNumberFormat.to_string(PhoneNumberFormat.E164)
