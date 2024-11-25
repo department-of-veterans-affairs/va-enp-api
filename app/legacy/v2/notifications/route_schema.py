@@ -1,10 +1,9 @@
 """Request and Response bodies for /v2/notifications."""
 
 from pydantic import UUID4, AwareDatetime, BaseModel, EmailStr, Field, HttpUrl, model_validator
-from pydantic_extra_types.phone_numbers import PhoneNumber
 from typing_extensions import Self
 
-from app.constants import IdentifierTypeICN, MobileAppType, NotificationType
+from app.constants import IdentifierTypeICN, MobileAppType, NotificationType, USNumberType
 
 
 class V2Template(BaseModel):
@@ -75,7 +74,6 @@ class V2GetNotificationResponseModel(BaseModel):
     status: str
     status_reason: str | None
     template: V2Template
-    # This line fails mypy because "type" is a Python built-in function.
     type: NotificationType
 
 
@@ -92,7 +90,8 @@ class V2GetSmsNotificationResponseModel(V2GetNotificationResponseModel):
     """Additional attributes when getting an SMS notification."""
 
     email_address: None
-    phone_number: PhoneNumber
+    # Restrict this to a valid phone number, in the 'US' region.
+    phone_number: USNumberType
     sms_sender_id: UUID4
     subject: None
 
@@ -140,7 +139,7 @@ class V2PostEmailRequestModel(V2PostNotificationRequestModel):
 class V2PostSmsRequestModel(V2PostNotificationRequestModel):
     """Attributes specific to requests to send SMS notifications."""
 
-    phone_number: str | None = None
+    phone_number: USNumberType | None = None
     sms_sender_id: UUID4
 
     @model_validator(mode='after')
@@ -194,7 +193,7 @@ class V2SmsContentModel(BaseModel):
     """The content body of a response for sending an SMS notification."""
 
     body: str
-    from_number: str
+    from_number: USNumberType
 
 
 class V2PostSmsResponseModel(V2PostNotificationResponseModel):
