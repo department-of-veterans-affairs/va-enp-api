@@ -1,8 +1,6 @@
 """Request and Response bodies for /v2/notifications."""
 
-from datetime import datetime
-
-from pydantic import UUID4, BaseModel, EmailStr, Field, HttpUrl, model_validator
+from pydantic import UUID4, AwareDatetime, BaseModel, EmailStr, Field, HttpUrl, model_validator
 from typing_extensions import Self
 
 from app.constants import IdentifierTypeICN, MobileAppType, NotificationType
@@ -63,15 +61,15 @@ class V2GetNotificationResponseModel(BaseModel):
     billing_code: str | None = Field(max_length=256, default=None)
     body: str
     callback_url: HttpUrl | None = Field(max_length=255, default=None)
-    completed_at: datetime | None
+    completed_at: AwareDatetime | None
     cost_in_millicents: float
-    created_at: datetime
+    created_at: AwareDatetime
     created_by_name: str | None
     provider_reference: str | None
     recipient_identifiers: list[RecipientIdentifierModel] | None
     reference: str | None
     segments_count: int
-    sent_at: datetime | None
+    sent_at: AwareDatetime | None
     sent_by: str | None
     status: str
     status_reason: str | None
