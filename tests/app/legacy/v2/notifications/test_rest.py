@@ -6,7 +6,7 @@ import pytest
 from fastapi import BackgroundTasks, status
 from fastapi.testclient import TestClient
 
-from app.constants import IdentifierTypeICN, MobileAppType
+from app.constants import IdentifierType, MobileAppType
 from app.db.models import Template
 from app.legacy.v2.notifications.route_schema import (
     V2PostPushRequestModel,
@@ -74,7 +74,7 @@ class TestRouter:
             mobile_app=MobileAppType.VA_FLAGSHIP_APP,
             template_id='d5b6e67c-8e2a-11ee-8b8e-0242ac120002',
             recipient_identifier=V2PostPushRequestModel.ICNRecipientIdentifierModel(
-                id_type=IdentifierTypeICN.ICN,
+                id_type=IdentifierType.ICN,
                 id_value='12345',
             ),
             personalisation={'name': 'John'},
@@ -114,7 +114,7 @@ class TestPush:
             mobile_app=MobileAppType.VA_FLAGSHIP_APP,
             template_id='d5b6e67c-8e2a-11ee-8b8e-0242ac120002',
             recipient_identifier=V2PostPushRequestModel.ICNRecipientIdentifierModel(
-                id_type=IdentifierTypeICN.ICN,
+                id_type=IdentifierType.ICN,
                 id_value='12345',
             ),
             personalisation={'name': 'John'},
@@ -147,7 +147,7 @@ class TestPush:
             mobile_app=MobileAppType.VA_FLAGSHIP_APP,
             template_id='d5b6e67c-8e2a-11ee-8b8e-0242ac120002',
             recipient_identifier=V2PostPushRequestModel.ICNRecipientIdentifierModel(
-                id_type=IdentifierTypeICN.ICN,
+                id_type=IdentifierType.ICN,
                 id_value='12345',
             ),
             personalisation={'name': 'John'},
