@@ -50,4 +50,10 @@ class OSPlatformType(StrEnum):
 
 
 """Annotated type for US phone numbers."""
-USNumberType = Annotated[Union[str, PhoneNumber], PhoneNumberValidator(supported_regions=['US'], default_region='US')]
+USNumberType = Annotated[
+    Union[str, PhoneNumber],
+    PhoneNumberValidator(
+        supported_regions=['US'],
+        default_region='US',
+    ),
+]
