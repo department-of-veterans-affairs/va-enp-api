@@ -21,13 +21,6 @@ class IdentifierType(StrEnum):
     VA_PROFILE_ID = 'VAPROFILEID'
 
 
-# made specific enum for ICN so api spec is clear
-class IdentifierTypeICN(StrEnum):
-    """Specific Enum type for ICN."""
-
-    ICN = IdentifierType.ICN.value
-
-
 class MobileAppType(StrEnum):
     """Mobile App Types available."""
 

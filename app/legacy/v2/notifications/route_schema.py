@@ -5,7 +5,7 @@ from typing import Literal
 from pydantic import UUID4, AwareDatetime, BaseModel, EmailStr, Field, HttpUrl, model_validator
 from typing_extensions import Self
 
-from app.constants import IdentifierTypeICN, MobileAppType, NotificationType, USNumberType
+from app.constants import IdentifierType, MobileAppType, NotificationType, USNumberType
 
 
 class V2Template(BaseModel):
@@ -35,7 +35,7 @@ class V2PostPushRequestModel(BaseModel):
         """Model for ICN recipient identifier."""
 
         # Created a specific enum for ICN so api spec is clear, and only "ICN" is allowed.
-        id_type: Literal[IdentifierTypeICN.ICN]
+        id_type: Literal[IdentifierType.ICN]
         id_value: str
 
     mobile_app: MobileAppType
