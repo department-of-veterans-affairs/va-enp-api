@@ -75,7 +75,7 @@ class V2GetNotificationResponseModel(BaseModel):
     status_reason: str | None
     template: V2Template
     # This line fails mypy because "type" is a Python built-in function.
-    type: NotificationType  # type: ignore
+    type: NotificationType
 
 
 class V2GetEmailNotificationResponseModel(V2GetNotificationResponseModel):
