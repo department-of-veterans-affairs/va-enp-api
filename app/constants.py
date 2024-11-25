@@ -1,7 +1,6 @@
 """Application Constants."""
 
 from enum import StrEnum
-from typing import ClassVar
 
 from phonenumbers import PhoneNumberFormat
 from pydantic_extra_types.phone_numbers import PhoneNumber
@@ -46,5 +45,5 @@ class OSPlatformType(StrEnum):
 class USNumberType(PhoneNumber):
     """Annotated type for US phone numbers."""
 
-    supported_regions: ClassVar[list[str]] = ['US']  # type: ignore
+    supported_regions = ['US']  # noqa: RUF012
     phone_format: str = PhoneNumberFormat.to_string(PhoneNumberFormat.E164)
