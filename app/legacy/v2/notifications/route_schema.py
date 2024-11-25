@@ -1,12 +1,11 @@
 """Request and Response bodies for /v2/notifications."""
 
 from datetime import datetime
-from typing import Literal
 
 from pydantic import UUID4, BaseModel, EmailStr, Field, HttpUrl, model_validator
 from typing_extensions import Self
 
-from app.constants import EMAIL_TYPE, PUSH_TYPE, SMS_TYPE, IdentifierTypeICN, MobileAppType
+from app.constants import IdentifierTypeICN, MobileAppType, NotificationType
 
 
 class V2Template(BaseModel):
@@ -78,7 +77,7 @@ class V2GetNotificationResponseModel(BaseModel):
     status_reason: str | None
     template: V2Template
     # This line fails mypy because "type" is a Python built-in function.
-    type: Literal[EMAIL_TYPE, PUSH_TYPE, SMS_TYPE]  # type: ignore
+    type: NotificationType  # type: ignore
 
 
 class V2GetEmailNotificationModel(V2GetNotificationResponseModel):

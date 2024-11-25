@@ -2,11 +2,6 @@
 
 from enum import StrEnum
 
-EMAIL_TYPE = 'email'
-PUSH_TYPE = 'push'
-SMS_TYPE = 'sms'
-NOTIFICATION_TYPE = (EMAIL_TYPE, PUSH_TYPE, SMS_TYPE)
-
 RESPONSE_400 = 'Bad request'
 RESPONSE_404 = 'Not found'
 RESPONSE_500 = 'Server error'
@@ -34,6 +29,14 @@ class MobileAppType(StrEnum):
 
     VA_FLAGSHIP_APP = 'VA_FLAGSHIP_APP'
     VETEXT = 'VETEXT'
+
+
+class NotificationType(StrEnum):
+    """Types of Notifications that can be sent."""
+
+    EMAIL = 'email'
+    PUSH = 'push'
+    SMS = 'sms'
 
 
 class OSPlatformType(StrEnum):
