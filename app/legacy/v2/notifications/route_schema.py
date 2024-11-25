@@ -1,5 +1,7 @@
 """Request and Response bodies for /v2/notifications."""
 
+from typing import Literal
+
 from pydantic import UUID4, AwareDatetime, BaseModel, EmailStr, Field, HttpUrl, model_validator
 from typing_extensions import Self
 
@@ -33,7 +35,7 @@ class V2PostPushRequestModel(BaseModel):
         """Model for ICN recipient identifier."""
 
         # Created a specific enum for ICN so api spec is clear, and only "ICN" is allowed.
-        id_type: IdentifierTypeICN
+        id_type: Literal[IdentifierTypeICN.ICN]
         id_value: str
 
     mobile_app: MobileAppType
