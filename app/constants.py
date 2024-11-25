@@ -1,9 +1,10 @@
 """Application Constants."""
 
 from enum import StrEnum
-from typing import Annotated, Union
+from typing import ClassVar
 
-from pydantic_extra_types.phone_numbers import PhoneNumber, PhoneNumberValidator
+from phonenumbers import PhoneNumberFormat
+from pydantic_extra_types.phone_numbers import PhoneNumber
 
 RESPONSE_400 = 'Bad request'
 RESPONSE_404 = 'Not found'
@@ -49,11 +50,8 @@ class OSPlatformType(StrEnum):
     IOS = 'IOS'
 
 
-"""Annotated type for US phone numbers."""
-USNumberType = Annotated[
-    Union[str, PhoneNumber],
-    PhoneNumberValidator(
-        supported_regions=['US'],
-        default_region='US',
-    ),
-]
+class USNumberType(PhoneNumber):
+    """Annotated type for US phone numbers."""
+
+    supported_regions: ClassVar[list[str]] = ['US']
+    phone_format: str = PhoneNumberFormat.to_string(PhoneNumberFormat.E164)
