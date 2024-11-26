@@ -6,11 +6,11 @@ import pytest
 from fastapi import BackgroundTasks, status
 from fastapi.testclient import TestClient
 
-from app.constants import IdentifierTypeICN, MobileAppType
+from app.constants import IdentifierType, MobileAppType
 from app.db.models import Template
 from app.legacy.v2.notifications.route_schema import (
-    V2NotificationPushRequest,
-    V2NotificationPushResponse,
+    V2PostPushRequestModel,
+    V2PostPushResponseModel,
 )
 
 
@@ -70,11 +70,11 @@ class TestRouter:
         mock_validate_template.return_value = Template(name='test_template')
         mock_dao_create_notification.side_effect = Exception()
 
-        request = V2NotificationPushRequest(
+        request = V2PostPushRequestModel(
             mobile_app=MobileAppType.VA_FLAGSHIP_APP,
             template_id='d5b6e67c-8e2a-11ee-8b8e-0242ac120002',
-            recipient_identifier=V2NotificationPushRequest.ICNRecipientIdentifier(
-                id_type=IdentifierTypeICN.ICN,
+            recipient_identifier=V2PostPushRequestModel.ICNRecipientIdentifierModel(
+                id_type=IdentifierType.ICN,
                 id_value='12345',
             ),
             personalisation={'name': 'John'},
@@ -110,11 +110,11 @@ class TestPush:
         """
         mock_validate_template.return_value = Template(name='test_template')
 
-        request = V2NotificationPushRequest(
+        request = V2PostPushRequestModel(
             mobile_app=MobileAppType.VA_FLAGSHIP_APP,
             template_id='d5b6e67c-8e2a-11ee-8b8e-0242ac120002',
-            recipient_identifier=V2NotificationPushRequest.ICNRecipientIdentifier(
-                id_type=IdentifierTypeICN.ICN,
+            recipient_identifier=V2PostPushRequestModel.ICNRecipientIdentifierModel(
+                id_type=IdentifierType.ICN,
                 id_value='12345',
             ),
             personalisation={'name': 'John'},
@@ -123,7 +123,7 @@ class TestPush:
         response = client.post('/v2/notifications/push', json=request.model_dump())
 
         assert response.status_code == status.HTTP_201_CREATED
-        assert response.json() == {'result': 'success'} == V2NotificationPushResponse().model_dump()
+        assert response.json() == {'result': 'success'} == V2PostPushResponseModel().model_dump()
 
     async def test_post_push_returns_400_when_unable_to_validate_template(
         self,
@@ -143,11 +143,11 @@ class TestPush:
         """
         mock_validate_template.side_effect = Exception()
 
-        request = V2NotificationPushRequest(
+        request = V2PostPushRequestModel(
             mobile_app=MobileAppType.VA_FLAGSHIP_APP,
             template_id='d5b6e67c-8e2a-11ee-8b8e-0242ac120002',
-            recipient_identifier=V2NotificationPushRequest.ICNRecipientIdentifier(
-                id_type=IdentifierTypeICN.ICN,
+            recipient_identifier=V2PostPushRequestModel.ICNRecipientIdentifierModel(
+                id_type=IdentifierType.ICN,
                 id_value='12345',
             ),
             personalisation={'name': 'John'},

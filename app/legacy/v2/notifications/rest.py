@@ -8,8 +8,8 @@ from loguru import logger
 from app.dao.notifications_dao import dao_create_notification
 from app.db.models import Notification, Template
 from app.legacy.v2.notifications.route_schema import (
-    V2NotificationPushRequest,
-    V2NotificationPushResponse,
+    V2PostPushRequestModel,
+    V2PostPushResponseModel,
 )
 from app.legacy.v2.notifications.utils import send_push_notification_helper, validate_template
 from app.routers import TimedAPIRoute
@@ -23,14 +23,14 @@ v2_notification_router = APIRouter(
 
 @v2_notification_router.post('/push', status_code=status.HTTP_201_CREATED)
 async def create_push_notification(
-    request_data: V2NotificationPushRequest,
+    request_data: V2PostPushRequestModel,
     request: Request,
     background_tasks: BackgroundTasks,
-) -> V2NotificationPushResponse:
+) -> V2PostPushResponseModel:
     """Create a push notification.
 
     Args:
-        request_data (V2NotificationPushRequest): The data necessary for the notification.
+        request_data (V2PostPushRequestModel): The data necessary for the notification.
         request (Request): The FastAPI request object.
         background_tasks (BackgroundTasks): The FastAPI background tasks object.
 
@@ -38,7 +38,7 @@ async def create_push_notification(
         HTTPException: If the template with the given template_id is not found.
 
     Returns:
-        V2NotificationPushResponse: The notification response data.
+        V2PostPushResponseModel: The notification response data.
 
     """
     icn = request_data.recipient_identifier.id_value
@@ -69,4 +69,4 @@ async def create_push_notification(
         icn,
         template_id,
     )
-    return V2NotificationPushResponse()
+    return V2PostPushResponseModel()
