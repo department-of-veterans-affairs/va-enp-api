@@ -7,10 +7,10 @@ class NotificationSingleRequest(BaseModel):
     """Request model for notification endpoint."""
 
     to: str
-    personalization: None | dict[str, str] = None
+    personalization: dict[str, str] | None = None
     template: UUID4
 
-    def serialize(self) -> dict[str, None | str | dict[str, str]]:
+    def serialize(self) -> dict[str, str | dict[str, str] | None]:
         """Serialize the pydantic model.
 
         Returns:
@@ -28,5 +28,5 @@ class NotificationSingleResponse(BaseModel):
     id: UUID4
     created_at: AwareDatetime
     updated_at: AwareDatetime
-    sent_at: None | AwareDatetime = None
+    sent_at: AwareDatetime | None = None
     to: str
