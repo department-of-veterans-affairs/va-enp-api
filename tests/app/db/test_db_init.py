@@ -114,23 +114,27 @@ class TestReadWriteSessionsFailure:
     async def test_get_read_session_failure(self) -> None:
         """Test the get_read_session function raises a ValueError when the db engine is None."""
         with pytest.raises(ValueError, match='The db read engine has not been initialized. None type received.'):  # noqa: PT012
-            async for _session in get_read_session_with_depends():
-                ...
+            # fmt: off
+            async for _session in get_read_session_with_depends(): pass  # noqa: E701
+            # fmt: off
 
     async def test_get_read_session_with_context_failure(self) -> None:
         """Test the get_read_session_with_context function raises a ValueError when the db engine is None."""
         with pytest.raises(ValueError, match='The db read engine has not been initialized. None type received.'):
-            async with get_read_session_with_context():
-                ...
+            # fmt: off
+            async with get_read_session_with_context(): pass  # noqa: E701
+            # fmt: on
 
     async def test_get_write_session_failure(self) -> None:
         """Test the get_write_session function raises a ValueError when the db engine is None."""
         with pytest.raises(ValueError, match='The db write engine has not been initialized. None type received.'):  # noqa: PT012
-            async for _session in get_write_session_with_depends():
-                ...
+            # fmt: off
+            async for _session in get_write_session_with_depends(): pass  # noqa: E701
+            # fmt: on
 
     async def test_get_write_session_with_context_failure(self) -> None:
         """Test the get_write_session_with_context function raises a ValueError when the db engine is None."""
         with pytest.raises(ValueError, match='The db write engine has not been initialized. None type received.'):
-            async with get_write_session_with_context():
-                ...
+            # fmt: off
+            async with get_write_session_with_context(): pass  # noqa: E701
+            # fmt: on

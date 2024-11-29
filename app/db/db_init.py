@@ -5,6 +5,7 @@ from typing import AsyncIterator
 
 from fastapi.concurrency import asynccontextmanager
 from loguru import logger
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import (
     AsyncEngine,
     AsyncSession,
@@ -22,28 +23,45 @@ _engine_write = None
 
 async def init_db() -> None:
     """Initialize the database engine."""
-    global _engine_read, _engine_write
-
     logger.info('Initializing the database engines...')
-
-    # Create the write database engine.
-    # echo=True logs the queries that are executed.  Set it to False to disable these logs.
-    _engine_write = create_async_engine(DB_WRITE_URI, echo=False)
 
     # Without this import, Base.metatable (used below) will not point to any tables, and the
     # call to "run_sync" will not create anything.
     import app.db.models  # noqa
 
+    # These methods are copy/paste due to globals.
+    await create_write_engine()
+    await create_read_engine()
+
+
+async def create_write_engine() -> None:
+    """Create the async write engine."""
+    global _engine_write
+    # Create the write database engine.
+    # echo=True logs the queries that are executed.  Set it to False to disable these logs.
+    _engine_write = create_async_engine(DB_WRITE_URI, echo=False)
     async with _engine_write.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
-
-    if DB_READ_URI:
-        # Create the read database engine.
-        # echo=True logs the queries that are executed.  Set it to False to disable these logs.
-        _engine_read = create_async_engine(DB_READ_URI, echo=False)
-
-        async with _engine_read.begin() as conn:
+        try:
+            print(f'{_engine_write} - {conn}')
             await conn.run_sync(Base.metadata.create_all)
+            # assert False
+        except IntegrityError:  # pragma: no cover
+            # Async workers on a fresh container will try to create tables at the same time - No deployed impact
+            pass
+
+
+async def create_read_engine() -> None:
+    """Create the async read engine."""
+    global _engine_read
+    # Create the read database engine.
+    # echo=True logs the queries that are executed.  Set it to False to disable these logs.
+    _engine_read = create_async_engine(DB_READ_URI, echo=False)
+    async with _engine_read.begin() as conn:
+        try:
+            await conn.run_sync(Base.metadata.create_all)
+        except IntegrityError:  # pragma: no cover
+            # Async workers on a fresh container will try to create tables at the same time - No deployed impact
+            pass
 
 
 async def close_db() -> None:
