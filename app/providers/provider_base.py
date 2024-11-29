@@ -34,7 +34,7 @@ class ProviderBase(ABC):
 
         Facilitates update and log consistency regardless of response.
         """
-        ...
+        raise NotImplementedError(f'Derived class: {self.__class__.__name__} does not implement this method.')
 
     async def send_notification(self, model: PushModel) -> str:
         """Send a notification using the provider.

@@ -27,3 +27,5 @@ async def test_not_implemented_virtual_void() -> None:
         await derived._send_push(PushModel(message='', target_arn=''))
     with pytest.raises(NotImplementedError):
         await derived._send_sms()
+    with pytest.raises(NotImplementedError):
+        await derived.process_response()
