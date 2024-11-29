@@ -2561,6 +2561,7 @@ optional = false
 python-versions = ">=3.8"
 files = [
     {file = "types_aiobotocore-2.15.2.post3-py3-none-any.whl", hash = "sha256:ae4786c3f3f33ebb0b4deaf021f589eb2e2cb59af7f0a105487fb0eca8e4b551"},
+    {file = "types_aiobotocore-2.15.2.post3.tar.gz", hash = "sha256:43fef0a8f5afa389f0255874bdad39d53f046e37b230a59544805b003232063b"},
 ]
 
 [package.dependencies]
