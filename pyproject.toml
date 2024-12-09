@@ -19,6 +19,7 @@ psycopg = {extras = ["binary"], version = "*"}
 pydantic = "*"
 pydantic_extra_types = "*"
 sqlalchemy = {extras = ["asyncio"], version = "*"}
+tenacity = "*"
 uvicorn-worker = "*"
 
 [tool.poetry.group.test]

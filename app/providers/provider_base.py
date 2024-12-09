@@ -3,8 +3,11 @@
 from abc import ABC
 
 from loguru import logger
+from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_full_jitter
 
+from app.constants import MAX_RETRIES
 from app.providers.provider_schemas import PushModel
+from app.providers.utils import log_last_attempt_on_failure, log_on_retry
 
 
 class ProviderRetryableError(Exception):
@@ -36,13 +39,21 @@ class ProviderBase(ABC):
         """
         raise NotImplementedError(f'Derived class: {self.__class__.__name__} does not implement this method.')
 
+    @retry(
+        before_sleep=log_on_retry,
+        reraise=True,
+        retry_error_callback=log_last_attempt_on_failure,
+        retry=retry_if_exception_type(ProviderRetryableError),
+        stop=stop_after_attempt(MAX_RETRIES),
+        wait=wait_full_jitter(multiplier=1, max=60),
+    )
     async def send_notification(self, model: PushModel) -> str:
         """Send a notification using the provider.
 
         Facilitates update and log consistency regardless of notification.
 
         Args:
-            model: the parameters to pass to SNS.Client.publish
+            model (PushModel): the parameters to pass to SNS.Client.publish
 
         Raises:
             ProviderNonRetryableError: Don't retry the request
