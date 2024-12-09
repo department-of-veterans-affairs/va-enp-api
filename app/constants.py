@@ -5,6 +5,10 @@ from enum import StrEnum
 from phonenumbers import PhoneNumberFormat
 from pydantic_extra_types.phone_numbers import PhoneNumber
 
+# this should be 2886 to retry for a full 24 hours
+# setting to 3 for now so local testing doesn't take too long
+MAX_RETRIES = 3
+
 RESPONSE_400 = 'Bad request'
 RESPONSE_404 = 'Not found'
 RESPONSE_500 = 'Server error'

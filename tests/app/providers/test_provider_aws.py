@@ -8,6 +8,7 @@ from unittest.mock import AsyncMock, patch
 
 import botocore.exceptions
 import pytest
+from tenacity import stop_after_attempt, wait_none
 
 from app.constants import MobileAppType
 from app.providers import sns_publish_retriable_exceptions_set
@@ -114,7 +115,9 @@ class TestProviderAWS:
 
     @pytest.mark.parametrize('exc', list(sns_publish_retriable_exceptions_set))
     async def test_send_push_notification_ClientError_exceptions_retriable(
-        self, mock_get_session: AsyncMock, exc: str
+        self,
+        mock_get_session: AsyncMock,
+        exc: str,
     ) -> None:
         """These instances of ClientError should raise ProviderRetryableError.
 
@@ -131,7 +134,10 @@ class TestProviderAWS:
         mock_client.publish.side_effect = botocore.exceptions.ClientError({'Error': {'Code': exc}}, 'sns')
 
         with pytest.raises(ProviderRetryableError):
-            await self.provider.send_notification(push_model)
+            await self.provider.send_notification.retry_with(stop=stop_after_attempt(2), wait=wait_none())(
+                self.provider,
+                push_model,
+            )
 
     async def test_register_push_endpoint(self, mock_get_session: AsyncMock) -> None:
         """Test the happy path.

@@ -9,10 +9,13 @@ import os
 import botocore
 from aiobotocore.session import get_session
 from loguru import logger
+from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_full_jitter
 
+from app.constants import MAX_RETRIES
 from app.providers import sns_publish_retriable_exceptions_set
 from app.providers.provider_base import ProviderBase, ProviderNonRetryableError, ProviderRetryableError
 from app.providers.provider_schemas import DeviceRegistrationModel, PushModel, PushRegistrationModel
+from app.providers.utils import log_last_attempt_on_failure, log_on_retry
 
 
 class ProviderAWS(ProviderBase):
@@ -110,6 +113,14 @@ class ProviderAWS(ProviderBase):
 
         return response
 
+    @retry(
+        before_sleep=log_on_retry,
+        reraise=True,
+        retry_error_callback=log_last_attempt_on_failure,
+        retry=retry_if_exception_type(ProviderRetryableError),
+        stop=stop_after_attempt(MAX_RETRIES),
+        wait=wait_full_jitter(multiplier=1, max=60),
+    )
     async def register_push_endpoint(self, push_registration_model: PushRegistrationModel) -> str:
         """Register a mobile app user.
 
