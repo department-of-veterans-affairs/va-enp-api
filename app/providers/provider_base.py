@@ -57,7 +57,6 @@ class ProviderBase(ABC):
 
         Raises:
             ProviderNonRetryableError: Don't retry the request
-            ProviderRetryableError: Retry the request
 
         Returns:
             str: A reference identifier for the sent notification
@@ -65,7 +64,7 @@ class ProviderBase(ABC):
         """
         try:
             return await self._send_push(model)
-        except (ProviderRetryableError, ProviderNonRetryableError):
+        except ProviderNonRetryableError:
             logger.exception(
                 'Sending a push notification failed for {} {}.',
                 'TargetArn' if (model.target_arn is not None) else 'TopicArn',

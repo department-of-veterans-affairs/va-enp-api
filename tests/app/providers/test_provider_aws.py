@@ -13,7 +13,7 @@ from tenacity import stop_after_attempt, wait_none
 from app.constants import MobileAppType
 from app.providers import sns_publish_retriable_exceptions_set
 from app.providers.provider_aws import ProviderAWS
-from app.providers.provider_base import ProviderNonRetryableError, ProviderRetryableError
+from app.providers.provider_base import ProviderNonRetryableError
 from app.providers.provider_schemas import DeviceRegistrationModel, PushModel, PushRegistrationModel
 from tests.app.providers import botocore_exceptions_kwargs
 
@@ -121,7 +121,7 @@ class TestProviderAWS:
     ) -> None:
         """These instances of ClientError should raise ProviderRetryableError.
 
-        The AWS provider uses SNS to send push notifications.  The tested exceptions are exceptions
+        The AWS provider uses SNS to send push notifications. The tested exceptions are exceptions
         that might get raised via calling the SNS client's "publish" method.
 
         https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/sns/client/publish.html
@@ -133,11 +133,16 @@ class TestProviderAWS:
         # Initializing a ClientError requires the positional arguments "error_response" and "operation_name".
         mock_client.publish.side_effect = botocore.exceptions.ClientError({'Error': {'Code': exc}}, 'sns')
 
-        with pytest.raises(ProviderRetryableError):
-            await self.provider.send_notification.retry_with(stop=stop_after_attempt(2), wait=wait_none())(
+        # This is returning None because it continues to retry until failure.
+        # A str would be returned if calling _send_push was successful.
+        # Using retry_with is necessary to avoid performing retries with the default wait strategy.
+        assert (
+            await self.provider.send_notification.retry_with(stop=stop_after_attempt(2), wait=wait_none())(  # type: ignore
                 self.provider,
                 push_model,
             )
+            is None
+        )
 
     async def test_register_push_endpoint(self, mock_get_session: AsyncMock) -> None:
         """Test the happy path.
