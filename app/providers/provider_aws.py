@@ -55,19 +55,15 @@ class ProviderAWS(ProviderBase):
         Args:
             push_model: the parameters to pass to SNS.Client.publish
 
-        Raises:
-            ProviderNonRetryableError: Don't retry the request
-            ProviderRetryableError: Retry the request
-
         Returns:
             str: A reference identifier for the sent notification
 
         """
-        publish_params = {'Message': push_model.message}
+        publish_params: dict[str, str | None] = {'Message': push_model.message}
         if push_model.target_arn is not None:
             publish_params['TargetArn'] = push_model.target_arn
         else:
-            publish_params['TopicArn'] = push_model.topic_arn  # type: ignore
+            publish_params['TopicArn'] = push_model.topic_arn
 
         try:
             session = get_session()
@@ -78,13 +74,9 @@ class ProviderAWS(ProviderBase):
                 aws_access_key_id=os.getenv('AWS_ACCESS_KEY_ID', ''),
             ) as client:
                 response: dict[str, str] = await client.publish(**publish_params)
-        except botocore.exceptions.ClientError as e:
-            if e.response['Error']['Code'] in sns_publish_retriable_exceptions_set:
-                raise ProviderRetryableError from e
-
-            raise ProviderNonRetryableError from e
         except Exception as e:
-            raise ProviderNonRetryableError from e
+            fail_message = f'Failed to send a push notification to {push_model.target_arn or push_model.topic_arn}'
+            self._handle_sns_exceptions(e, fail_message)
 
         logger.debug(response)
         return response['MessageId']
@@ -132,8 +124,6 @@ class ProviderAWS(ProviderBase):
         Returns:
             str: The endpoint ARN needed to send a push notification to the registered device
 
-        Raises:
-            ProviderNonRetryableError: Don't retry the request
         """
         try:
             session = get_session()
@@ -148,10 +138,10 @@ class ProviderAWS(ProviderBase):
                     Token=push_registration_model.token,
                 )
         except Exception as e:
-            logger.exception(
-                'Failed to register a push client with AWS SNS: {}', push_registration_model.platform_application_arn
+            fail_message = (
+                f'Failed to register a push client with AWS SNS: {push_registration_model.platform_application_arn}'
             )
-            raise ProviderNonRetryableError('Failed to register a push client with AWS SNS') from e
+            self._handle_sns_exceptions(e, fail_message)
 
         logger.info(
             'Created push endpoint ARN {} for device {} on application {}.',
@@ -160,3 +150,22 @@ class ProviderAWS(ProviderBase):
             push_registration_model.platform_application_arn,
         )
         return response['EndpointArn']
+
+    def _handle_sns_exceptions(self, e: Exception, fail_message: str) -> None:
+        """Handle exceptions raised by SNS.
+
+        Args:
+            e: The exception that was raised
+            fail_message: The message to log when the exception is caught
+
+        Raises:
+            ProviderRetryableError: Exception that can be retried
+            ProviderNonRetryableError: Don't retry the request
+
+        """
+        if isinstance(e, botocore.exceptions.ClientError):
+            if e.response.get('Error', {}).get('Code') in sns_publish_retriable_exceptions_set:
+                raise ProviderRetryableError from e
+
+        logger.exception(fail_message)
+        raise ProviderNonRetryableError(fail_message) from e

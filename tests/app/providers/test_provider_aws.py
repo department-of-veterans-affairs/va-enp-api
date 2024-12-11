@@ -25,6 +25,20 @@ class TestProviderAWS:
 
     provider = ProviderAWS()
 
+    async def test_str(self, mock_get_session: AsyncMock) -> None:
+        """Test the string representation of the class."""
+        assert str(self.provider) == 'AWS Provider'
+
+    async def test_get_platform_application_arn(
+        self, mock_get_session: AsyncMock, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Test with various mocked environments."""
+        monkeypatch.setenv('AWS_REGION_NAME', 'us-west-1')
+        monkeypatch.setenv('AWS_ACCOUNT_ID', '999999999999')
+        monkeypatch.setenv('AWS_PLATFORM', 'APNS')
+
+        assert self.provider.get_platform_application_arn('foo') == 'arn:aws:sns:us-west-1:999999999999:app/APNS/foo'
+
     @pytest.mark.parametrize(
         'data',
         [
@@ -158,21 +172,26 @@ class TestProviderAWS:
         assert await self.provider.register_push_endpoint(push_registration_model) == '12345'
         mock_client.create_platform_endpoint.assert_called_once()
 
-    async def test_get_platform_application_arn(
-        self, mock_get_session: AsyncMock, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        """Test with various mocked environments."""
-        monkeypatch.setenv('AWS_REGION_NAME', 'us-west-1')
-        monkeypatch.setenv('AWS_ACCOUNT_ID', '999999999999')
-        monkeypatch.setenv('AWS_PLATFORM', 'APNS')
-
-        assert self.provider.get_platform_application_arn('foo') == 'arn:aws:sns:us-west-1:999999999999:app/APNS/foo'
-
-    async def test_str(self, mock_get_session: AsyncMock) -> None:
-        """Test the string representation of the class."""
-        assert str(self.provider) == 'AWS Provider'
-
     async def test_register_push_endpoint_with_non_retryable_exceptions(self, mock_get_session: AsyncMock) -> None:
+        """Test handling of retryable exceptions."""
+        mock_get_session.side_effect = botocore.exceptions.ClientError(
+            {'Error': {'Code': 'InternalErrorException'}},
+            'sns',
+        )
+
+        push_registration_model = PushRegistrationModel(platform_application_arn='123', token='456')
+
+        # This is returning None because it continues to retry until failure.
+        # A str would be returned if calling register_push_endpoint was successful.
+        # Using retry_with is necessary to avoid performing retries with the default wait strategy.
+        assert (
+            await self.provider.register_push_endpoint.retry_with(stop=stop_after_attempt(2), wait=wait_none())(  # type: ignore
+                self.provider, push_registration_model
+            )
+            is None
+        )
+
+    async def test_register_push_endpoint_with_retryable_exceptions(self, mock_get_session: AsyncMock) -> None:
         """Test handling of non-retryable exceptions."""
         mock_get_session.side_effect = botocore.exceptions.ClientError(
             {'Error': {'Code': 'InvalidParameterException'}},
