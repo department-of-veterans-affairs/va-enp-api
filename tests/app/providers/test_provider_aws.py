@@ -172,7 +172,7 @@ class TestProviderAWS:
         assert await self.provider.register_push_endpoint(push_registration_model) == '12345'
         mock_client.create_platform_endpoint.assert_called_once()
 
-    async def test_register_push_endpoint_with_non_retryable_exceptions(self, mock_get_session: AsyncMock) -> None:
+    async def test_register_push_endpoint_with_retryable_exceptions(self, mock_get_session: AsyncMock) -> None:
         """Test handling of retryable exceptions."""
         mock_get_session.side_effect = botocore.exceptions.ClientError(
             {'Error': {'Code': 'InternalErrorException'}},
@@ -191,7 +191,7 @@ class TestProviderAWS:
             is None
         )
 
-    async def test_register_push_endpoint_with_retryable_exceptions(self, mock_get_session: AsyncMock) -> None:
+    async def test_register_push_endpoint_with_non_retryable_exceptions(self, mock_get_session: AsyncMock) -> None:
         """Test handling of non-retryable exceptions."""
         mock_get_session.side_effect = botocore.exceptions.ClientError(
             {'Error': {'Code': 'InvalidParameterException'}},
