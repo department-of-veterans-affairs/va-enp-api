@@ -76,7 +76,7 @@ class ProviderAWS(ProviderBase):
                 response: dict[str, str] = await client.publish(**publish_params)
         except Exception as e:
             fail_message = f'Failed to send a push notification to {push_model.target_arn or push_model.topic_arn}'
-            self._handle_sns_exceptions(e, fail_message)
+            _handle_sns_exceptions(e, fail_message)
 
         logger.debug(response)
         return response['MessageId']
@@ -141,7 +141,7 @@ class ProviderAWS(ProviderBase):
             fail_message = (
                 f'Failed to register a push client with AWS SNS: {push_registration_model.platform_application_arn}'
             )
-            self._handle_sns_exceptions(e, fail_message)
+            _handle_sns_exceptions(e, fail_message)
 
         logger.info(
             'Created push endpoint ARN {} for device {} on application {}.',
@@ -151,21 +151,22 @@ class ProviderAWS(ProviderBase):
         )
         return response['EndpointArn']
 
-    def _handle_sns_exceptions(self, e: Exception, fail_message: str) -> None:
-        """Handle exceptions raised by SNS.
 
-        Args:
-            e: The exception that was raised
-            fail_message: The message to log when the exception is caught
+def _handle_sns_exceptions(e: Exception, fail_message: str) -> None:
+    """Handle exceptions raised by SNS.
 
-        Raises:
-            ProviderRetryableError: Exception that can be retried
-            ProviderNonRetryableError: Don't retry the request
+    Args:
+        e (Exception): The exception that was raised
+        fail_message (str): The message to log when the exception is caught
 
-        """
-        if isinstance(e, botocore.exceptions.ClientError):
-            if e.response.get('Error', {}).get('Code') in sns_publish_retriable_exceptions_set:
-                raise ProviderRetryableError from e
+    Raises:
+        ProviderRetryableError: Exception that can be retried
+        ProviderNonRetryableError: Don't retry the request
 
-        logger.exception(fail_message)
-        raise ProviderNonRetryableError(fail_message) from e
+    """
+    if isinstance(e, botocore.exceptions.ClientError):
+        if e.response.get('Error', {}).get('Code') in sns_publish_retriable_exceptions_set:
+            raise ProviderRetryableError from e
+
+    logger.exception(fail_message)
+    raise ProviderNonRetryableError(fail_message) from e
