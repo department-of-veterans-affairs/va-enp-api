@@ -8,11 +8,12 @@ from unittest.mock import AsyncMock, patch
 
 import botocore.exceptions
 import pytest
+from tenacity import stop_after_attempt, wait_none
 
 from app.constants import MobileAppType
 from app.providers import sns_publish_retriable_exceptions_set
 from app.providers.provider_aws import ProviderAWS
-from app.providers.provider_base import ProviderNonRetryableError, ProviderRetryableError
+from app.providers.provider_base import ProviderNonRetryableError
 from app.providers.provider_schemas import DeviceRegistrationModel, PushModel, PushRegistrationModel
 from tests.app.providers import botocore_exceptions_kwargs
 
@@ -23,6 +24,20 @@ class TestProviderAWS:
     """Test the methods of the ProviderAWS class."""
 
     provider = ProviderAWS()
+
+    async def test_str(self, mock_get_session: AsyncMock) -> None:
+        """Test the string representation of the class."""
+        assert str(self.provider) == 'AWS Provider'
+
+    async def test_get_platform_application_arn(
+        self, mock_get_session: AsyncMock, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Test with various mocked environments."""
+        monkeypatch.setenv('AWS_REGION_NAME', 'us-west-1')
+        monkeypatch.setenv('AWS_ACCOUNT_ID', '999999999999')
+        monkeypatch.setenv('AWS_PLATFORM', 'APNS')
+
+        assert self.provider.get_platform_application_arn('foo') == 'arn:aws:sns:us-west-1:999999999999:app/APNS/foo'
 
     @pytest.mark.parametrize(
         'data',
@@ -114,11 +129,13 @@ class TestProviderAWS:
 
     @pytest.mark.parametrize('exc', list(sns_publish_retriable_exceptions_set))
     async def test_send_push_notification_ClientError_exceptions_retriable(
-        self, mock_get_session: AsyncMock, exc: str
+        self,
+        mock_get_session: AsyncMock,
+        exc: str,
     ) -> None:
         """These instances of ClientError should raise ProviderRetryableError.
 
-        The AWS provider uses SNS to send push notifications.  The tested exceptions are exceptions
+        The AWS provider uses SNS to send push notifications. The tested exceptions are exceptions
         that might get raised via calling the SNS client's "publish" method.
 
         https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/sns/client/publish.html
@@ -130,8 +147,16 @@ class TestProviderAWS:
         # Initializing a ClientError requires the positional arguments "error_response" and "operation_name".
         mock_client.publish.side_effect = botocore.exceptions.ClientError({'Error': {'Code': exc}}, 'sns')
 
-        with pytest.raises(ProviderRetryableError):
-            await self.provider.send_notification(push_model)
+        # This is returning None because it continues to retry until failure.
+        # A str would be returned if calling _send_push was successful.
+        # Using retry_with is necessary to avoid performing retries with the default wait strategy.
+        assert (
+            await self.provider.send_notification.retry_with(stop=stop_after_attempt(2), wait=wait_none())(  # type: ignore
+                self.provider,
+                push_model,
+            )
+            is None
+        )
 
     async def test_register_push_endpoint(self, mock_get_session: AsyncMock) -> None:
         """Test the happy path.
@@ -147,19 +172,24 @@ class TestProviderAWS:
         assert await self.provider.register_push_endpoint(push_registration_model) == '12345'
         mock_client.create_platform_endpoint.assert_called_once()
 
-    async def test_get_platform_application_arn(
-        self, mock_get_session: AsyncMock, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        """Test with various mocked environments."""
-        monkeypatch.setenv('AWS_REGION_NAME', 'us-west-1')
-        monkeypatch.setenv('AWS_ACCOUNT_ID', '999999999999')
-        monkeypatch.setenv('AWS_PLATFORM', 'APNS')
+    async def test_register_push_endpoint_with_retryable_exceptions(self, mock_get_session: AsyncMock) -> None:
+        """Test handling of retryable exceptions."""
+        mock_get_session.side_effect = botocore.exceptions.ClientError(
+            {'Error': {'Code': 'InternalErrorException'}},
+            'sns',
+        )
 
-        assert self.provider.get_platform_application_arn('foo') == 'arn:aws:sns:us-west-1:999999999999:app/APNS/foo'
+        push_registration_model = PushRegistrationModel(platform_application_arn='123', token='456')
 
-    async def test_str(self, mock_get_session: AsyncMock) -> None:
-        """Test the string representation of the class."""
-        assert str(self.provider) == 'AWS Provider'
+        # This is returning None because it continues to retry until failure.
+        # A str would be returned if calling register_push_endpoint was successful.
+        # Using retry_with is necessary to avoid performing retries with the default wait strategy.
+        assert (
+            await self.provider.register_push_endpoint.retry_with(stop=stop_after_attempt(2), wait=wait_none())(  # type: ignore
+                self.provider, push_registration_model
+            )
+            is None
+        )
 
     async def test_register_push_endpoint_with_non_retryable_exceptions(self, mock_get_session: AsyncMock) -> None:
         """Test handling of non-retryable exceptions."""
