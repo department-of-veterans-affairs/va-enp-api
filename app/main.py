@@ -15,6 +15,7 @@ from app.db.db_init import close_db, get_read_session_with_depends, get_write_se
 from app.legacy.v2.notifications.rest import v2_notification_router
 from app.logging.logging_config import CustomizeLogger
 from app.providers.provider_aws import ProviderAWS
+from app.state import ENPState
 from app.v3 import api_router as v3_router
 
 MKDOCS_DIRECTORY = 'site'
@@ -36,12 +37,20 @@ async def lifespan(app: FastAPI) -> AsyncIterator[Never]:
     await init_db()
     # Route handlers should access this dictionary to send notifications using
     # various third-party services, such as AWS, Twilio, etc.
-    app.state.providers = {'aws': ProviderAWS()}
+    app.state.enp_state.providers = {'aws': ProviderAWS()}
 
     yield  # type: ignore
 
-    app.state.providers.clear()
+    app.state.enp_state.clear_providers()
     await close_db()
+
+
+class CustomFastAPI(FastAPI):
+    """Custom FastAPI class to include ENPState."""
+
+    def __init__(self, *args, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
+        self.state.enp_state = ENPState()
 
 
 def create_app() -> FastAPI:
@@ -64,7 +73,7 @@ def create_app() -> FastAPI:
     return app
 
 
-app: FastAPI = create_app()
+app: CustomFastAPI = create_app()
 
 
 @app.get('/')
