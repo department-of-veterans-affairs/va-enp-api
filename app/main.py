@@ -3,7 +3,7 @@
 import os
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
-from typing import Annotated, Never
+from typing import Annotated, Any, AsyncContextManager, Callable, Mapping, Never
 
 from fastapi import Depends, FastAPI, status
 from fastapi.staticfiles import StaticFiles
@@ -21,8 +21,21 @@ from app.v3 import api_router as v3_router
 MKDOCS_DIRECTORY = 'site'
 
 
+class CustomFastAPI(FastAPI):
+    """Custom FastAPI class to include ENPState."""
+
+    def __init__(self, lifespan: Callable[['CustomFastAPI'], AsyncContextManager[Mapping[str, Any]]]) -> None:
+        """Initialize the CustomFastAPI instance with ENPState.
+
+        Args:
+            lifespan: The lifespan context manager for the application.
+        """
+        super().__init__(lifespan=lifespan)
+        self.state.enp_state = ENPState()
+
+
 @asynccontextmanager
-async def lifespan(app: FastAPI) -> AsyncIterator[Never]:
+async def lifespan(app: CustomFastAPI) -> AsyncIterator[Never]:
     """Initialize the database, and populate the providers dictionary.
 
     https://fastapi.tiangolo.com/advanced/events/?h=life#lifespan
@@ -35,6 +48,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[Never]:
 
     """
     await init_db()
+
     # Route handlers should access this dictionary to send notifications using
     # various third-party services, such as AWS, Twilio, etc.
     app.state.enp_state.providers = {'aws': ProviderAWS()}
@@ -45,23 +59,14 @@ async def lifespan(app: FastAPI) -> AsyncIterator[Never]:
     await close_db()
 
 
-class CustomFastAPI(FastAPI):
-    """Custom FastAPI class to include ENPState."""
-
-    def __init__(self, *args, **kwargs) -> None:
-        super().__init__(*args, **kwargs)
-        self.state.enp_state = ENPState()
-
-
-def create_app() -> FastAPI:
+def create_app() -> CustomFastAPI:
     """Create and configure the FastAPI app.
 
     Returns:
         CustomFastAPI: The FastAPI application instance with custom logging.
-
     """
     CustomizeLogger.make_logger()
-    app = FastAPI(lifespan=lifespan)
+    app = CustomFastAPI(lifespan=lifespan)
     app.include_router(v3_router)
     app.include_router(v2_notification_router)
 
