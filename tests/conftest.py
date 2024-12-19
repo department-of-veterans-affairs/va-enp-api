@@ -7,6 +7,7 @@ from fastapi.testclient import TestClient
 
 from app.main import app
 from app.providers.provider_aws import ProviderAWS
+from app.state import ENPState
 
 
 @pytest.fixture(scope='session')
@@ -17,5 +18,6 @@ def client() -> TestClient:
         TestClient: A test client to test with
 
     """
-    app.state.providers = {'aws': Mock(spec=ProviderAWS)}
+    app.state.enp_state = ENPState()
+    app.state.enp_state.providers['aws'] = Mock(spec=ProviderAWS)
     return TestClient(app)

@@ -31,7 +31,7 @@ class CustomFastAPI(FastAPI):
             lifespan: The lifespan context manager for the application.
         """
         super().__init__(lifespan=lifespan)
-        self.state.enp_state = ENPState()
+        self.enp_state = ENPState()
 
 
 @asynccontextmanager
@@ -51,11 +51,11 @@ async def lifespan(app: CustomFastAPI) -> AsyncIterator[Never]:
 
     # Route handlers should access this dictionary to send notifications using
     # various third-party services, such as AWS, Twilio, etc.
-    app.state.enp_state.providers = {'aws': ProviderAWS()}
+    app.enp_state.providers = {'aws': ProviderAWS()}
 
     yield  # type: ignore
 
-    app.state.enp_state.clear_providers()
+    app.enp_state.clear_providers()
     await close_db()
 
 

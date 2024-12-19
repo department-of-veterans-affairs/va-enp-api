@@ -33,7 +33,7 @@ async def create_device_registration(
     """
     logger.debug('Received device registration request: {}', request)
 
-    provider = fastapi_request.app.state.providers['aws']
+    provider = fastapi_request.app.state.enp_state.providers['aws']
     logger.debug('Loaded provider: {}', provider)
 
     device_registration_model = DeviceRegistrationModel(

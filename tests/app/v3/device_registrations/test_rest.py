@@ -42,7 +42,7 @@ def test_post(
         payload(dict): The request payload
 
     """
-    client.app.state.providers[  # type: ignore
+    client.app.enp_state.providers[
         'aws'
     ].register_device.return_value = (
         'arn:aws:sns:us-east-1:000000000000:endpoint/APNS/notify/00000000-0000-0000-0000-000000000000'
