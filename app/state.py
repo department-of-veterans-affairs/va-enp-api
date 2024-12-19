@@ -10,6 +10,8 @@ class ENPState:
 
     def __init__(self) -> None:
         """Initialize ENPState with a default set of providers."""
+        # Route handlers should access this dictionary to send notifications using
+        # various third-party services, such as AWS, Twilio, etc.
         self.providers: Dict[str, Any] = {'aws': ProviderAWS()}
 
     def clear_providers(self) -> None:
