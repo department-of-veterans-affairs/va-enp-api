@@ -10,3 +10,12 @@ def test_enp_state_initialization() -> None:
     state.providers = {'aws': ProviderAWS()}
     assert 'aws' in state.providers
     assert isinstance(state.providers['aws'], ProviderAWS)
+
+
+def test_clear_providers() -> None:
+    """Test the clear_providers method to ensure it clears the providers dictionary."""
+    state = ENPState()
+
+    assert len(state.providers) == 1
+    state.clear_providers()
+    assert len(state.providers) == 0

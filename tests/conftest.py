@@ -18,6 +18,6 @@ def client() -> TestClient:
         TestClient: A test client to test with
 
     """
-    app.state.enp_state = ENPState()
-    app.state.enp_state.providers['aws'] = Mock(spec=ProviderAWS)
+    app.enp_state = ENPState()
+    app.enp_state.providers['aws'] = Mock(spec=ProviderAWS)
     return TestClient(app)
