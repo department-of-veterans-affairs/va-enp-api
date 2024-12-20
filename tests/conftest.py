@@ -17,7 +17,7 @@ class EnpTestClient(TestClient):
         TestClient (TestClient): FastAPI's test client.
     """
 
-    app: CustomFastAPI  # type: ignore
+    app: CustomFastAPI
 
 
 @pytest.fixture(scope='session')
