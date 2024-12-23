@@ -29,6 +29,7 @@ optional = true
 pytest-cov = "*"
 pytest = "*"
 pytest-asyncio = "*"
+pytest-mock = "*"
 
 [tool.poetry.group.static_tools]
 optional = true

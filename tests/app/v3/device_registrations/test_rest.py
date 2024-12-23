@@ -1,11 +1,13 @@
 """Test cases for the device-registrations REST API."""
 
+from unittest.mock import AsyncMock
+
 import pytest
 from fastapi import status
-from fastapi.testclient import TestClient
 
 from app.constants import MobileAppType, OSPlatformType
 from app.v3.device_registrations.route_schema import DeviceRegistrationRequest
+from tests.conftest import ENPTestClient
 
 
 # Valid applications are VA_FLAGSHIP_APP, VETEXT.  Valid platforms are IOS, ANDROID.
@@ -25,10 +27,11 @@ from app.v3.device_registrations.route_schema import DeviceRegistrationRequest
     ],
 )
 def test_post(
-    client: TestClient,
+    client: ENPTestClient,
     application: MobileAppType,
     platform: OSPlatformType,
     payload: dict[str, str],
+    mocker: AsyncMock,
 ) -> None:
     """Test POST /v3/device-registration.
 
@@ -36,16 +39,17 @@ def test_post(
     the endpoint sid.
 
     Args:
-        client(TestClient): FastAPI client fixture
+        client(ENPTestClient): Custom FastAPI client fixture
         application(str): The application name, either VA_FLAGSHIP_APP or VETEXT
         platform(str): The platform name, either IOS or ANDROID
         payload(dict): The request payload
+        mocker(AsyncMock): Mock fixture for async dependencies
 
     """
-    client.app.state.providers[  # type: ignore
-        'aws'
-    ].register_device.return_value = (
-        'arn:aws:sns:us-east-1:000000000000:endpoint/APNS/notify/00000000-0000-0000-0000-000000000000'
+    mocker.patch.object(
+        client.app.enp_state.providers['aws'],
+        'register_device',
+        return_value='arn:aws:sns:us-east-1:000000000000:endpoint/APNS/notify/00000000-0000-0000-0000-000000000000',
     )
 
     request = DeviceRegistrationRequest(**payload, app_name=application, os_name=platform)

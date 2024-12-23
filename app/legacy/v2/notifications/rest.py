@@ -60,7 +60,7 @@ async def create_push_notification(
     notification = await dao_create_notification(Notification(personalization=json.dumps(personalization)))
 
     background_tasks.add_task(
-        send_push_notification_helper, personalization, icn, template, request.app.state.providers['aws']
+        send_push_notification_helper, personalization, icn, template, request.app.enp_state.providers['aws']
     )
 
     logger.info(
