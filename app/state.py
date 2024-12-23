@@ -6,7 +6,7 @@ from app.providers.provider_aws import ProviderAWS
 
 
 class ENPState:
-    """Custom application state class to hold providers."""
+    """Custom application state class."""
 
     def __init__(self) -> None:
         """Initialize ENPState with a default set of providers."""
