@@ -4,7 +4,6 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 from fastapi import BackgroundTasks, status
-from fastapi.testclient import TestClient
 
 from app.constants import IdentifierType, MobileAppType
 from app.db.models import Template
@@ -12,6 +11,7 @@ from app.legacy.v2.notifications.route_schema import (
     V2PostPushRequestModel,
     V2PostPushResponseModel,
 )
+from tests.conftest import ENPTestClient
 
 
 @pytest.mark.asyncio
@@ -26,7 +26,7 @@ class TestRouter:
         mock_validate_template: AsyncMock,
         mock_dao_create_notification: AsyncMock,
         mock_background_task: AsyncMock,
-        client: TestClient,
+        client: ENPTestClient,
     ) -> None:
         """Test route can return 400.
 
@@ -34,7 +34,7 @@ class TestRouter:
             mock_validate_template (AsyncMock): Mock call to validate_template
             mock_dao_create_notification (AsyncMock): Mock call to create notification in the database
             mock_background_task (AsyncMock): Mock call to add a background task
-            client (TestClient): FastAPI client fixture
+            client (ENPTestClient): Custom FastAPI client fixture
 
         """
         invalid_request = {
@@ -56,7 +56,7 @@ class TestRouter:
         mock_validate_template: AsyncMock,
         mock_dao_create_notification: AsyncMock,
         mock_background_task: AsyncMock,
-        client: TestClient,
+        client: ENPTestClient,
     ) -> None:
         """Test route can return 500.
 
@@ -64,7 +64,7 @@ class TestRouter:
             mock_validate_template (AsyncMock): Mock call to validate_template
             mock_dao_create_notification (AsyncMock): Mock call to create notification in the database
             mock_background_task (AsyncMock): Mock call to add a background task
-            client (TestClient): FastAPI client fixture
+            client (ENPTestClient): Custom FastAPI client fixture
 
         """
         mock_validate_template.return_value = Template(name='test_template')
@@ -97,7 +97,7 @@ class TestPush:
         mock_validate_template: AsyncMock,
         mock_dao_create_notification: AsyncMock,
         mock_background_task: AsyncMock,
-        client: TestClient,
+        client: ENPTestClient,
     ) -> None:
         """Test route can return 201.
 
@@ -105,7 +105,7 @@ class TestPush:
             mock_validate_template (AsyncMock): Mock call to validate_template
             mock_dao_create_notification (AsyncMock): Mock call to create notification in the database
             mock_background_task (AsyncMock): Mock call to add a background task
-            client (TestClient): FastAPI client fixture
+            client (ENPTestClient): Custom FastAPI client fixture
 
         """
         mock_validate_template.return_value = Template(name='test_template')
@@ -130,7 +130,7 @@ class TestPush:
         mock_validate_template: AsyncMock,
         mock_dao_create_notification: AsyncMock,
         mock_background_task: AsyncMock,
-        client: TestClient,
+        client: ENPTestClient,
     ) -> None:
         """Test route returns 400 when there is an exception thrown trying to validate the template.
 
@@ -138,7 +138,7 @@ class TestPush:
             mock_validate_template (AsyncMock): Mock call to validate_template
             mock_dao_create_notification (AsyncMock): Mock call to create notification in the database
             mock_background_task (AsyncMock): Mock call to add a background task
-            client (TestClient): FastAPI client fixture
+            client (ENPTestClient): Custom FastAPI client fixture
 
         """
         mock_validate_template.side_effect = Exception()

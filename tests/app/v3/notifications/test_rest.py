@@ -3,28 +3,28 @@
 from uuid import uuid4
 
 from fastapi import status
-from fastapi.testclient import TestClient
 
 from app.constants import RESPONSE_400
 from app.v3.notifications.route_schema import NotificationSingleRequest
+from tests.conftest import ENPTestClient
 
 
-def test_get(client: TestClient) -> None:
+def test_get(client: ENPTestClient) -> None:
     """Test GET /v3/notifications/.
 
     Args:
-        client(TestClient): FastAPI client fixture
+        client(ENPTestClient): Custom FastAPI client fixture
 
     """
     resp = client.get(f'/v3/notifications/{uuid4()}')
     assert resp.status_code == status.HTTP_200_OK
 
 
-def test_get_missing_uuid(client: TestClient) -> None:
+def test_get_missing_uuid(client: ENPTestClient) -> None:
     """Test GET /v3/notifications/ with a missing uuid.
 
     Args:
-        client(TestClient): FastAPI client fixture
+        client(ENPTestClient): Custom FastAPI client fixture
 
     """
     # will think it's supposed to be a POST so throws 405 instead of 404 (FastAPI)
@@ -32,11 +32,11 @@ def test_get_missing_uuid(client: TestClient) -> None:
     assert resp.status_code == status.HTTP_405_METHOD_NOT_ALLOWED
 
 
-def test_get_malformed_request(client: TestClient) -> None:
+def test_get_malformed_request(client: ENPTestClient) -> None:
     """Test GET /v3/notifications/ with a malformed request.
 
     Args:
-        client(TestClient): FastAPI client fixture
+        client(ENPTestClient): Custom FastAPI client fixture
 
     """
     malformed_uuid = '1234'
@@ -51,11 +51,11 @@ def test_get_malformed_request(client: TestClient) -> None:
     assert malformed_uuid in resp_text
 
 
-def test_post(client: TestClient) -> None:
+def test_post(client: ENPTestClient) -> None:
     """Test POST /v3/notifications/.
 
     Args:
-        client(TestClient): FastAPI client fixture
+        client(ENPTestClient): Custom FastAPI client fixture
 
     """
     srequest = NotificationSingleRequest(
@@ -67,11 +67,11 @@ def test_post(client: TestClient) -> None:
     assert resp.status_code == status.HTTP_202_ACCEPTED
 
 
-def test_post_no_personalization(client: TestClient) -> None:
+def test_post_no_personalization(client: ENPTestClient) -> None:
     """Test POST /v3/notifications/ with no personalization.
 
     Args:
-        client(TestClient): FastAPI client fixture
+        client(ENPTestClient): Custom FastAPI client fixture
 
     """
     srequest = NotificationSingleRequest(
@@ -82,11 +82,11 @@ def test_post_no_personalization(client: TestClient) -> None:
     assert resp.status_code == status.HTTP_202_ACCEPTED
 
 
-def test_post_malformed_request(client: TestClient) -> None:
+def test_post_malformed_request(client: ENPTestClient) -> None:
     """Test POST /v3/notifications/ with a malformed request.
 
     Args:
-        client(TestClient): FastAPI client fixture
+        client(ENPTestClient): Custom FastAPI client fixture
 
     """
     request: dict[str, str] = {}

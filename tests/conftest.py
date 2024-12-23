@@ -10,7 +10,7 @@ from app.providers.provider_aws import ProviderAWS
 from app.state import ENPState
 
 
-class EnpTestClient(TestClient):
+class ENPTestClient(TestClient):
     """An ENP test client for the CustomFastAPI app.
 
     Args:
@@ -21,15 +21,15 @@ class EnpTestClient(TestClient):
 
 
 @pytest.fixture(scope='session')
-def client() -> EnpTestClient:
+def client() -> ENPTestClient:
     """Return a test client.
 
     Returns:
-        EnpTestClient: A test client to test with
+        ENPTestClient: A test client to test with
 
     """
     app.enp_state = ENPState()
 
     app.enp_state.providers['aws'] = Mock(spec=ProviderAWS)
 
-    return EnpTestClient(app)
+    return ENPTestClient(app)
