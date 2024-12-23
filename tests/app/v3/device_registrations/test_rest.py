@@ -1,5 +1,7 @@
 """Test cases for the device-registrations REST API."""
 
+from unittest.mock import AsyncMock
+
 import pytest
 from fastapi import status
 
@@ -29,6 +31,7 @@ def test_post(
     application: MobileAppType,
     platform: OSPlatformType,
     payload: dict[str, str],
+    mocker: AsyncMock,
 ) -> None:
     """Test POST /v3/device-registration.
 
@@ -40,12 +43,13 @@ def test_post(
         application(str): The application name, either VA_FLAGSHIP_APP or VETEXT
         platform(str): The platform name, either IOS or ANDROID
         payload(dict): The request payload
+        mocker(AsyncMock): Mock fixture for async dependencies
 
     """
-    client.app.enp_state.providers[  # type: ignore
-        'aws'
-    ].register_device.return_value = (
-        'arn:aws:sns:us-east-1:000000000000:endpoint/APNS/notify/00000000-0000-0000-0000-000000000000'
+    mocker.patch.object(
+        client.app.enp_state.providers['aws'],
+        'register_device',
+        return_value='arn:aws:sns:us-east-1:000000000000:endpoint/APNS/notify/00000000-0000-0000-0000-000000000000',
     )
 
     request = DeviceRegistrationRequest(**payload, app_name=application, os_name=platform)
