@@ -13,8 +13,10 @@ from app.providers.provider_aws import ProviderAWS
 class EnpTestClient(TestClient):
     """An ENP test client.
 
+    This was implemented to avoid issues with MyPy not recognizing state attributes.
+
     Args:
-        TestClient (_type_): _description_
+        TestClient(TestClient): Starlette test client for FastAPI
     """
 
     app: FastAPI
@@ -22,10 +24,10 @@ class EnpTestClient(TestClient):
 
 @pytest.fixture(scope='session')
 def client() -> EnpTestClient:
-    """Return a test client.
+    """Return a custom test client.
 
     Returns:
-        EnpTestClient: A test client to test with
+        EnpTestClient: A custom test client to test with
 
     """
     app.state.providers = {'aws': Mock(spec=ProviderAWS)}

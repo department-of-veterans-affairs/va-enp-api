@@ -36,7 +36,7 @@ def test_post(
     the endpoint sid.
 
     Args:
-        client(EnpTestClient): FastAPI client fixture
+        client(EnpTestClient): Custom FastAPI client fixture
         application(str): The application name, either VA_FLAGSHIP_APP or VETEXT
         platform(str): The platform name, either IOS or ANDROID
         payload(dict): The request payload
