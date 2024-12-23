@@ -11,7 +11,12 @@ from loguru import logger
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_scoped_session
 
-from app.db.db_init import close_db, get_read_session_with_depends, get_write_session_with_depends, init_db
+from app.db.db_init import (
+    close_db,
+    get_read_session_with_depends,
+    get_write_session_with_depends,
+    init_db,
+)
 from app.legacy.v2.notifications.rest import v2_notification_router
 from app.logging.logging_config import CustomizeLogger
 from app.state import ENPState
