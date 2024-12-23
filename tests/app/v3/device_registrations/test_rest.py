@@ -2,10 +2,10 @@
 
 import pytest
 from fastapi import status
-from fastapi.testclient import TestClient
 
 from app.constants import MobileAppType, OSPlatformType
 from app.v3.device_registrations.route_schema import DeviceRegistrationRequest
+from tests.conftest import EnpTestClient
 
 
 # Valid applications are VA_FLAGSHIP_APP, VETEXT.  Valid platforms are IOS, ANDROID.
@@ -25,7 +25,7 @@ from app.v3.device_registrations.route_schema import DeviceRegistrationRequest
     ],
 )
 def test_post(
-    client: TestClient,
+    client: EnpTestClient,
     application: MobileAppType,
     platform: OSPlatformType,
     payload: dict[str, str],
@@ -36,13 +36,13 @@ def test_post(
     the endpoint sid.
 
     Args:
-        client(TestClient): FastAPI client fixture
+        client(EnpTestClient): FastAPI client fixture
         application(str): The application name, either VA_FLAGSHIP_APP or VETEXT
         platform(str): The platform name, either IOS or ANDROID
         payload(dict): The request payload
 
     """
-    client.app.state.providers[  # type: ignore
+    client.app.state.providers[
         'aws'
     ].register_device.return_value = (
         'arn:aws:sns:us-east-1:000000000000:endpoint/APNS/notify/00000000-0000-0000-0000-000000000000'

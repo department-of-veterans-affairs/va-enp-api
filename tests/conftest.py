@@ -3,19 +3,30 @@
 from unittest.mock import Mock
 
 import pytest
+from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 from app.main import app
 from app.providers.provider_aws import ProviderAWS
 
 
+class EnpTestClient(TestClient):
+    """An ENP test client.
+
+    Args:
+        TestClient (_type_): _description_
+    """
+
+    app: FastAPI
+
+
 @pytest.fixture(scope='session')
-def client() -> TestClient:
+def client() -> EnpTestClient:
     """Return a test client.
 
     Returns:
-        TestClient: A test client to test with
+        EnpTestClient: A test client to test with
 
     """
     app.state.providers = {'aws': Mock(spec=ProviderAWS)}
-    return TestClient(app)
+    return EnpTestClient(app)
