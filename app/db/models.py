@@ -41,7 +41,6 @@ def create_year_partition(target: Base, connection: Connection, **kw: any) -> No
     ON notifications_{year} (created_at);
     """)
 
-    # Execute the SQL using SQLAlchemy's text()
     connection.execute(sql)
 
 
