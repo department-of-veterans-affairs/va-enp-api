@@ -6,6 +6,7 @@ from uuid import uuid4
 
 from sqlalchemy import String, event, text
 from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.engine import Connection
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base import Base
@@ -25,7 +26,7 @@ class Notification(TimestampMixin, Base):
     __mapper_args__: ClassVar = {'primary_key': ['id', 'created_at']}
 
 
-def create_year_partition(target: Base, connection: any, **kw: any) -> None:
+def create_year_partition(target: Base, connection: Connection, **kw: any) -> None:
     """Creates partition for the current year."""
     year = datetime.utcnow().year
 
@@ -48,7 +49,7 @@ def create_year_partition(target: Base, connection: any, **kw: any) -> None:
 event.listen(Notification.__table__, 'after_create', create_year_partition)
 
 
-def ensure_future_partition(connection: any, date: datetime) -> None:
+def ensure_future_partition(connection: Connection, date: datetime) -> None:
     """Ensures partition exists for the given date."""
     year = date.year
     partition_name = f'notifications_{year}'
