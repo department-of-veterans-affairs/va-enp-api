@@ -15,7 +15,7 @@ from app.legacy.v2.notifications.utils import send_push_notification_helper, val
 from app.routers import TimedAPIRoute
 
 v2_notification_router = APIRouter(
-    prefix='/v2/notifications',
+    prefix='/legacy/v2/notifications',
     tags=['v2 Notification Endpoints'],
     route_class=TimedAPIRoute,
 )
