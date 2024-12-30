@@ -3,7 +3,6 @@
 from asyncio import current_task
 from typing import AsyncIterator
 
-import app
 from fastapi.concurrency import asynccontextmanager
 from loguru import logger
 from sqlalchemy.exc import IntegrityError
@@ -21,7 +20,7 @@ from app.db.base import Base
 _engine_read = None
 _engine_write = None
 
-@app.on_event("startup")
+
 async def init_db() -> None:
     """Initialize the database engine."""
     logger.info('Initializing the database engines...')
