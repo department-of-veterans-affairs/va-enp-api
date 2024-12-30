@@ -27,21 +27,21 @@ class Notification(TimestampMixin, Base):
 
 
 def create_year_partition(target: Base, connection: Connection, **kw: any) -> None:
-    """Creates partition for the current year."""
-    year = datetime.utcnow().year
+    """Creates partitions for all years from 2024 to the current year."""
+    current_year = datetime.utcnow().year
 
-    # Create partition for the current year
-    sql = text(f"""
-    CREATE TABLE IF NOT EXISTS notifications_{year}
-    PARTITION OF notifications
-    FOR VALUES FROM ('{year}-01-01 00:00:00')
-    TO ('{year+1}-01-01 00:00:00');
+    for year in range(2024, current_year + 1):
+        sql = text(f"""
+        CREATE TABLE IF NOT EXISTS notifications_{year}
+        PARTITION OF notifications
+        FOR VALUES FROM ('{year}-01-01 00:00:00')
+        TO ('{year+1}-01-01 00:00:00');
 
-    CREATE INDEX IF NOT EXISTS idx_notifications_{year}_created_at
-    ON notifications_{year} (created_at);
-    """)
+        CREATE INDEX IF NOT EXISTS idx_notifications_{year}_created_at
+        ON notifications_{year} (created_at);
+        """)
 
-    connection.execute(sql)
+        connection.execute(sql)
 
 
 # Register event listener for partition creation
