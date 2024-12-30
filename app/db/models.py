@@ -49,31 +49,31 @@ def create_year_partition(target: Base, connection: Connection, **kw: any) -> No
 event.listen(Notification.__table__, 'after_create', create_year_partition)
 
 
-def ensure_future_partition(connection: Connection, date: datetime) -> None:
-    """Ensures partition exists for the given date."""
-    year = date.year
-    partition_name = f'notifications_{year}'
+# def ensure_future_partition(connection: Connection, date: datetime) -> None:
+#     """Ensures partition exists for the given date."""
+#     year = date.year
+#     partition_name = f'notifications_{year}'
 
-    # Check if partition exists
-    exists = connection.execute(f"""
-    SELECT EXISTS (
-        SELECT 1
-        FROM pg_class c
-        JOIN pg_namespace n ON n.oid = c.relnamespace
-        WHERE c.relname = '{partition_name}'
-    );
-    """).scalar()
+#     # Check if partition exists
+#     exists = connection.execute(f"""
+#     SELECT EXISTS (
+#         SELECT 1
+#         FROM pg_class c
+#         JOIN pg_namespace n ON n.oid = c.relnamespace
+#         WHERE c.relname = '{partition_name}'
+#     );
+#     """).scalar()
 
-    if not exists:
-        connection.execute(f"""
-        CREATE TABLE IF NOT EXISTS {partition_name}
-        PARTITION OF notifications
-        FOR VALUES FROM ('{year}-01-01 00:00:00')
-        TO ('{year+1}-01-01 00:00:00');
+#     if not exists:
+#         connection.execute(f"""
+#         CREATE TABLE IF NOT EXISTS {partition_name}
+#         PARTITION OF notifications
+#         FOR VALUES FROM ('{year}-01-01 00:00:00')
+#         TO ('{year+1}-01-01 00:00:00');
 
-        CREATE INDEX IF NOT EXISTS idx_{partition_name}_created_at
-        ON {partition_name} (created_at);
-        """)
+#         CREATE INDEX IF NOT EXISTS idx_{partition_name}_created_at
+#         ON {partition_name} (created_at);
+#         """)
 
 
 class Service(Base):
