@@ -1,22 +1,15 @@
 """Database models for the application."""
 
 from datetime import datetime
+from typing import ClassVar
 from uuid import uuid4
 
-from sqlalchemy import String, event
+from sqlalchemy import String, event, text
 from sqlalchemy.dialects.postgresql import UUID
-from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base import Base
 from app.db.model_mixins import TimestampMixin
-
-Base = declarative_base()
-
-
-class TimestampMixin:
-    created_at: Mapped[datetime] = mapped_column(default=datetime.utcnow)
-    updated_at: Mapped[datetime] = mapped_column(default=datetime.utcnow, onupdate=datetime.utcnow)
 
 
 class Notification(TimestampMixin, Base):
@@ -24,39 +17,39 @@ class Notification(TimestampMixin, Base):
 
     __tablename__ = 'notifications'
 
-    # Define table arguments properly for partitioning
-    __table_args__ = {
-        'postgresql_partition_by': 'RANGE (created_at)',
-    }
+    __table_args__: ClassVar = ({'postgresql_partition_by': 'RANGE (created_at)'},)
 
-    id: Mapped[UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid4)
+    id: Mapped[UUID] = mapped_column(UUID(as_uuid=True), nullable=False, default=uuid4)
     personalization: Mapped[str | None] = mapped_column(String, nullable=True)
 
+    __mapper_args__: ClassVar = {'primary_key': ['id', 'created_at']}
 
-def create_year_partition(target, connection, **kw):
-    """Creates partition for the current year"""
+
+def create_year_partition(target: Base, connection: any, **kw: any) -> None:
+    """Creates partition for the current year."""
     year = datetime.utcnow().year
 
-    # Create partition for current year
-    connection.execute(f"""
+    # Create partition for the current year
+    sql = text(f"""
     CREATE TABLE IF NOT EXISTS notifications_{year}
     PARTITION OF notifications
-    FOR VALUES FROM ('{year}-01-01 00:00:00') 
+    FOR VALUES FROM ('{year}-01-01 00:00:00')
     TO ('{year+1}-01-01 00:00:00');
-    
-    -- Create index on created_at for the partition
-    CREATE INDEX IF NOT EXISTS idx_notifications_{year}_created_at 
+
+    CREATE INDEX IF NOT EXISTS idx_notifications_{year}_created_at
     ON notifications_{year} (created_at);
     """)
+
+    # Execute the SQL using SQLAlchemy's text()
+    connection.execute(sql)
 
 
 # Register event listener for partition creation
 event.listen(Notification.__table__, 'after_create', create_year_partition)
 
 
-# Function to ensure future partitions exist
-def ensure_future_partition(connection, date: datetime):
-    """Ensures partition exists for the given date"""
+def ensure_future_partition(connection: any, date: datetime) -> None:
+    """Ensures partition exists for the given date."""
     year = date.year
     partition_name = f'notifications_{year}'
 
@@ -74,10 +67,10 @@ def ensure_future_partition(connection, date: datetime):
         connection.execute(f"""
         CREATE TABLE IF NOT EXISTS {partition_name}
         PARTITION OF notifications
-        FOR VALUES FROM ('{year}-01-01 00:00:00') 
+        FOR VALUES FROM ('{year}-01-01 00:00:00')
         TO ('{year+1}-01-01 00:00:00');
-        
-        CREATE INDEX IF NOT EXISTS idx_{partition_name}_created_at 
+
+        CREATE INDEX IF NOT EXISTS idx_{partition_name}_created_at
         ON {partition_name} (created_at);
         """)
 
