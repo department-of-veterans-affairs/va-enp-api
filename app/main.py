@@ -114,8 +114,8 @@ async def test_db_create(
     from app.db.models import Template
 
     template = Template(name=data)
-    notification_2024 = Notification(personalization='John', created_at=datetime(2024, 6, 15, 12, 0, 0))
-    notification_2025 = Notification(personalization='Adam', created_at=datetime(2025, 6, 15, 12, 0, 0))
+    notification_2024 = Notification(personalization='2024 Notification', created_at=datetime(2024, 6, 15, 12, 0, 0))
+    notification_2025 = Notification(personalization='2025 Notification', created_at=datetime(2025, 6, 15, 12, 0, 0))
 
     async with db_session() as session:
         session.add(template)
