@@ -3,12 +3,13 @@
 import os
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
+from datetime import datetime
 from typing import Annotated, Any, AsyncContextManager, Callable, Mapping, Never
 
 from fastapi import Depends, FastAPI, status
 from fastapi.staticfiles import StaticFiles
 from loguru import logger
-from sqlalchemy import select
+from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession, async_scoped_session
 
 from app.db.db_init import (
@@ -99,40 +100,52 @@ async def test_db_create(
     *,
     data: str = 'hello',
     db_session: Annotated[async_scoped_session[AsyncSession], Depends(get_write_session_with_depends)],
-) -> dict[str, dict[str, str]]:
-    """Test inserting Templates into the database. This is a temporary test endpoint.
+) -> dict[str, list[dict]]:
+    """Test inserting Templates and Notifications into the database. This is a temporary test endpoint.
 
     Args:
         data (str): The data to insert
         db_session: The database session
 
     Returns:
-        dict[str, dict[str, str]]: The inserted notification and template item
+        dict[str, dict[str, str]]: The inserted notification and template items
 
     """
     from app.db.models import Template
 
     template = Template(name=data)
-    notification = Notification(personalization='hello!')
+    notification_2024 = Notification(personalization='John', created_at=datetime(2024, 6, 15, 12, 0, 0))
+    notification_2025 = Notification(personalization='Adam', created_at=datetime(2025, 6, 15, 12, 0, 0))
 
     async with db_session() as session:
         session.add(template)
-        session.add(notification)
+        session.add(notification_2024)
+        session.add(notification_2025)
         await session.commit()
 
     return {
-        'template': {
-            'id': str(template.id),
-            'name': template.name,
-            'created_at': str(template.created_at),
-            'updated_at': str(template.updated_at),
-        },
-        'notification': {
-            'id': str(notification.id),
-            'personalization': notification.personalization,
-            'created_at': str(notification.created_at),
-            'updated_at': str(notification.updated_at),
-        },
+        'templates': [
+            {
+                'id': str(template.id),
+                'name': template.name,
+                'created_at': str(template.created_at),
+                'updated_at': str(template.updated_at),
+            }
+        ],
+        'notifications': [
+            {
+                'id': str(notification_2024.id),
+                'personalization': notification_2024.personalization,
+                'created_at': str(notification_2024.created_at),
+                'updated_at': str(notification_2024.updated_at),
+            },
+            {
+                'id': str(notification_2025.id),
+                'personalization': notification_2025.personalization,
+                'created_at': str(notification_2025.created_at),
+                'updated_at': str(notification_2025.updated_at),
+            },
+        ],
     }
 
 
@@ -164,7 +177,8 @@ async def test_db_read(
                 }
             )
 
-        notification_results = await session.scalars(select(Notification))
+        # TODO - How to get this without raw SQL
+        notification_results = notification_results = await session.execute(text('SELECT * FROM notifications_2024'))
         for n in notification_results:
             items.append(
                 {

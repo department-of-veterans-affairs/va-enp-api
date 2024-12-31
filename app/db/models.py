@@ -27,10 +27,16 @@ class Notification(TimestampMixin, Base):
 
 
 def create_year_partition(target: Base, connection: Connection, **kw: any) -> None:
-    """Creates partitions for all years from 2024 to the current year."""
+    """Creates partitions for all years from 2024 to the next year.
+
+    Args:
+        target (Base): The target table to create partitions for.
+        connection (Connection): The database connection used to execute SQL statements.
+        **kw (any): Additional keyword arguments passed to the function.
+    """
     current_year = datetime.utcnow().year
 
-    for year in range(2024, current_year + 1):
+    for year in range(2024, current_year + 2):
         sql = text(f"""
         CREATE TABLE IF NOT EXISTS notifications_{year}
         PARTITION OF notifications
