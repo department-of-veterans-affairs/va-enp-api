@@ -17,6 +17,7 @@ from app.db.db_init import (
     get_write_session_with_depends,
     init_db,
 )
+from app.db.models import Notification, Template
 from app.legacy.v2.notifications.rest import v2_notification_router
 from app.logging.logging_config import CustomizeLogger
 from app.state import ENPState
@@ -98,7 +99,7 @@ async def test_db_create(
     *,
     data: str = 'hello',
     db_session: Annotated[async_scoped_session[AsyncSession], Depends(get_write_session_with_depends)],
-) -> dict[str, str]:
+) -> dict[str, dict[str, str]]:
     """Test inserting Templates into the database. This is a temporary test endpoint.
 
     Args:
@@ -106,21 +107,32 @@ async def test_db_create(
         db_session: The database session
 
     Returns:
-        dict[str, str]: The inserted item
+        dict[str, dict[str, str]]: The inserted notification and template item
 
     """
     from app.db.models import Template
 
     template = Template(name=data)
+    notification = Notification(personalization='hello!')
 
     async with db_session() as session:
         session.add(template)
+        session.add(notification)
         await session.commit()
+
     return {
-        'id': str(template.id),
-        'name': template.name,
-        'created_at': str(template.created_at),
-        'updated_at': str(template.updated_at),
+        'template': {
+            'id': str(template.id),
+            'name': template.name,
+            'created_at': str(template.created_at),
+            'updated_at': str(template.updated_at),
+        },
+        'notification': {
+            'id': str(notification.id),
+            'personalization': notification.personalization,
+            'created_at': str(notification.created_at),
+            'updated_at': str(notification.updated_at),
+        },
     }
 
 
@@ -128,20 +140,40 @@ async def test_db_create(
 async def test_db_read(
     db_session: Annotated[async_scoped_session[AsyncSession], Depends(get_read_session_with_depends)],
 ) -> list[dict[str, str]]:
-    """Test getting items from the database. This is a temporary test endpoint.
+    """Test getting items from the database, including Templates and Notifications.
 
     Args:
         db_session: The database session
 
     Returns:
-        list[dict[str,str]]: The items in the tests table
+        list[dict[str,str]]: The items in the Templates and Notifications tables
 
     """
-    from app.db.models import Template
-
     items = []
+
     async with db_session() as session:
-        results = await session.scalars(select(Template))
-        for r in results:
-            items.append({'id': str(r.id), 'name': r.name})
+        template_results = await session.scalars(select(Template))
+        for r in template_results:
+            items.append(
+                {
+                    'type': 'template',
+                    'id': str(r.id),
+                    'name': r.name,
+                    'created_at': str(r.created_at),
+                    'updated_at': str(r.updated_at),
+                }
+            )
+
+        notification_results = await session.scalars(select(Notification))
+        for n in notification_results:
+            items.append(
+                {
+                    'type': 'notification',
+                    'id': str(n.id),
+                    'personalization': n.personalization,
+                    'created_at': str(n.created_at),
+                    'updated_at': str(n.updated_at),
+                }
+            )
+
     return items
