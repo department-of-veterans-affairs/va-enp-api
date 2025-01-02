@@ -1,6 +1,8 @@
 fileignoreconfig:
 - filename: .env.example
   checksum: f04bd8b8a51131d412bea4b8098e714ca01f4c7475eeb0a40d196d922070ba43
+- filename: app/auth.py
+  checksum: 31e75b44f03afab392d8bfe0a05dc66db227e32b0bec57dd0069b7f38307976b
 - filename: app/db/__init__.py
   checksum: b079eb426725423f18be76949e3e10ca50ebfdd419f8768c2b7b58ddc41e5e01
 - filename: app/db/models.py
@@ -19,4 +21,8 @@ fileignoreconfig:
   checksum: 0e3ae2fd3a50245a8c143d31c4316b164b51161d2db6e660aa956b78eda1b4d8
 - filename: tests/app/providers/test_provider_aws.py
   checksum: f2ed526b1a81c5c0facfd4d1e7f1a3e26194778c1909a354c98c3b042945d34d
+- filename: tests/app/test_auth.py
+  checksum: 43a63d5642c744fab8e703b3ee4a1e65d1aa51e4004304cd50cab36f2ec93594
+- filename: tests/conftest.py
+  checksum: 3656032eac92d9070439d581529790de4f26dd810f4d09ae504afc455799a6f1
 version: "1.0"
