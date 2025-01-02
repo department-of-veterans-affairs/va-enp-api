@@ -8,9 +8,9 @@ from fastapi import HTTPException, Request
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from loguru import logger
 
-ADMIN_SECRET_KEY = os.environ['ENP_ADMIN_SECRET_KEY']
-ALGORITHM = os.environ.get('ENP_ALGORITHM', 'HS256')
-ACCESS_TOKEN_EXPIRE_SECONDS = int(os.environ.get('ENP_ACCESS_TOKEN_EXPIRE_SECONDS', 60))
+ADMIN_SECRET_KEY = os.getenv('ENP_ADMIN_SECRET_KEY')
+ALGORITHM = os.getenv('ENP_ALGORITHM', 'HS256')
+ACCESS_TOKEN_EXPIRE_SECONDS = int(os.getenv('ENP_ACCESS_TOKEN_EXPIRE_SECONDS', 60))
 
 
 class JWTBearer(HTTPBearer):
