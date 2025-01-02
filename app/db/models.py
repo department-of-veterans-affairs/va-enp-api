@@ -4,7 +4,7 @@ from datetime import datetime
 from typing import ClassVar
 from uuid import uuid4
 
-from sqlalchemy import String, event, text
+from sqlalchemy import String, Table, event, text
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.engine import Connection
 from sqlalchemy.orm import Mapped, mapped_column
@@ -24,6 +24,33 @@ class Notification(TimestampMixin, Base):
     personalization: Mapped[str | None] = mapped_column(String, nullable=True)
 
     __mapper_args__: ClassVar = {'primary_key': ['id', 'created_at']}
+
+    @classmethod
+    def get_partition_name(cls, key: int) -> str:
+        """Get the partition table name for the given key (year).
+
+        Args:
+            key (int): The year of the partition.
+
+        Returns:
+            str: The partition table name.
+        """
+        return f'{cls.__tablename__}_{key}'
+
+    @classmethod
+    def get_partition_table(cls, key: int) -> Table:
+        """Retrieve the SQLAlchemy Table object for the specified partition.
+
+        Args:
+            key (int): The year of the partition.
+
+        Returns:
+            Table: The SQLAlchemy Table object for the partition.
+        """
+        partition_name = cls.get_partition_name(key)
+        if partition_name not in cls.metadata.tables:
+            raise ValueError(f'Partition table {partition_name} does not exist in metadata.')
+        return cls.metadata.tables[partition_name]
 
 
 def create_year_partition(target: Base, connection: Connection, **kw: any) -> None:

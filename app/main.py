@@ -9,7 +9,7 @@ from typing import Annotated, Any, AsyncContextManager, Callable, Mapping, Never
 from fastapi import Depends, FastAPI, status
 from fastapi.staticfiles import StaticFiles
 from loguru import logger
-from sqlalchemy import select, text
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_scoped_session
 
 from app.db.db_init import (
@@ -177,8 +177,9 @@ async def test_db_read(
                 }
             )
 
-        # TODO - How to get this without raw SQL
-        notification_results = notification_results = await session.execute(text('SELECT * FROM notifications_2024'))
+        # TODO - How to get this without raw SQL ?
+        partition_table = Notification.get_partition_table(2024)
+        notification_results = await session.execute(select(partition_table))
         for n in notification_results:
             items.append(
                 {
