@@ -5,6 +5,7 @@ import hmac
 import json
 import time
 from typing import TypedDict
+from unittest.mock import AsyncMock
 
 from fastapi.testclient import TestClient
 
@@ -43,8 +44,21 @@ def _get_jwt_token(client_secret: str, payload_dict: PayloadDict) -> str:
     return token
 
 
+def test_credentials_returns_none(client: TestClient, mocker: AsyncMock) -> None:
+    """Test when the credentials call returns None.
+
+    Args:
+        client (TestClient): FastAPI test client
+        mocker: Pytest mocker
+    """
+    mocker.patch('app.auth.HTTPBearer.__call__', return_value=None)
+    response = client.post('/v3/device-registrations')
+    assert response.status_code == 403
+    assert response.json() == {'detail': 'Not authenticated'}
+
+
 def test_missing_authorization_scheme(client: TestClient) -> None:
-    """Test the invalid authorization scheme.
+    """Test the invalid(missing) authorization scheme.
 
     Args:
         client (TestClient): FastAPI test client
@@ -64,7 +78,7 @@ def test_missing_authorization_scheme(client: TestClient) -> None:
 
 
 def test_expired_iat_in_token(client: TestClient) -> None:
-    """Test the missing iat in token.
+    """Test an expired iat in token.
 
     Args:
         client (TestClient): FastAPI test client
@@ -84,7 +98,7 @@ def test_expired_iat_in_token(client: TestClient) -> None:
 
 
 def test_future_iat_in_token(client: TestClient) -> None:
-    """Test the missing iat in token.
+    """Test an iat in the future in token.
 
     Args:
         client (TestClient): FastAPI test client
