@@ -23,6 +23,8 @@ class ENPTestClient(TestClient):
 
     app: CustomFastAPI
     token_expiry = 60
+    client_id = 'test'
+    client_secret = 'not-very-secret'
 
     def __init__(self, app: CustomFastAPI) -> None:
         """Initialize the ENPTestClient.
@@ -31,7 +33,7 @@ class ENPTestClient(TestClient):
             app (CustomFastAPI): The FastAPI application instance.
         """
         headers = {
-            'Authorization': f'Bearer {self.get_jwt_token('test', 'not-very-secret')}',
+            'Authorization': f'Bearer {self.get_jwt_token(self.client_id, self.client_secret)}',
         }
         super().__init__(app, headers=headers)
 
