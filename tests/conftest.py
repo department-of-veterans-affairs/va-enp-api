@@ -33,11 +33,11 @@ class ENPTestClient(TestClient):
             app (CustomFastAPI): The FastAPI application instance.
         """
         headers = {
-            'Authorization': f'Bearer {self.get_jwt_token(self.client_id, self.client_secret)}',
+            'Authorization': f'Bearer {self.get_jwt_token()}',
         }
         super().__init__(app, headers=headers)
 
-    def get_jwt_token(cls, client_id: str, client_secret: str) -> str:
+    def get_jwt_token(cls) -> str:
         """Utility to generate a JWT token.
 
         Args:
@@ -51,7 +51,7 @@ class ENPTestClient(TestClient):
         header = json.dumps(header_dict)
         current_timestamp = int(time.time())
         payload_dict = {
-            'iss': client_id,
+            'iss': cls.client_id,
             'iat': current_timestamp,
             'exp': current_timestamp + cls.token_expiry,
             'jti': 'jwt_nonce',
@@ -62,7 +62,7 @@ class ENPTestClient(TestClient):
         payload = base64.urlsafe_b64encode(bytes(str(payload), 'utf-8')).decode().replace('=', '')
 
         signature = hmac.new(
-            bytes(client_secret, 'utf-8'), bytes(header + '.' + payload, 'utf-8'), digestmod='sha256'
+            bytes(cls.client_secret, 'utf-8'), bytes(header + '.' + payload, 'utf-8'), digestmod='sha256'
         ).digest()
         sigb64 = base64.urlsafe_b64encode(bytes(signature)).decode().replace('=', '')
 

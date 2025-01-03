@@ -38,8 +38,10 @@ class JWTBearer(HTTPBearer):
         """
         credentials: HTTPAuthorizationCredentials | None = await super(JWTBearer, self).__call__(request)
         if credentials is None:
+            logger.exception('No credentials provided.')
             raise HTTPException(status_code=403, detail='Not authenticated')
         if not self.verify_token(str(credentials.credentials)):
+            logger.exception('Invalid token or expired token.')
             raise HTTPException(status_code=403, detail='Invalid token or expired token.')
         return credentials
 
@@ -53,7 +55,7 @@ class JWTBearer(HTTPBearer):
             bool: True if the token is valid and not expired, False otherwise.
         """
         try:
-            payload = jwt.decode(
+            jwt.decode(
                 jwtoken,
                 ADMIN_SECRET_KEY,
                 algorithms=[ALGORITHM],
@@ -61,7 +63,6 @@ class JWTBearer(HTTPBearer):
                     'verify_signature': True,
                 },
             )
-            logger.info('JWT payload: {}', payload)
             return True
         except (jwt.PyJWTError, jwt.ImmatureSignatureError):
             return False
