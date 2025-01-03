@@ -18,7 +18,7 @@ fileignoreconfig:
 - filename: poetry.lock
   checksum: 092072053154e1dfafc1e0013ba252a7d7b04f41ba79baaa92666bfe04e921eb
 - filename: scripts/run_tests.sh
-  checksum: 6d608023833ea60a2ee5efb53ceba785f1f3c21918f1b1f829a5b07e6b70016a
+  checksum: 80cd986074c12205493156f86b43e732777e2fae75683780006fb1baea90b82b
 - filename: tests/app/providers/__init__.py
   checksum: 0e3ae2fd3a50245a8c143d31c4316b164b51161d2db6e660aa956b78eda1b4d8
 - filename: tests/app/providers/test_provider_aws.py
