@@ -1,9 +1,12 @@
 """Test suite for initializing FastAPI application."""
 
-from unittest.mock import Mock, patch
+from asyncio import CancelledError
+from unittest.mock import AsyncMock, MagicMock, Mock, patch
 
+import pytest
 from starlette import status
 
+from app.main import CustomFastAPI, lifespan
 from tests.conftest import ENPTestClient
 
 
@@ -32,3 +35,55 @@ def test_simple_route_logs_hello_world(mock_logger: Mock, client: ENPTestClient)
 
     # Check if the logger.info was called with "Hello World"
     mock_logger.assert_called_with('Hello World')
+
+
+@pytest.mark.asyncio
+async def test_lifespan_normal() -> None:
+    """Test normal lifespan execution.
+
+    Test that init_db() is called during stratup.
+    Test that clear_providers() & close_db() are called after normal context exit.
+
+    """
+    with (
+        patch('app.main.init_db', new_callable=AsyncMock) as mock_init_db,
+        patch('app.main.close_db', new_callable=AsyncMock) as mock_close_db,
+    ):
+        app = CustomFastAPI(lifespan=lifespan)
+
+        app.enp_state.clear_providers = MagicMock()
+
+        async with lifespan(app):
+            pass
+
+        mock_init_db.assert_awaited_once()
+        app.enp_state.clear_providers.assert_called_once()
+        mock_close_db.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_lifespan_cancelled_exception() -> None:
+    """Test lifespan execution when asyncio.CancelledError raised.
+
+    Raises:
+        CancelledError: Raised during shutdown, uvicorn ctrl-c
+
+    Test that init_db() is called during stratup.
+    Test that clear_providers() & close_db() are called when asyncio.CancelledError raised in lifespan.
+
+    """
+    with (
+        patch('app.main.init_db', new_callable=AsyncMock) as mock_init_db,
+        patch('app.main.close_db', new_callable=AsyncMock) as mock_close_db,
+    ):
+        app = CustomFastAPI(lifespan=lifespan)
+        app.enp_state.clear_providers = MagicMock()
+
+        # We expect an asyncio.CancelledError to propagate
+        with pytest.raises(CancelledError):
+            async with lifespan(app):
+                raise CancelledError()
+
+        mock_init_db.assert_awaited_once()
+        app.enp_state.clear_providers.assert_called_once()
+        mock_close_db.assert_awaited_once()
