@@ -178,8 +178,12 @@ async def test_db_read(
             )
 
         # TODO - How to get this without raw SQL ?
-        partition_table = Notification.get_partition_table(2024)
-        notification_results = await session.execute(select(partition_table))
+
+        ## This does not work because notification_2024 is not a SQL Alchemy Object
+        # partition_table = Notification.get_partition_table(2024)
+        # notification_results = await session.execute(select(partition_table))
+
+        notification_results = await session.scalars(select(Notification))
         for n in notification_results:
             items.append(
                 {
