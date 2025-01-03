@@ -5,7 +5,7 @@ from typing import ClassVar
 from uuid import uuid4
 
 from loguru import logger
-from sqlalchemy import String, Table, event, text
+from sqlalchemy import MetaData, String, Table, event, text
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.engine import Connection
 from sqlalchemy.exc import SQLAlchemyError
@@ -13,6 +13,8 @@ from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base import Base
 from app.db.model_mixins import TimestampMixin
+
+metadata = MetaData()
 
 NOTIFICATION_STARTING_PARTITION_YEAR = 2024
 
@@ -55,6 +57,7 @@ class Notification(TimestampMixin, Base):
             ValueError: If the partition table does not exist in metadata.
         """
         partition_name = cls.get_partition_name(key)
+        print(cls.metadata.tables)
         if partition_name not in cls.metadata.tables:
             raise ValueError(f'Partition table {partition_name} does not exist in metadata.')
         return cls.metadata.tables[partition_name]
@@ -86,6 +89,19 @@ def create_notification_year_partition(target: Base, connection: Connection, **k
             """)
 
             connection.execute(sql)
+
+            # TODO - Add to SQLAlchemy metadata
+            # This is not working
+            Table(
+                f'notifications_{year}',
+                metadata,
+                *(column.copy() for column in Notification.__table__.columns),
+                schema=Notification.__table__.schema,
+                extend_existing=True,
+                # keep_existing=True
+            )
+            # metadata.tables[partition_table.name] = partition_table
+
             logger.info('Partition for year {} ensured.', {})
         except SQLAlchemyError as e:
             logger.critical('Error creating partition for year {}: {}', year, e)
