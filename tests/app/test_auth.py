@@ -10,7 +10,7 @@ from unittest.mock import AsyncMock
 from fastapi.testclient import TestClient
 
 
-class PayloadDict(TypedDict):
+class JWTPayloadDict(TypedDict):
     """Payload dictionary type."""
 
     iat: int
@@ -18,7 +18,7 @@ class PayloadDict(TypedDict):
     jti: str
 
 
-def _get_jwt_token(client_secret: str, payload_dict: PayloadDict) -> str:
+def _get_jwt_token(client_secret: str, payload_dict: JWTPayloadDict) -> str:
     """Utility to generate a JWT token.
 
     Args:
@@ -65,7 +65,7 @@ def test_missing_authorization_scheme(client: TestClient) -> None:
     """
     client_secret = 'not-very-secret'
     current_timestamp = int(time.time())
-    payload_dict: PayloadDict = {
+    payload_dict: JWTPayloadDict = {
         'iat': current_timestamp,
         'exp': current_timestamp + 60,
         'jti': 'jwt_nonce',
@@ -85,7 +85,7 @@ def test_expired_iat_in_token(client: TestClient) -> None:
     """
     client_secret = 'not-very-secret'
     current_timestamp = int(time.time())
-    payload_dict: PayloadDict = {
+    payload_dict: JWTPayloadDict = {
         'iat': current_timestamp - 300,
         'exp': current_timestamp - 240,
         'jti': 'jwt_nonce',
@@ -105,7 +105,7 @@ def test_future_iat_in_token(client: TestClient) -> None:
     """
     client_secret = 'not-very-secret'
     current_timestamp = int(time.time())
-    payload_dict: PayloadDict = {
+    payload_dict: JWTPayloadDict = {
         'iat': current_timestamp + 120,
         'exp': current_timestamp + 180,
         'jti': 'jwt_nonce',

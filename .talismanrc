@@ -24,7 +24,7 @@ fileignoreconfig:
 - filename: tests/app/providers/test_provider_aws.py
   checksum: f2ed526b1a81c5c0facfd4d1e7f1a3e26194778c1909a354c98c3b042945d34d
 - filename: tests/app/test_auth.py
-  checksum: 43a63d5642c744fab8e703b3ee4a1e65d1aa51e4004304cd50cab36f2ec93594
+  checksum: dbce38f807d54fa2776a31a3897350591569b2cfc3d73fa03f0381527c737efb
 - filename: tests/conftest.py
   checksum: 843972c0bd6cfb1b40942b6ce96a74df42274ef9edd9da4159f8ef6c67c6a8ba
 version: "1.0"
