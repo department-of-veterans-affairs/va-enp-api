@@ -21,4 +21,4 @@ display_result $? 1 "Expected Poetry version: ${POETRY_VERSION}, found: $(head -
 
 
 # Values set in pyroject.toml
-# pytest
+pytest
