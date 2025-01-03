@@ -1,5 +1,6 @@
 #! /bin/bash
 
+# Poetry version stability check
 POETRY_VERSION=$(grep "poetry_version" pyproject.toml | grep -m 1 -oE "[0-9]{1}.[0-9]{1,3}.[0-9]{1,3}")
 
 if [[ -z $(head -1 poetry.lock | grep -E "${POETRY_VERSION}") ]]; then
