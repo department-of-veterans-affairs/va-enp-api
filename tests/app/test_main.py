@@ -1,7 +1,7 @@
 """Test suite for initializing FastAPI application."""
 
 from asyncio import CancelledError
-from unittest.mock import AsyncMock, MagicMock, Mock, patch
+from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
 from starlette import status
@@ -42,7 +42,7 @@ async def test_lifespan_normal() -> None:
     """Test normal lifespan execution.
 
     Test that init_db() is called during stratup.
-    Test that clear_providers() & close_db() are called after normal context exit.
+    Test that close_db() is called after normal context exit.
 
     """
     with (
@@ -51,13 +51,10 @@ async def test_lifespan_normal() -> None:
     ):
         app = CustomFastAPI(lifespan=lifespan)
 
-        app.enp_state.clear_providers = MagicMock()
-
         async with lifespan(app):
             pass
 
         mock_init_db.assert_awaited_once()
-        app.enp_state.clear_providers.assert_called_once()
         mock_close_db.assert_awaited_once()
 
 
@@ -69,7 +66,7 @@ async def test_lifespan_cancelled_exception() -> None:
         CancelledError: Raised during shutdown, uvicorn ctrl-c
 
     Test that init_db() is called during stratup.
-    Test that clear_providers() & close_db() are called when asyncio.CancelledError raised in lifespan.
+    Test that close_db() is called when asyncio.CancelledError raised in lifespan.
 
     """
     with (
@@ -77,7 +74,6 @@ async def test_lifespan_cancelled_exception() -> None:
         patch('app.main.close_db', new_callable=AsyncMock) as mock_close_db,
     ):
         app = CustomFastAPI(lifespan=lifespan)
-        app.enp_state.clear_providers = MagicMock()
 
         # We expect an asyncio.CancelledError to propagate
         with pytest.raises(CancelledError):
@@ -85,5 +81,4 @@ async def test_lifespan_cancelled_exception() -> None:
                 raise CancelledError()
 
         mock_init_db.assert_awaited_once()
-        app.enp_state.clear_providers.assert_called_once()
         mock_close_db.assert_awaited_once()
