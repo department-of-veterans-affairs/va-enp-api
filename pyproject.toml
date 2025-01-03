@@ -16,6 +16,7 @@ python = "^3.12"
 aiobotocore = "*"
 botocore = "*"
 fastapi = {extras = ["standard"], version = "*"}
+pyjwt = "*"
 gunicorn = "*"
 loguru = "*"
 phonenumbers = "*"
