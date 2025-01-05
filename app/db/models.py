@@ -5,7 +5,7 @@ from typing import ClassVar
 from uuid import uuid4
 
 from loguru import logger
-from sqlalchemy import MetaData, String, Table, event, text
+from sqlalchemy import MetaData, String, event, text
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.engine import Connection
 from sqlalchemy.exc import SQLAlchemyError
@@ -30,37 +30,6 @@ class Notification(TimestampMixin, Base):
 
     id: Mapped[UUID] = mapped_column(UUID(as_uuid=True), nullable=False, default=uuid4)
     personalization: Mapped[str | None] = mapped_column(String, nullable=True)
-
-    @classmethod
-    def get_partition_name(cls, key: int) -> str:
-        """Get the partition table name for the given key (year).
-
-        Args:
-            key (int): The year of the partition.
-
-        Returns:
-            str: The partition table name.
-        """
-        return f'{cls.__tablename__}_{key}'
-
-    @classmethod
-    def get_partition_table(cls, key: int) -> Table:
-        """Retrieve the SQLAlchemy Table object for the specified partition.
-
-        Args:
-            key (int): The year of the partition.
-
-        Returns:
-            Table: The SQLAlchemy Table object for the partition.
-
-        Raises:
-            ValueError: If the partition table does not exist in metadata.
-        """
-        partition_name = cls.get_partition_name(key)
-        print(cls.metadata.tables)
-        if partition_name not in cls.metadata.tables:
-            raise ValueError(f'Partition table {partition_name} does not exist in metadata.')
-        return cls.metadata.tables[partition_name]
 
 
 def create_notification_year_partition(target: Base, connection: Connection, **kw: any) -> None:
@@ -89,18 +58,6 @@ def create_notification_year_partition(target: Base, connection: Connection, **k
             """)
 
             connection.execute(sql)
-
-            # TODO - Add to SQLAlchemy metadata
-            # This is not working
-            Table(
-                f'notifications_{year}',
-                metadata,
-                *(column.copy() for column in Notification.__table__.columns),
-                schema=Notification.__table__.schema,
-                extend_existing=True,
-                # keep_existing=True
-            )
-            # metadata.tables[partition_table.name] = partition_table
 
             logger.info('Partition for year {} ensured.', {})
         except SQLAlchemyError as e:
