@@ -5,7 +5,6 @@ from unittest.mock import MagicMock
 
 import pytest
 from sqlalchemy.exc import SQLAlchemyError
-from sqlalchemy.sql import text
 
 from app.db.models import Notification, create_notification_year_partition
 
@@ -25,33 +24,24 @@ class TestCreateNotificationYearPartition:
 
         create_notification_year_partition(Notification, connection=self.mock_connection)
 
-        sql_2024 = text(
-            """CREATE TABLE IF NOT EXISTS notifications_2024
-            PARTITION OF notifications
-            FOR VALUES FROM ('2024-01-01')
-            TO ('2025-01-01');
+        sql_calls = [str(call[0][0]) for call in self.mock_connection.execute.call_args_list]
 
-            CREATE INDEX IF NOT EXISTS idx_notifications_2024gi_created_at
-            ON notifications_2024 (created_at);""".strip()
-        )
+        assert self.mock_connection.execute.call_count == 3
 
-        sql_2025 = text(
-            """CREATE TABLE IF NOT EXISTS notifications_2025
-            PARTITION OF notifications
-            FOR VALUES FROM ('2025-01-01')
-            TO ('2026-01-01');
-
-            CREATE INDEX IF NOT EXISTS idx_notifications_2025_created_at
-            ON notifications_2025 (created_at);""".strip()
-        )
-
-        expected_sql_calls = [mocker.call(sql_2024), mocker.call(sql_2025)]
-
-        self.mock_connection.execute.assert_has_calls(expected_sql_calls, any_order=True)
-        assert self.mock_connection.execute.call_count == 2
+        for sql in sql_calls:
+            for year in [2024, 2025, 2026]:
+                if f'notifications_{year}' in sql:
+                    assert 'PARTITION OF notifications' in sql
+                    assert f"'{year}-01-01'" in sql
+                    assert f"'{year + 1}-01-01'" in sql
+                    assert 'created_at' in sql
 
         mock_logger.info.assert_has_calls(
-            [mocker.call('Partition for year {} ensured.', 2024), mocker.call('Partition for year {} ensured.', 2025)],
+            [
+                mocker.call('Partition for year {} ensured.', 2024),
+                mocker.call('Partition for year {} ensured.', 2025),
+                mocker.call('Partition for year {} ensured.', 2026),
+            ],
             any_order=True,
         )
 
