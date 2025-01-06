@@ -10,21 +10,18 @@ from app.providers.provider_aws import ProviderAWS
 from app.providers.provider_base import ProviderNonRetryableError
 
 
-@pytest.mark.asyncio
 async def test_get_arn_from_icn_not_implemented() -> None:
     """Test get_arn_from_icn."""
     with pytest.raises(NotImplementedError):
         await get_arn_from_icn('12345')
 
 
-@pytest.mark.asyncio
 async def test_validate_template_not_implemented() -> None:
     """Test validate_template."""
     with pytest.raises(NotImplementedError):
         await validate_template('d5b6e67c-8e2a-11ee-8b8e-0242ac120002')
 
 
-@pytest.mark.asyncio
 class TestSendPushNotificationHelper:
     """Test send_push_notification_helper."""
 
