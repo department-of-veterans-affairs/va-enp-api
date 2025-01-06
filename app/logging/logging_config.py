@@ -69,7 +69,6 @@ class CustomizeLogger:
         cls._configure_fastapi_logger()
         cls._configure_uvicorn_logger()
         cls._configure_gunicorn_logger()
-        cls._configure_sqlalchemy_logger()
 
     @classmethod
     def customize_logging(
@@ -137,11 +136,3 @@ class CustomizeLogger:
             # Set to False to avoid duplicate logs
             gunicorn_logger.propagate = False
         loguru_logger.info('Gunicorn logger has been configured with Loguru.')
-
-    @classmethod
-    def _configure_sqlalchemy_logger(cls) -> None:
-        """Configure SQLAlchemy to use Loguru for logging."""
-        sqlalchemy_logger = logging.getLogger('sqlalchemy.engine')
-        sqlalchemy_logger.handlers = [InterceptHandler()]
-        sqlalchemy_logger.setLevel(logging.INFO)
-        loguru_logger.info('SQLAlchemy logger has been configured with Loguru.')
