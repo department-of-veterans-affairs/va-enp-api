@@ -5,7 +5,7 @@ from typing import Any
 from uuid import uuid4
 
 from loguru import logger
-from sqlalchemy import MetaData, String, event, text
+from sqlalchemy import String, event, text
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.engine import Connection
 from sqlalchemy.exc import SQLAlchemyError
@@ -13,8 +13,6 @@ from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base import Base
 from app.db.model_mixins import TimestampMixin
-
-metadata = MetaData()
 
 NOTIFICATION_STARTING_PARTITION_YEAR = 2024
 

@@ -3,7 +3,7 @@
 import os
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Annotated, Any, AsyncContextManager, Callable, List, Mapping, Never
 
 from fastapi import Depends, FastAPI, HTTPException, Query, status
@@ -18,7 +18,7 @@ from app.db.db_init import (
     get_write_session_with_depends,
     init_db,
 )
-from app.db.models import Notification, Template
+from app.db.models import NOTIFICATION_STARTING_PARTITION_YEAR, Notification, Template
 from app.legacy.v2.notifications.rest import v2_notification_router
 from app.logging.logging_config import CustomizeLogger
 from app.state import ENPState
@@ -113,13 +113,22 @@ async def test_db_create(
     """
     from app.db.models import Template
 
+    items_to_create = []
+
     template = Template(name=data)
-    notification_2024 = Notification(personalization='2024 Notification', created_at=datetime(2024, 6, 15, 12, 0, 0))
-    notification_2025 = Notification(personalization='2025 Notification', created_at=datetime(2025, 6, 15, 12, 0, 0))
-    notification_2026 = Notification(personalization='2026 Notification', created_at=datetime(2026, 6, 15, 12, 0, 0))
+
+    items_to_create.append(template)
+
+    current_year = datetime.now(timezone.utc).year
+
+    notifications = []
+    for year in range(NOTIFICATION_STARTING_PARTITION_YEAR, current_year + 2):
+        notification = Notification(personalization=f'{year} Notification', created_at=datetime(year, 6, 15, 12, 0, 0))
+        items_to_create.append(notification)
+        notifications.append(notification)
 
     async with db_session() as session:
-        session.add_all([template, notification_2024, notification_2025, notification_2026])
+        session.add_all(items_to_create)
         await session.commit()
 
     return {
@@ -133,23 +142,12 @@ async def test_db_create(
         ],
         'notifications': [
             {
-                'id': str(notification_2024.id),
-                'personalization': str(notification_2024.personalization),
-                'created_at': str(notification_2024.created_at),
-                'updated_at': str(notification_2024.updated_at),
-            },
-            {
-                'id': str(notification_2025.id),
-                'personalization': str(notification_2025.personalization),
-                'created_at': str(notification_2025.created_at),
-                'updated_at': str(notification_2025.updated_at),
-            },
-            {
-                'id': str(notification_2026.id),
-                'personalization': str(notification_2026.personalization),
-                'created_at': str(notification_2026.created_at),
-                'updated_at': str(notification_2026.updated_at),
-            },
+                'id': str(notification.id),
+                'personalization': str(notification.personalization),
+                'created_at': str(notification.created_at),
+                'updated_at': str(notification.updated_at),
+            }
+            for notification in notifications
         ],
     }
 
