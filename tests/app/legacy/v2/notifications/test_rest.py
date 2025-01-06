@@ -2,7 +2,6 @@
 
 from unittest.mock import AsyncMock, patch
 
-import pytest
 from fastapi import BackgroundTasks, status
 
 from app.constants import IdentifierType, MobileAppType
@@ -16,7 +15,6 @@ from tests.conftest import ENPTestClient
 _push_path = '/legacy/v2/notifications/push'
 
 
-@pytest.mark.asyncio
 @patch.object(BackgroundTasks, 'add_task')
 @patch('app.legacy.v2.notifications.rest.dao_create_notification')
 @patch('app.legacy.v2.notifications.rest.validate_template')
@@ -87,7 +85,6 @@ class TestRouter:
         assert response.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
 
 
-@pytest.mark.asyncio
 @patch.object(BackgroundTasks, 'add_task')
 @patch('app.legacy.v2.notifications.rest.dao_create_notification')
 @patch('app.legacy.v2.notifications.rest.validate_template')

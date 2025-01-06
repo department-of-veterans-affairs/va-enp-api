@@ -37,7 +37,6 @@ def test_simple_route_logs_hello_world(mock_logger: Mock, client: ENPTestClient)
     mock_logger.assert_called_with('Hello World')
 
 
-@pytest.mark.asyncio
 async def test_lifespan_normal() -> None:
     """Test normal lifespan execution.
 
@@ -58,7 +57,6 @@ async def test_lifespan_normal() -> None:
         mock_close_db.assert_awaited_once()
 
 
-@pytest.mark.asyncio
 async def test_lifespan_cancelled_exception() -> None:
     """Test lifespan execution when asyncio.CancelledError raised.
 

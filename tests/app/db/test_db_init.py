@@ -18,7 +18,6 @@ from app.db.db_init import (
 
 
 @patch('app.db.db_init.create_async_engine')
-@pytest.mark.asyncio
 @pytest.mark.parametrize(
     'read_uri_value',
     [
@@ -42,7 +41,6 @@ async def test_init_db(mock_create_async_engine: Mock, read_uri_value: str) -> N
 
 @patch('app.db.db_init._engine_write', spec=AsyncMock)
 @patch('app.db.db_init._engine_read', spec=AsyncMock)
-@pytest.mark.asyncio
 async def test_close_db(mock_engine_read: AsyncMock, mock_engine_write: AsyncMock) -> None:
     """Test the close_db function to ensure db engines are closed when called."""
     mock_engine_read.dispose = AsyncMock()
@@ -72,7 +70,6 @@ def test_get_db_session_failure() -> None:
 @patch('app.db.db_init.async_scoped_session', return_value=Mock(spec=async_scoped_session))
 @patch('app.db.db_init._engine_read', Mock(spec=AsyncEngine))
 @patch('app.db.db_init._engine_write', Mock(spec=AsyncEngine))
-@pytest.mark.asyncio
 class TestReadWriteSessions:
     """Test the read and write session functions."""
 
@@ -107,7 +104,6 @@ class TestReadWriteSessions:
 
 @patch('app.db.db_init._engine_write', None)
 @patch('app.db.db_init._engine_read', None)
-@pytest.mark.asyncio
 class TestReadWriteSessionsFailure:
     """Test the read and write session functions."""
 

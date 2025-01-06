@@ -18,7 +18,6 @@ from app.providers.provider_schemas import DeviceRegistrationModel, PushModel, P
 from tests.app.providers import botocore_exceptions_kwargs
 
 
-@pytest.mark.asyncio
 @patch('app.providers.provider_aws.get_session')
 class TestProviderAWS:
     """Test the methods of the ProviderAWS class."""
