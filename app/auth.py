@@ -66,6 +66,6 @@ class JWTBearer(HTTPBearer):
             logger.warning('No credentials provided.')
             raise HTTPException(status_code=403, detail='Not authenticated')
         if not verify_token(str(credentials.credentials)):
-            logger.warning('Invalid token or expired token.')
-            raise HTTPException(status_code=403, detail='Invalid token or expired token.')
+            logger.warning('Invalid or expired token.')
+            raise HTTPException(status_code=403, detail='Invalid or expired token.')
         return credentials

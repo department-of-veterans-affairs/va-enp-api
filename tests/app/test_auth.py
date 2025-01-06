@@ -61,7 +61,7 @@ def test_expired_iat_in_token(client: TestClient) -> None:
         '/v3/device-registrations', headers={'Authorization': f'Bearer {generate_token(payload=payload)}'}
     )
     assert response.status_code == 403
-    assert response.json() == {'detail': 'Invalid token or expired token.'}
+    assert response.json() == {'detail': 'Invalid or expired token.'}
 
 
 def test_future_iat_in_token(client: TestClient) -> None:
@@ -80,4 +80,4 @@ def test_future_iat_in_token(client: TestClient) -> None:
         '/v3/device-registrations', headers={'Authorization': f'Bearer {generate_token(payload=payload)}'}
     )
     assert response.status_code == 403
-    assert response.json() == {'detail': 'Invalid token or expired token.'}
+    assert response.json() == {'detail': 'Invalid or expired token.'}
