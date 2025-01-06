@@ -116,11 +116,10 @@ async def test_db_create(
     template = Template(name=data)
     notification_2024 = Notification(personalization='2024 Notification', created_at=datetime(2024, 6, 15, 12, 0, 0))
     notification_2025 = Notification(personalization='2025 Notification', created_at=datetime(2025, 6, 15, 12, 0, 0))
+    notification_2026 = Notification(personalization='2026 Notification', created_at=datetime(2026, 6, 15, 12, 0, 0))
 
     async with db_session() as session:
-        session.add(template)
-        session.add(notification_2024)
-        session.add(notification_2025)
+        session.add_all([template, notification_2024, notification_2025, notification_2026])
         await session.commit()
 
     return {
@@ -144,6 +143,12 @@ async def test_db_create(
                 'personalization': str(notification_2025.personalization),
                 'created_at': str(notification_2025.created_at),
                 'updated_at': str(notification_2025.updated_at),
+            },
+            {
+                'id': str(notification_2026.id),
+                'personalization': str(notification_2026.personalization),
+                'created_at': str(notification_2026.created_at),
+                'updated_at': str(notification_2026.updated_at),
             },
         ],
     }
