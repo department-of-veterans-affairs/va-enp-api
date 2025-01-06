@@ -2,10 +2,22 @@
 
 import time
 from unittest.mock import AsyncMock
+from uuid import uuid4
 
+from fastapi import status
 from fastapi.testclient import TestClient
 
 from app.auth import JWTPayloadDict, generate_token
+
+
+def test_happy_path(client: TestClient) -> None:
+    """Test that the endpoint returns a 200 status code, with valid credentials provided by the test client.
+
+    Args:
+        client(ENPTestClient): Custom FastAPI client fixture
+    """
+    resp = client.get(f'/v3/notifications/{uuid4()}')
+    assert resp.status_code == status.HTTP_200_OK
 
 
 def test_credentials_returns_none(client: TestClient, mocker: AsyncMock) -> None:

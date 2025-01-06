@@ -67,7 +67,7 @@ def generate_token(sig_key: str = ADMIN_SECRET_KEY, payload: JWTPayloadDict | No
             iat=int(time.time()),
             exp=int(time.time()) + ACCESS_TOKEN_EXPIRE_SECONDS,
         )
-    return jwt.encode(payload.__dict__, sig_key, headers=headers)
+    return jwt.encode(dict(payload), sig_key, headers=headers)
 
 
 class JWTBearer(HTTPBearer):
@@ -87,9 +87,9 @@ class JWTBearer(HTTPBearer):
         """
         credentials: HTTPAuthorizationCredentials | None = await super(JWTBearer, self).__call__(request)
         if credentials is None:
-            logger.exception('No credentials provided.')
+            logger.warning('No credentials provided.')
             raise HTTPException(status_code=403, detail='Not authenticated')
         if not verify_token(str(credentials.credentials)):
-            logger.exception('Invalid token or expired token.')
+            logger.warning('Invalid token or expired token.')
             raise HTTPException(status_code=403, detail='Invalid token or expired token.')
         return credentials
