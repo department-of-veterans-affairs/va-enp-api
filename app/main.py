@@ -113,22 +113,18 @@ async def test_db_create(
     """
     from app.db.models import Template
 
-    items_to_create = []
-
     template = Template(name=data)
-
-    items_to_create.append(template)
 
     current_year = datetime.now(timezone.utc).year
 
     notifications = []
     for year in range(NOTIFICATION_STARTING_PARTITION_YEAR, current_year + 2):
         notification = Notification(personalization=f'{year} Notification', created_at=datetime(year, 6, 15, 12, 0, 0))
-        items_to_create.append(notification)
         notifications.append(notification)
 
     async with db_session() as session:
-        session.add_all(items_to_create)
+        session.add(template)
+        session.add_all(notifications)
         await session.commit()
 
     return {
