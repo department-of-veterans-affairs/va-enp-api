@@ -54,10 +54,12 @@ async def lifespan(app: CustomFastAPI) -> AsyncIterator[Never]:
     """
     await init_db()
 
-    yield  # type: ignore
-
-    app.enp_state.clear_providers()
-    await close_db()
+    try:
+        yield  # type: ignore
+    finally:
+        app.enp_state.clear_providers()
+        await close_db()
+        logger.info('AsyncContextManager lifespan shutdown complete')
 
 
 def create_app() -> CustomFastAPI:
