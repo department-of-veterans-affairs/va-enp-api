@@ -2,7 +2,6 @@
 
 from unittest.mock import AsyncMock, patch
 
-import pytest
 from fastapi import BackgroundTasks, status
 
 from app.constants import IdentifierType, MobileAppType
