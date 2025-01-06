@@ -100,7 +100,7 @@ async def test_db_create(
     *,
     data: str = 'hello',
     db_session: Annotated[async_scoped_session[AsyncSession], Depends(get_write_session_with_depends)],
-) -> dict[str, list[dict]]:
+) -> dict[str, list[dict[str, str]]]:
     """Test inserting Templates and Notifications into the database. This is a temporary test endpoint.
 
     Args:
@@ -127,7 +127,7 @@ async def test_db_create(
         'templates': [
             {
                 'id': str(template.id),
-                'name': template.name,
+                'name': str(template.name),
                 'created_at': str(template.created_at),
                 'updated_at': str(template.updated_at),
             }
@@ -135,13 +135,13 @@ async def test_db_create(
         'notifications': [
             {
                 'id': str(notification_2024.id),
-                'personalization': notification_2024.personalization,
+                'personalization': str(notification_2024.personalization),
                 'created_at': str(notification_2024.created_at),
                 'updated_at': str(notification_2024.updated_at),
             },
             {
                 'id': str(notification_2025.id),
-                'personalization': notification_2025.personalization,
+                'personalization': str(notification_2025.personalization),
                 'created_at': str(notification_2025.created_at),
                 'updated_at': str(notification_2025.updated_at),
             },
@@ -189,7 +189,7 @@ async def test_db_read(
                 {
                     'type': 'notification',
                     'id': str(n.id),
-                    'personalization': n.personalization,
+                    'personalization': str(n.personalization),
                     'created_at': str(n.created_at),
                     'updated_at': str(n.updated_at),
                 }

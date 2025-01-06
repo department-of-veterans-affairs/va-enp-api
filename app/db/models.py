@@ -1,7 +1,7 @@
 """Database models for the application."""
 
-from datetime import datetime
-from typing import ClassVar
+from datetime import datetime, timezone
+from typing import Any
 from uuid import uuid4
 
 from loguru import logger
@@ -23,28 +23,29 @@ class Notification(TimestampMixin, Base):
     """Database table for notifications."""
 
     __tablename__ = 'notifications'
+    __table_args__ = {'postgresql_partition_by': 'RANGE (created_at)'}  # noqa: RUF012
+    __mapper_args__ = {'primary_key': ['id', 'created_at']}  # noqa: RUF012
 
-    __table_args__: ClassVar = {'postgresql_partition_by': 'RANGE (created_at)'}
-
-    __mapper_args__: ClassVar = {'primary_key': ['id', 'created_at']}
-
-    id: Mapped[UUID] = mapped_column(UUID(as_uuid=True), nullable=False, default=uuid4)
+    id: Mapped[UUID[str]] = mapped_column(UUID(as_uuid=True), nullable=False, default=uuid4)
     personalization: Mapped[str | None] = mapped_column(String, nullable=True)
 
 
-def create_notification_year_partition(target: Base, connection: Connection, **kw: any) -> None:
+@event.listens_for(
+    Notification.__table__,
+    'after_create',
+)
+def create_notification_year_partition(target: Base, connection: Connection, **kwg: dict[str, Any]) -> None:
     """Creates year-based partitions for all years from the start year to the next year.
 
     Args:
         target (Base): The target table to create partitions for.
         connection (Connection): The database connection used to execute SQL statements.
-        **kw (any): Additional keyword arguments passed by SQLAlchemy.
+        **kwg (Any): Additional keyword arguments passed by SQLAlchemy.
 
     Raises:
         SQLAlchemyError: If an error occurs while creating a partition.
     """
-    current_year = datetime.utcnow().year
-
+    current_year = datetime.now(timezone.utc).year
     for year in range(NOTIFICATION_STARTING_PARTITION_YEAR, current_year + 2):
         try:
             sql = text(f"""
@@ -56,17 +57,12 @@ def create_notification_year_partition(target: Base, connection: Connection, **k
                 CREATE INDEX IF NOT EXISTS idx_notifications_{year}_created_at
                 ON notifications_{year} (created_at);
             """)
-
             connection.execute(sql)
 
-            logger.info('Partition for year {} ensured.', {})
+            logger.info('Partition for year {} ensured.', year)
         except SQLAlchemyError as e:
             logger.critical('Error creating partition for year {}: {}', year, e)
             raise
-
-
-# Register event listener for notification year-based partition creation
-event.listen(Notification.__table__, 'after_create', create_notification_year_partition)
 
 
 class Service(Base):
