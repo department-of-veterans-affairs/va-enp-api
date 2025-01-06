@@ -7,7 +7,8 @@ from uuid import uuid4
 from fastapi import status
 from fastapi.testclient import TestClient
 
-from app.auth import JWTPayloadDict, generate_token
+from app.auth import JWTPayloadDict
+from tests.conftest import generate_token
 
 
 def test_happy_path(client: TestClient) -> None:

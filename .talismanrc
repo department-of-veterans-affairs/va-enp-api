@@ -26,5 +26,5 @@ fileignoreconfig:
 - filename: tests/app/test_auth.py
   checksum: dbce38f807d54fa2776a31a3897350591569b2cfc3d73fa03f0381527c737efb
 - filename: tests/conftest.py
-  checksum: b0a6133224b61f42313b2f28cd1937b9d90eb82a77522c50845df61bd6106f7e
+  checksum: 35e538d03d3a2d0b2696b9a93994b77a1a041090d160ac9518a958e640a09488
 version: "1.0"

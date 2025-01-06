@@ -1,7 +1,6 @@
 """This module contains authentication methods used to verify the JWT token sent by clients."""
 
 import os
-import time
 from typing import TypedDict
 
 import jwt
@@ -45,29 +44,6 @@ def verify_token(jwtoken: str) -> bool:
         response = False
 
     return response
-
-
-def generate_token(sig_key: str = ADMIN_SECRET_KEY, payload: JWTPayloadDict | None = None) -> str:
-    """Generate a JWT token.
-
-    Args:
-        sig_key (str): The key to sign the JWT token with.
-        payload (JWTPayloadDict): The payload to include in the JWT token.
-
-    Returns:
-        str: The signed JWT token.
-    """
-    headers = {
-        'typ': 'JWT',
-        'alg': ALGORITHM,
-    }
-    if payload is None:
-        payload = JWTPayloadDict(
-            iss='enp',
-            iat=int(time.time()),
-            exp=int(time.time()) + ACCESS_TOKEN_EXPIRE_SECONDS,
-        )
-    return jwt.encode(dict(payload), sig_key, headers=headers)
 
 
 class JWTBearer(HTTPBearer):
