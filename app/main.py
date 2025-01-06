@@ -9,7 +9,7 @@ from typing import Annotated, Any, AsyncContextManager, Callable, List, Mapping,
 from fastapi import Depends, FastAPI, HTTPException, Query, status
 from fastapi.staticfiles import StaticFiles
 from loguru import logger
-from sqlalchemy import extract, select
+from sqlalchemy import extract, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession, async_scoped_session
 
 from app.db.db_init import (
@@ -190,7 +190,8 @@ async def fetch_notifications(session: AsyncSession, year_list: List[int]) -> Li
     """
     notifications = []
     if year_list:
-        notification_query = select(Notification).where(extract('year', Notification.created_at).in_(year_list))
+        conditions = [extract('year', Notification.created_at) == year for year in year_list]
+        notification_query = select(Notification).where(or_(*conditions))
     else:
         notification_query = select(Notification)
 
