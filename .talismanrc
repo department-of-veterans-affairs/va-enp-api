@@ -16,7 +16,7 @@ fileignoreconfig:
 - filename: ci/docker-compose-local.yml
   checksum: c73beda98c39232441d86f6d6f6f2858274f9703f8a462eac1effacfbb9aa39d
 - filename: poetry.lock
-  checksum: 1fe2d703836e948d14b7d0da2ca55c5c25081ccbd84823561fbc2ad09478552b
+  checksum: 0d37167f4fd23e1ace7119c3e7b6f3703785876d349897b3f56aed64eeedf237
 - filename: scripts/run_tests.sh
   checksum: 80cd986074c12205493156f86b43e732777e2fae75683780006fb1baea90b82b
 - filename: tests/app/providers/__init__.py
