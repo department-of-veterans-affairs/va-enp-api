@@ -156,7 +156,7 @@ async def test_db_create(
         ],
     }
 
-  
+
 async def fetch_templates(session: AsyncSession) -> List[dict[str, str]]:
     """Fetch all templates from the database.
 
