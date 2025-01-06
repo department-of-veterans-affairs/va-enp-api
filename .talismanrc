@@ -2,7 +2,7 @@ fileignoreconfig:
 - filename: .env.example
   checksum: f04bd8b8a51131d412bea4b8098e714ca01f4c7475eeb0a40d196d922070ba43
 - filename: app/auth.py
-  checksum: 36cadbf5607f6b56df1d2e29ee3a6aa63103764941cacb5861aa7755425248ef
+  checksum: b8b990d39c52396707c4ba153e5630139517d6ba3ba5b4aef774f45c2bf73c6b
 - filename: app/db/__init__.py
   checksum: b079eb426725423f18be76949e3e10ca50ebfdd419f8768c2b7b58ddc41e5e01
 - filename: app/db/models.py
