@@ -44,7 +44,7 @@ def create_notification_year_partition(target: Base, connection: Connection, **k
         SQLAlchemyError: If an error occurs while creating a partition.
     """
     current_year = datetime.now(timezone.utc).year
-    for year in range(NOTIFICATION_STARTING_PARTITION_YEAR, current_year + 2):
+    for year in range(NOTIFICATION_STARTING_PARTITION_YEAR, current_year + 11):
         try:
             sql = text(f"""
                 CREATE TABLE IF NOT EXISTS notifications_{year}
