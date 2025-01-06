@@ -11,6 +11,7 @@ from loguru import logger
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_scoped_session
 
+from app.auth import JWTBearer
 from app.db.db_init import (
     close_db,
     get_read_session_with_depends,
@@ -95,7 +96,7 @@ def simple_route() -> dict[str, str]:
     return {'Hello': 'World'}
 
 
-@app.post('/db/test', status_code=status.HTTP_201_CREATED)
+@app.post('/db/test', status_code=status.HTTP_201_CREATED, dependencies=[Depends(JWTBearer())])
 async def test_db_create(
     *,
     data: str = 'hello',
@@ -126,7 +127,7 @@ async def test_db_create(
     }
 
 
-@app.get('/db/test', status_code=status.HTTP_200_OK)
+@app.get('/db/test', status_code=status.HTTP_200_OK, dependencies=[Depends(JWTBearer())])
 async def test_db_read(
     db_session: Annotated[async_scoped_session[AsyncSession], Depends(get_read_session_with_depends)],
 ) -> list[dict[str, str]]:
