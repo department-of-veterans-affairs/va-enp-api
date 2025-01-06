@@ -6,10 +6,10 @@ from contextlib import asynccontextmanager
 from datetime import datetime
 from typing import Annotated, Any, AsyncContextManager, Callable, Mapping, Never
 
-from fastapi import Depends, FastAPI, status
+from fastapi import Depends, FastAPI, Query, status
 from fastapi.staticfiles import StaticFiles
 from loguru import logger
-from sqlalchemy import select
+from sqlalchemy import extract, select
 from sqlalchemy.ext.asyncio import AsyncSession, async_scoped_session
 
 from app.db.db_init import (
@@ -152,15 +152,18 @@ async def test_db_create(
 @app.get('/db/test', status_code=status.HTTP_200_OK)
 async def test_db_read(
     db_session: Annotated[async_scoped_session[AsyncSession], Depends(get_read_session_with_depends)],
+    year: int | None = Query(default=None, description='Filter notifications by year'),
 ) -> list[dict[str, str]]:
     """Test getting items from the database, including Templates and Notifications.
 
+    Optionally filter notifications by year.
+
     Args:
-        db_session: The database session
+        db_session: The database session.
+        year (int | None): The year to filter notifications by (optional).
 
     Returns:
-        list[dict[str,str]]: The items in the Templates and Notifications tables
-
+        list[dict[str, str]]: The items in the Templates and Notifications tables.
     """
     items = []
 
@@ -177,13 +180,18 @@ async def test_db_read(
                 }
             )
 
-        notification_results = await session.scalars(select(Notification))
+        if year:
+            notification_query = select(Notification).where(extract('year', Notification.created_at) == year)
+        else:
+            notification_query = select(Notification)
+
+        notification_results = await session.scalars(notification_query)
         for n in notification_results:
             items.append(
                 {
                     'type': 'notification',
                     'id': str(n.id),
-                    'personalization': str(n.personalization),
+                    'personalization': n.personalization or '',
                     'created_at': str(n.created_at),
                     'updated_at': str(n.updated_at),
                 }
