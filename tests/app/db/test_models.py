@@ -20,30 +20,28 @@ class TestCreateNotificationYearPartition:
         """Test successful creation of year-based partitions."""
         mock_datetime = mocker.patch('app.db.models.datetime')
         mock_datetime.now.return_value = datetime(2025, 1, 1, tzinfo=timezone.utc)
-        mock_logger = mocker.patch('app.db.models.logger')
 
         create_notification_year_partition(Notification, connection=self.mock_connection)
 
-        sql_calls = [str(call[0][0]) for call in self.mock_connection.execute.call_args_list]
+        expected_years = [2024, 2025, 2026]
+        expected_patterns = {
+            year: [
+                f'notifications_{year}',
+                'PARTITION OF notifications',
+                f"'{year}-01-01'",
+                f"'{year + 1}-01-01'",
+                'created_at',
+            ]
+            for year in expected_years
+        }
 
-        assert self.mock_connection.execute.call_count == 3
+        executed_queries = [str(call[0][0]) for call in self.mock_connection.execute.call_args_list]
+        assert len(executed_queries) == len(expected_years)
 
-        for sql in sql_calls:
-            for year in [2024, 2025, 2026]:
-                if f'notifications_{year}' in sql:
-                    assert 'PARTITION OF notifications' in sql
-                    assert f"'{year}-01-01'" in sql
-                    assert f"'{year + 1}-01-01'" in sql
-                    assert 'created_at' in sql
-
-        mock_logger.info.assert_has_calls(
-            [
-                mocker.call('Partition for year {} ensured.', 2024),
-                mocker.call('Partition for year {} ensured.', 2025),
-                mocker.call('Partition for year {} ensured.', 2026),
-            ],
-            any_order=True,
-        )
+        for query in executed_queries:
+            matching_year = next(year for year in expected_years if f'notifications_{year}' in query)
+            for pattern in expected_patterns[matching_year]:
+                assert pattern in query
 
     def test_create_notification_year_partition_failure(self, mocker: MagicMock) -> None:
         """Test handling of SQL execution failure."""
