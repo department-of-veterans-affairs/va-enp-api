@@ -22,4 +22,3 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: LocalPassword
       POSTGRES_DB: va-enp-api-db
-      PGOPTIONS: "-c log_statement=all"
