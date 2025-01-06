@@ -1,6 +1,5 @@
 """Tests the creation of year-based partitions for the `Notification` table."""
 
-from datetime import datetime, timezone
 from unittest.mock import MagicMock
 
 import pytest
@@ -18,12 +17,9 @@ class TestCreateNotificationYearPartition:
 
     def test_create_notification_year_partition_success(self, mocker: MagicMock) -> None:
         """Test successful creation of year-based partitions."""
-        mock_datetime = mocker.patch('app.db.models.datetime')
-        mock_datetime.now.return_value = datetime(2025, 1, 1, tzinfo=timezone.utc)
-
         create_notification_year_partition(Notification, connection=self.mock_connection)
 
-        expected_years = [2024, 2025, 2026]
+        expected_years = [2024, 2025, 2026, 2027, 2028, 2029, 2030, 2031, 2032, 2033]
         expected_patterns = {
             year: [
                 f'notifications_{year}',

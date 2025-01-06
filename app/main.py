@@ -3,7 +3,7 @@
 import os
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
-from datetime import datetime, timezone
+from datetime import datetime
 from typing import Annotated, Any, AsyncContextManager, Callable, List, Mapping, Never
 
 from fastapi import Depends, FastAPI, HTTPException, Query, status
@@ -18,7 +18,12 @@ from app.db.db_init import (
     get_write_session_with_depends,
     init_db,
 )
-from app.db.models import NOTIFICATION_STARTING_PARTITION_YEAR, Notification, Template
+from app.db.models import (
+    NOTIFICATION_PARTITION_DURATION_YEARS,
+    NOTIFICATION_STARTING_PARTITION_YEAR,
+    Notification,
+    Template,
+)
 from app.legacy.v2.notifications.rest import v2_notification_router
 from app.logging.logging_config import CustomizeLogger
 from app.state import ENPState
@@ -115,10 +120,11 @@ async def test_db_create(
 
     template = Template(name=data)
 
-    current_year = datetime.now(timezone.utc).year
-
     notifications = []
-    for year in range(NOTIFICATION_STARTING_PARTITION_YEAR, current_year + 2):
+    for year in range(
+        NOTIFICATION_STARTING_PARTITION_YEAR,
+        NOTIFICATION_STARTING_PARTITION_YEAR + NOTIFICATION_PARTITION_DURATION_YEARS,
+    ):
         notification = Notification(personalization=f'{year} Notification', created_at=datetime(year, 6, 15, 12, 0, 0))
         notifications.append(notification)
 

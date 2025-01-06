@@ -1,6 +1,5 @@
 """Database models for the application."""
 
-from datetime import datetime, timezone
 from typing import Any
 from uuid import uuid4
 
@@ -15,6 +14,7 @@ from app.db.base import Base
 from app.db.model_mixins import TimestampMixin
 
 NOTIFICATION_STARTING_PARTITION_YEAR = 2024
+NOTIFICATION_PARTITION_DURATION_YEARS = 10
 
 
 class Notification(TimestampMixin, Base):
@@ -33,7 +33,7 @@ class Notification(TimestampMixin, Base):
     'after_create',
 )
 def create_notification_year_partition(target: Base, connection: Connection, **kwg: dict[str, Any]) -> None:
-    """Creates year-based partitions for all years from the start year to the next year.
+    """Creates year-based partitions for all years from the NOTIFICATION_STARTING_PARTITION_YEAR to NOTIFICATION_STARTING_PARTITION_YEAR + NOTIFICATION_PARTITION_DURATION_YEARS.
 
     Args:
         target (Base): The target table to create partitions for.
@@ -43,8 +43,10 @@ def create_notification_year_partition(target: Base, connection: Connection, **k
     Raises:
         SQLAlchemyError: If an error occurs while creating a partition.
     """
-    current_year = datetime.now(timezone.utc).year
-    for year in range(NOTIFICATION_STARTING_PARTITION_YEAR, current_year + 11):
+    for year in range(
+        NOTIFICATION_STARTING_PARTITION_YEAR,
+        NOTIFICATION_STARTING_PARTITION_YEAR + NOTIFICATION_PARTITION_DURATION_YEARS,
+    ):
         try:
             sql = text(f"""
                 CREATE TABLE IF NOT EXISTS notifications_{year}
