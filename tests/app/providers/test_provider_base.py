@@ -7,7 +7,6 @@ from app.providers.provider_base import ProviderBase, ProviderNonRetryableError,
 from app.providers.provider_schemas import PushModel
 
 
-@pytest.mark.asyncio
 async def test_not_implemented_virtual_void() -> None:
     """Ensure all methods that may be implmented raise an exception if they are not yet implemented."""
 
@@ -32,7 +31,6 @@ async def test_not_implemented_virtual_void() -> None:
         await derived.process_response()
 
 
-@pytest.mark.asyncio
 class TestSendNotification:
     """Test the send_notification method of the ProviderBase class."""
 

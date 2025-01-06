@@ -18,7 +18,6 @@ from app.db.db_init import (
 
 
 @patch('app.db.db_init.create_async_engine')
-@pytest.mark.asyncio
 @pytest.mark.parametrize(
     'read_uri_value',
     [
@@ -42,7 +41,6 @@ async def test_init_db(mock_create_async_engine: Mock, read_uri_value: str) -> N
 
 @patch('app.db.db_init._engine_write', spec=AsyncMock)
 @patch('app.db.db_init._engine_read', spec=AsyncMock)
-@pytest.mark.asyncio
 async def test_close_db(mock_engine_read: AsyncMock, mock_engine_write: AsyncMock) -> None:
     """Test the close_db function to ensure db engines are closed when called."""
     mock_engine_read.dispose = AsyncMock()
@@ -65,14 +63,13 @@ def test_get_db_session_success() -> None:
 
 def test_get_db_session_failure() -> None:
     """Test the get_db_session function raises a ValueError when the db engine is None."""
-    with pytest.raises(ValueError, match='The db test engine has not been initialized. None type received.'):
+    with pytest.raises(ValueError, match=r'The db test engine has not been initialized. None type received.'):
         get_db_session(None, 'test')
 
 
 @patch('app.db.db_init.async_scoped_session', return_value=Mock(spec=async_scoped_session))
 @patch('app.db.db_init._engine_read', Mock(spec=AsyncEngine))
 @patch('app.db.db_init._engine_write', Mock(spec=AsyncEngine))
-@pytest.mark.asyncio
 class TestReadWriteSessions:
     """Test the read and write session functions."""
 
@@ -107,34 +104,33 @@ class TestReadWriteSessions:
 
 @patch('app.db.db_init._engine_write', None)
 @patch('app.db.db_init._engine_read', None)
-@pytest.mark.asyncio
 class TestReadWriteSessionsFailure:
     """Test the read and write session functions."""
 
     async def test_get_read_session_failure(self) -> None:
         """Test the get_read_session function raises a ValueError when the db engine is None."""
-        with pytest.raises(ValueError, match='The db read engine has not been initialized. None type received.'):  # noqa: PT012
+        with pytest.raises(ValueError, match=r'The db read engine has not been initialized. None type received.'):  # noqa: PT012
             # fmt: off
             async for _session in get_read_session_with_depends(): pass  # noqa: E701
             # fmt: off
 
     async def test_get_read_session_with_context_failure(self) -> None:
         """Test the get_read_session_with_context function raises a ValueError when the db engine is None."""
-        with pytest.raises(ValueError, match='The db read engine has not been initialized. None type received.'):
+        with pytest.raises(ValueError, match=r'The db read engine has not been initialized. None type received.'):
             # fmt: off
             async with get_read_session_with_context(): pass  # noqa: E701
             # fmt: on
 
     async def test_get_write_session_failure(self) -> None:
         """Test the get_write_session function raises a ValueError when the db engine is None."""
-        with pytest.raises(ValueError, match='The db write engine has not been initialized. None type received.'):  # noqa: PT012
+        with pytest.raises(ValueError, match=r'The db write engine has not been initialized. None type received.'):  # noqa: PT012
             # fmt: off
             async for _session in get_write_session_with_depends(): pass  # noqa: E701
             # fmt: on
 
     async def test_get_write_session_with_context_failure(self) -> None:
         """Test the get_write_session_with_context function raises a ValueError when the db engine is None."""
-        with pytest.raises(ValueError, match='The db write engine has not been initialized. None type received.'):
+        with pytest.raises(ValueError, match=r'The db write engine has not been initialized. None type received.'):
             # fmt: off
             async with get_write_session_with_context(): pass  # noqa: E701
             # fmt: on

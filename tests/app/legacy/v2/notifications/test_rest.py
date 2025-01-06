@@ -2,7 +2,6 @@
 
 from unittest.mock import AsyncMock, patch
 
-import pytest
 from fastapi import BackgroundTasks, status
 
 from app.constants import IdentifierType, MobileAppType
@@ -13,8 +12,9 @@ from app.legacy.v2.notifications.route_schema import (
 )
 from tests.conftest import ENPTestClient
 
+_push_path = '/legacy/v2/notifications/push'
 
-@pytest.mark.asyncio
+
 @patch.object(BackgroundTasks, 'add_task')
 @patch('app.legacy.v2.notifications.rest.dao_create_notification')
 @patch('app.legacy.v2.notifications.rest.validate_template')
@@ -47,7 +47,7 @@ class TestRouter:
             'personalization': 'not_a_dict',
         }
 
-        response = client.post('/v2/notifications/push', json=invalid_request)
+        response = client.post(_push_path, json=invalid_request)
 
         assert response.status_code == status.HTTP_400_BAD_REQUEST
 
@@ -80,17 +80,16 @@ class TestRouter:
             personalisation={'name': 'John'},
         )
 
-        response = client.post('/v2/notifications/push', json=request.model_dump())
+        response = client.post(_push_path, json=request.model_dump())
 
         assert response.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
 
 
-@pytest.mark.asyncio
 @patch.object(BackgroundTasks, 'add_task')
 @patch('app.legacy.v2.notifications.rest.dao_create_notification')
 @patch('app.legacy.v2.notifications.rest.validate_template')
 class TestPush:
-    """Test POST /v2/notifications/push."""
+    """Test POST /legacy/v2/notifications/push."""
 
     async def test_post_push_returns_201(
         self,
@@ -120,7 +119,7 @@ class TestPush:
             personalisation={'name': 'John'},
         )
 
-        response = client.post('/v2/notifications/push', json=request.model_dump())
+        response = client.post(_push_path, json=request.model_dump())
 
         assert response.status_code == status.HTTP_201_CREATED
         assert response.json() == {'result': 'success'} == V2PostPushResponseModel().model_dump()
@@ -153,6 +152,6 @@ class TestPush:
             personalisation={'name': 'John'},
         )
 
-        response = client.post('/v2/notifications/push', json=request.model_dump())
+        response = client.post(_push_path, json=request.model_dump())
 
         assert response.status_code == status.HTTP_400_BAD_REQUEST
