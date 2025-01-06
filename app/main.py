@@ -4,9 +4,9 @@ import os
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from datetime import datetime
-from typing import Annotated, Any, AsyncContextManager, Callable, Mapping, Never
+from typing import Annotated, Any, AsyncContextManager, Callable, List, Mapping, Never
 
-from fastapi import Depends, FastAPI, Query, status
+from fastapi import Depends, FastAPI, HTTPException, Query, status
 from fastapi.staticfiles import StaticFiles
 from loguru import logger
 from sqlalchemy import extract, select
@@ -149,52 +149,94 @@ async def test_db_create(
     }
 
 
+async def fetch_templates(session: AsyncSession) -> List[dict[str, str]]:
+    """Fetch all templates from the database.
+
+    Args:
+        session (AsyncSession): The database session.
+
+    Returns:
+        List[dict[str, str]]: A list of templates, each represented as a dictionary.
+    """
+    templates = []
+    results = await session.scalars(select(Template))
+    for r in results:
+        templates.append(
+            {
+                'type': 'template',
+                'id': str(r.id),
+                'name': r.name,
+                'created_at': str(r.created_at),
+                'updated_at': str(r.updated_at),
+            }
+        )
+    return templates
+
+
+async def fetch_notifications(session: AsyncSession, year_list: List[int]) -> List[dict[str, str]]:
+    """Fetch notifications from the database, filtered by year if specified.
+
+    Args:
+        session (AsyncSession): The database session.
+        year_list (List[int]): A list of years to filter notifications by. If empty, fetches all notifications.
+
+    Returns:
+        List[dict[str, str]]: A list of notifications, each represented as a dictionary.
+    """
+    notifications = []
+    if year_list:
+        notification_query = select(Notification).where(extract('year', Notification.created_at).in_(year_list))
+    else:
+        notification_query = select(Notification)
+
+    results = await session.scalars(notification_query)
+    for n in results:
+        notifications.append(
+            {
+                'type': 'notification',
+                'id': str(n.id),
+                'personalization': n.personalization or '',
+                'created_at': str(n.created_at),
+                'updated_at': str(n.updated_at),
+            }
+        )
+    return notifications
+
+
 @app.get('/db/test', status_code=status.HTTP_200_OK)
 async def test_db_read(
     db_session: Annotated[async_scoped_session[AsyncSession], Depends(get_read_session_with_depends)],
-    year: int | None = Query(default=None, description='Filter notifications by year'),
+    years: str | None = Query(
+        default=None, description='Comma-separated years to filter notifications (e.g., 2024,2025)'
+    ),
 ) -> list[dict[str, str]]:
-    """Test getting items from the database, including Templates and Notifications.
+    """Get items from the database, including Templates and Notifications.
 
-    Optionally filter notifications by year.
+    Optionally filter notifications by multiple years passed as a comma-separated string (&years=2024,2025).
 
     Args:
-        db_session: The database session.
-        year (int | None): The year to filter notifications by (optional).
+        db_session (Annotated[async_scoped_session[AsyncSession]]): The database session dependency.
+        years (str | None): Comma-separated years to filter notifications (optional).
 
     Returns:
         list[dict[str, str]]: The items in the Templates and Notifications tables.
+
+    Raises:
+        HTTPException: If the `years` parameter contains invalid values.
     """
+    year_list: List[int] = []
+    if years:
+        try:
+            year_list = [int(year.strip()) for year in years.split(',')]
+        except ValueError:
+            raise HTTPException(
+                status_code=400, detail='Invalid years format. Use comma-separated integers (e.g., 2024,2025).'
+            )
+
     items = []
 
     async with db_session() as session:
-        template_results = await session.scalars(select(Template))
-        for r in template_results:
-            items.append(
-                {
-                    'type': 'template',
-                    'id': str(r.id),
-                    'name': r.name,
-                    'created_at': str(r.created_at),
-                    'updated_at': str(r.updated_at),
-                }
-            )
-
-        if year:
-            notification_query = select(Notification).where(extract('year', Notification.created_at) == year)
-        else:
-            notification_query = select(Notification)
-
-        notification_results = await session.scalars(notification_query)
-        for n in notification_results:
-            items.append(
-                {
-                    'type': 'notification',
-                    'id': str(n.id),
-                    'personalization': n.personalization or '',
-                    'created_at': str(n.created_at),
-                    'updated_at': str(n.updated_at),
-                }
-            )
+        items.extend(await fetch_templates(session))
+        items.extend(await fetch_notifications(session, year_list))
 
     return items
