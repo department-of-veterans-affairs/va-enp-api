@@ -3,10 +3,13 @@ services:
     build:
       context: ..
       dockerfile: ./ci/Dockerfile
+      args:
+        POETRY_ARGS: --with static_tools,test,mkdocs
+        TEST_FOLDER: tests
     container_name: enp-api
     ports:
       - 8000:8000
-    entrypoint: ["poetry", "run", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+    entrypoint: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
     env_file:
       - .env.local
     volumes:

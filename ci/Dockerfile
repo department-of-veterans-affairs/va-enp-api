@@ -1,29 +1,65 @@
 # basic starting point to run the app in a container
-FROM python:3.12-alpine3.20
+FROM python:3.12-alpine3.21 AS builder
 
 ENV POETRY_NO_INTERACTION=1 \
     POETRY_VIRTUALENVS_IN_PROJECT=1 \
     POETRY_VIRTUALENVS_CREATE=1 \
-    POETRY_CACHE_DIR=/tmp/poetry_cache
+    POETRY_CACHE_DIR=/tmp/poetry_cache \
+    POETRY_HOME="/opt/poetry"
+
+ENV PATH="$POETRY_HOME/bin:$PATH"
 
 WORKDIR /app
 
-RUN adduser -h /app -D vanotify
-
-RUN pip install --upgrade pip 
-RUN pip install poetry==1.8.3
-
-USER vanotify
-
 COPY pyproject.toml poetry.lock /app/
 
-RUN poetry install --no-root --with static_tools,test,mkdocs && rm -rf $POETRY_CACHE_DIR
+ARG POETRY_ARGS
 
+# install system dependencies
+RUN apk add --no-cache --virtual .build-deps cargo curl gcc musl-dev rust
+# install poetry
+RUN curl -sSL https://install.python-poetry.org | POETRY_VERSION=1.8.4 python3 -
+# install project dependencies
+RUN poetry install --no-root --no-ansi $POETRY_ARGS && rm -rf $POETRY_CACHE_DIR
+
+
+########################################################################################################################
+# python 3.12 is supported until Oct 2028
+FROM python:3.12-alpine3.21
+
+ARG TEST_FOLDER
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PATH="/app/.venv/bin:$PATH"
+
+WORKDIR /app
+
+# add user and give ownership of app dir
+RUN adduser -h /app -D vanotify
+
+# From context and only what is necessary, importing relative to WORKDIR
+COPY app/ app
+
+# necessary files for mkdocs
+COPY scripts/create_mkdoc_files.py /app/scripts/create_mkdoc_files.py
 COPY mkdocs.yml /app/mkdocs.yml
-COPY app /app/app
-COPY scripts /app/scripts
 
-RUN poetry run python scripts/create_mkdoc_files.py
-RUN poetry run mkdocs build
+# Tests, using glob pattern to avoid copying
+COPY $TEST_FOLDER/ tests
 
+# Copy builder files - venv
+COPY --from=builder /app/.venv /app/.venv
 
+RUN echo "$POETRY_ARGS"
+
+# these need to run only when POETRY_ARGS contain the proper setting
+RUN if echo "$POETRY_ARGS" | grep -q "mkdocs"; then \
+    poetry run python scripts/create_mkdoc_files.py \
+    && poetry run mkdocs build;\
+    fi;
+
+# switch to user
+USER vanotify
+
+# CMD here for running when deployed to infra
+CMD ["gunicorn", "app.main:app", "-b", "0.0.0.0:8000", "-k", "uvicorn_worker.UvicornWorker", "-w", "4"]
