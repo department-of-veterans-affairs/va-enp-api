@@ -25,6 +25,7 @@ RUN poetry install --no-root --no-ansi $POETRY_ARGS && rm -rf $POETRY_CACHE_DIR
 
 ########################################################################################################################
 # python 3.12 is supported until Oct 2028
+# alpine 3.21 is supported until 1 Nov 2026
 FROM python:3.12-alpine3.21
 
 ARG TEST_FOLDER
