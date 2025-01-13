@@ -1,18 +1,18 @@
 """Test module for app/legacy/v2/notifications/rest.py."""
 
 from unittest.mock import AsyncMock, patch
+from uuid import uuid4
 
 import pytest
 from fastapi import BackgroundTasks, status
-from pydantic import UUID4, HttpUrl
+from fastapi.encoders import jsonable_encoder
 
-from app.constants import IdentifierType, MobileAppType
+from app.constants import IdentifierType, MobileAppType, USNumberType
 from app.db.models import Template
 from app.legacy.v2.notifications.route_schema import (
-    RecipientIdentifierModel,
-    V2PostNotificationRequestModel,
     V2PostPushRequestModel,
     V2PostPushResponseModel,
+    V2PostSmsRequestModel,
 )
 from tests.conftest import ENPTestClient
 
@@ -182,18 +182,17 @@ class TestNotificationRouter:
             route (str): Route to test
 
         """
-        request = V2PostNotificationRequestModel(
-            billing_code='12345',
-            callback_url=HttpUrl('https://example.com'),
-            personalisation={'name': 'John'},
-            recipient_identifier=RecipientIdentifierModel(
-                id_type='ICN',
-                id_value='12345',
-            ),
+        template_id = uuid4()
+        sms_sender_id = uuid4()
+
+        request = V2PostSmsRequestModel(
             reference='test',
-            template_id=UUID4('d5b6e67c-8e2a-11ee-8b8e-0242ac120002'),
+            template_id=template_id,
+            phone_number=USNumberType('+18005550101'),
+            sms_sender_id=sms_sender_id,
         )
-        response = client.post(route, json=request.model_dump())
+        payload = jsonable_encoder(request)
+        response = client.post(route, json=payload)
 
         assert response.status_code == status.HTTP_201_CREATED
 
