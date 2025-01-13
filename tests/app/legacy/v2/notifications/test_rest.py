@@ -4,10 +4,13 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 from fastapi import BackgroundTasks, status
+from pydantic import UUID4, HttpUrl
 
 from app.constants import IdentifierType, MobileAppType
 from app.db.models import Template
 from app.legacy.v2.notifications.route_schema import (
+    RecipientIdentifierModel,
+    V2PostNotificationRequestModel,
     V2PostPushRequestModel,
     V2PostPushResponseModel,
 )
@@ -162,8 +165,8 @@ class TestNotificationRouter:
     """Test the v2 push notifications router."""
 
     routes = (
-        '/legacy/v2/notifications/push',
-        '/v2/notifications/push',
+        '/legacy/v2/notifications/push/sms',
+        '/v2/notifications/push/sms',
     )
 
     @pytest.mark.parametrize('route', routes)
@@ -179,17 +182,18 @@ class TestNotificationRouter:
             route (str): Route to test
 
         """
-        request = {
-            'mobile_app': 'va_mobile',
-            'template_id': 'd5b6e67c-8e2a-11ee-8b8e-0242ac120002',
-            'recipient_identifier': {
-                'id_type': 'icn',
-                'id_value': '12345',
-            },
-            'personalisation': {'name': 'John'},
-        }
-
-        response = client.post(route, json=request)
+        request = V2PostNotificationRequestModel(
+            billing_code='12345',
+            callback_url=HttpUrl('https://example.com'),
+            personalisation={'name': 'John'},
+            recipient_identifier=RecipientIdentifierModel(
+                id_type='ICN',
+                id_value='12345',
+            ),
+            reference='test',
+            template_id=UUID4('d5b6e67c-8e2a-11ee-8b8e-0242ac120002'),
+        )
+        response = client.post(route, json=request.model_dump())
 
         assert response.status_code == status.HTTP_201_CREATED
 
@@ -206,8 +210,6 @@ class TestNotificationRouter:
             route (str): Route to test
 
         """
-        invalid_request = {'foo': 'bar'}
-
-        response = client.post(route, json=invalid_request)
+        response = client.post(route)
 
         assert response.status_code == status.HTTP_400_BAD_REQUEST
