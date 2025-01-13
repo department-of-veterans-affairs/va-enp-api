@@ -2,6 +2,7 @@
 
 from unittest.mock import AsyncMock, patch
 
+import pytest
 from fastapi import BackgroundTasks, status
 
 from app.constants import IdentifierType, MobileAppType
@@ -18,8 +19,8 @@ _push_path = '/legacy/v2/notifications/push'
 @patch.object(BackgroundTasks, 'add_task')
 @patch('app.legacy.v2.notifications.rest.dao_create_notification')
 @patch('app.legacy.v2.notifications.rest.validate_template')
-class TestRouter:
-    """Test the v2 notifications router."""
+class TestPushRouter:
+    """Test the v2 push notifications router."""
 
     async def test_router_returns_400_with_invalid_request_data(
         self,
@@ -153,5 +154,60 @@ class TestPush:
         )
 
         response = client.post(_push_path, json=request.model_dump())
+
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+
+
+class TestNotificationRouter:
+    """Test the v2 push notifications router."""
+
+    routes = (
+        '/legacy/v2/notifications/push',
+        '/v2/notifications/push',
+    )
+
+    @pytest.mark.parametrize('route', routes)
+    async def test_happy_path(
+        self,
+        client: ENPTestClient,
+        route: str,
+    ) -> None:
+        """Test route can return 201.
+
+        Args:
+            client (ENPTestClient): Custom FastAPI client fixture
+            route (str): Route to test
+
+        """
+        request = {
+            'mobile_app': 'va_mobile',
+            'template_id': 'd5b6e67c-8e2a-11ee-8b8e-0242ac120002',
+            'recipient_identifier': {
+                'id_type': 'icn',
+                'id_value': '12345',
+            },
+            'personalisation': {'name': 'John'},
+        }
+
+        response = client.post(route, json=request)
+
+        assert response.status_code == status.HTTP_201_CREATED
+
+    @pytest.mark.parametrize('route', routes)
+    async def test_router_returns_400_with_invalid_request_data(
+        self,
+        client: ENPTestClient,
+        route: str,
+    ) -> None:
+        """Test route can return 400.
+
+        Args:
+            client (ENPTestClient): Custom FastAPI client fixture
+            route (str): Route to test
+
+        """
+        invalid_request = {'foo': 'bar'}
+
+        response = client.post(route, json=invalid_request)
 
         assert response.status_code == status.HTTP_400_BAD_REQUEST
