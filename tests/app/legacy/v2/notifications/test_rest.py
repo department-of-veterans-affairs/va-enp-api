@@ -165,8 +165,8 @@ class TestNotificationRouter:
     """Test the v2 push notifications router."""
 
     routes = (
-        '/legacy/v2/notifications/push/sms',
-        '/v2/notifications/push/sms',
+        '/legacy/v2/notifications/sms',
+        '/v2/notifications/sms',
     )
 
     @pytest.mark.parametrize('route', routes)

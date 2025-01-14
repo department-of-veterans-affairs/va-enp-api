@@ -38,7 +38,7 @@ v2_notification_router = APIRouter(
 )
 
 
-@v2_notification_router.post('/push', status_code=status.HTTP_201_CREATED)
+@v2_legacy_notification_router.post('/push', status_code=status.HTTP_201_CREATED)
 async def create_push_notification(
     request_data: V2PostPushRequestModel,
     request: Request,
@@ -119,6 +119,6 @@ async def create_sms_notification(
         uri=HttpUrl('https://example.com'),
         content=V2SmsContentModel(
             body='Hello, world!',
-            from_number=USNumberType('+15555555555'),
+            from_number=USNumberType('+18005550202'),
         ),
     )
