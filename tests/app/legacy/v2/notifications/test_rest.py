@@ -162,7 +162,7 @@ class TestPush:
 
 
 class TestNotificationRouter:
-    """Test the v2 push notifications router."""
+    """Test the v2 notifications router."""
 
     routes = (
         '/legacy/v2/notifications/sms',
