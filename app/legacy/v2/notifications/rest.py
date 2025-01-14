@@ -1,23 +1,38 @@
 """All endpoints for the v2/notifications route."""
 
 import json
+from uuid import uuid4
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request, status
 from loguru import logger
+from pydantic import HttpUrl
 
 from app.auth import JWTBearer
+from app.constants import USNumberType
 from app.dao.notifications_dao import dao_create_notification
 from app.db.models import Notification, Template
 from app.legacy.v2.notifications.route_schema import (
     V2PostPushRequestModel,
     V2PostPushResponseModel,
+    V2PostSmsRequestModel,
+    V2PostSmsResponseModel,
+    V2SmsContentModel,
+    V2Template,
 )
 from app.legacy.v2.notifications.utils import send_push_notification_helper, validate_template
 from app.routers import TimedAPIRoute
 
-v2_notification_router = APIRouter(
+v2_legacy_notification_router = APIRouter(
     dependencies=[Depends(JWTBearer())],
     prefix='/legacy/v2/notifications',
+    route_class=TimedAPIRoute,
+    tags=['v2 Legacy Notification Endpoints'],
+)
+
+
+v2_notification_router = APIRouter(
+    dependencies=[Depends(JWTBearer())],
+    prefix='/v2/notifications',
     route_class=TimedAPIRoute,
     tags=['v2 Notification Endpoints'],
 )
@@ -72,3 +87,38 @@ async def create_push_notification(
         template_id,
     )
     return V2PostPushResponseModel()
+
+
+@v2_notification_router.post('/sms', status_code=status.HTTP_201_CREATED)
+@v2_legacy_notification_router.post('/sms', status_code=status.HTTP_201_CREATED)
+async def create_sms_notification(
+    request: V2PostSmsRequestModel,
+) -> V2PostSmsResponseModel:
+    """Create an SMS notification.
+
+    Args:
+        request_data (V2PostPushRequestModel): The data necessary for the notification.
+        request (Request): The FastAPI request object.
+        background_tasks (BackgroundTasks): The FastAPI background tasks object.
+
+    Returns:
+        V2PostPushResponseModel: The notification response data.
+
+    """
+    logger.debug('Creating SMS notification with request data {}.', request)
+    return V2PostSmsResponseModel(
+        id=uuid4(),
+        billing_code='123456',
+        callback_url=HttpUrl('https://example.com'),
+        reference='123456',
+        template=V2Template(
+            id=uuid4(),
+            uri=HttpUrl('https://example.com'),
+            version=1,
+        ),
+        uri=HttpUrl('https://example.com'),
+        content=V2SmsContentModel(
+            body='Hello, world!',
+            from_number=USNumberType('+15555555555'),
+        ),
+    )

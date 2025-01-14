@@ -25,7 +25,7 @@ from app.db.models import (
     Notification,
     Template,
 )
-from app.legacy.v2.notifications.rest import v2_notification_router
+from app.legacy.v2.notifications.rest import v2_legacy_notification_router, v2_notification_router
 from app.logging.logging_config import CustomizeLogger
 from app.state import ENPState
 from app.v3 import api_router as v3_router
@@ -78,6 +78,7 @@ def create_app() -> CustomFastAPI:
     CustomizeLogger.make_logger()
     app = CustomFastAPI(lifespan=lifespan)
     app.include_router(v3_router)
+    app.include_router(v2_legacy_notification_router)
     app.include_router(v2_notification_router)
 
     # Static site for MkDocs. If unavailable locally, run `mkdocs build` to create the site files
