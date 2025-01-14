@@ -1,6 +1,6 @@
 """Request and Response bodies for /v2/notifications."""
 
-from typing import Literal
+from typing import ClassVar, Literal
 
 from pydantic import UUID4, AwareDatetime, BaseModel, EmailStr, Field, HttpUrl, model_validator
 from typing_extensions import Self
@@ -143,6 +143,48 @@ class V2PostSmsRequestModel(V2PostNotificationRequestModel):
 
     phone_number: USNumberType | None = None
     sms_sender_id: UUID4
+
+    class Config:
+        """Configuration for the model. Includes examples for the OpenAPI schema."""
+
+        schema_extra: ClassVar = {
+            'examples': {
+                'phone number': {
+                    'summary': 'phone number',
+                    'description': 'Send an SMS notification to a phone number.',
+                    'value': {
+                        'billing_code': '12345',
+                        'callback_url': 'https://example.com/',
+                        'personalisation': {
+                            'additionalProp1': 'string',
+                            'additionalProp2': 'string',
+                            'additionalProp3': 'string',
+                        },
+                        'reference': 'an-external-id',
+                        'template_id': 'a71400e3-b2f8-4bd1-91c0-27f9ca7106a1',
+                        'phone_number': '+18005550101',
+                        'sms_sender_id': '4f44ffc8-1ff8-4832-b1af-0b615691b6ea',
+                    },
+                },
+                'recipient identifier': {
+                    'summary': 'recipient identifier',
+                    'description': 'Send an SMS notification to a recipient identifier.',
+                    'value': {
+                        'billing_code': 'string',
+                        'callback_url': 'https://example.com/',
+                        'personalisation': {
+                            'additionalProp1': 'string',
+                            'additionalProp2': 'string',
+                            'additionalProp3': 'string',
+                        },
+                        'reference': 'string',
+                        'template_id': 'a71400e3-b2f8-4bd1-91c0-27f9ca7106a1',
+                        'sms_sender_id': '4f44ffc8-1ff8-4832-b1af-0b615691b6ea',
+                        'recipient_identifier': {'id_type': 'ICN', 'id_value': 'not-a-valid-icn'},
+                    },
+                },
+            },
+        }
 
     @model_validator(mode='after')
     def phone_number_or_recipient_id(self) -> Self:

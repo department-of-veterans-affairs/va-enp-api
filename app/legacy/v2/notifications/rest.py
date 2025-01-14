@@ -1,9 +1,10 @@
 """All endpoints for the v2/notifications route."""
 
 import json
+from typing import Annotated
 from uuid import uuid4
 
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request, status
+from fastapi import APIRouter, BackgroundTasks, Body, Depends, HTTPException, Request, status
 from loguru import logger
 from pydantic import HttpUrl
 
@@ -92,7 +93,12 @@ async def create_push_notification(
 @v2_notification_router.post('/sms', status_code=status.HTTP_201_CREATED)
 @v2_legacy_notification_router.post('/sms', status_code=status.HTTP_201_CREATED)
 async def create_sms_notification(
-    request: V2PostSmsRequestModel,
+    request: Annotated[
+        V2PostSmsRequestModel,
+        Body(
+            openapi_examples=V2PostSmsRequestModel.Config.schema_extra['examples'],
+        ),
+    ],
 ) -> V2PostSmsResponseModel:
     """Create an SMS notification.
 
