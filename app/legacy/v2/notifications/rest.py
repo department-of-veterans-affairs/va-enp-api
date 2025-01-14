@@ -97,11 +97,11 @@ async def create_sms_notification(
     """Create an SMS notification.
 
     Args:
-        request_data (V2PostPushRequestModel): The data necessary for the notification.
+        request_data (V2PostSmsRequestModel): The data necessary for the notification.
         request (Request): The FastAPI request object.
 
     Returns:
-        V2PostPushResponseModel: The notification response data.
+        V2PostSmsResponseModel: The notification response data.
 
     """
     logger.debug('Creating SMS notification with request data {}.', request)
