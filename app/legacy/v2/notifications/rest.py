@@ -99,7 +99,6 @@ async def create_sms_notification(
     Args:
         request_data (V2PostPushRequestModel): The data necessary for the notification.
         request (Request): The FastAPI request object.
-        background_tasks (BackgroundTasks): The FastAPI background tasks object.
 
     Returns:
         V2PostPushResponseModel: The notification response data.
@@ -118,7 +117,7 @@ async def create_sms_notification(
         ),
         uri=HttpUrl('https://example.com'),
         content=V2SmsContentModel(
-            body='Hello, world!',
-            from_number=USNumberType('+18005550202'),
+            body='example',
+            from_number=USNumberType('+18005550101'),
         ),
     )
