@@ -3,7 +3,6 @@
 from asyncio import CancelledError
 from unittest.mock import AsyncMock, Mock, patch
 
-import pytest
 from starlette import status
 
 from app.main import CustomFastAPI, lifespan
