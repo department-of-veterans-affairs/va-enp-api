@@ -29,7 +29,6 @@ Please provide relevant information and / or links to demonstrate the functional
 - [ ] I have performed a self-review of my own code
 - [ ] I have commented my code, particularly in hard-to-understand areas
 - [ ] I have made corresponding changes to any documentation
-- [ ] My changes generate no new warnings
 - [ ] I have added tests that prove my fix is effective or that my feature works. [Testing guidelines](https://github.com/department-of-veterans-affairs/vanotify-team/blob/main/Process/testing_guide.md)
 - [ ] I have ensured the latest main is merged into my branch and all checks are green prior to review
 - [ ] New and existing unit tests pass locally with my changes
