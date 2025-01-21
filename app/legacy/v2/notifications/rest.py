@@ -96,7 +96,7 @@ async def create_sms_notification(
     request: Annotated[
         V2PostSmsRequestModel,
         Body(
-            openapi_examples=V2PostSmsRequestModel.Config.schema_extra['examples'],
+            openapi_examples=V2PostSmsRequestModel.json_schema_extra['examples'],
         ),
     ],
 ) -> V2PostSmsResponseModel:

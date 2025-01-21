@@ -1,6 +1,7 @@
 """App entrypoint."""
 
 import os
+from asyncio.exceptions import CancelledError
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from datetime import datetime
@@ -63,6 +64,11 @@ async def lifespan(app: CustomFastAPI) -> AsyncIterator[Never]:
 
     try:
         yield  # type: ignore
+    except CancelledError as e:
+        if isinstance(e.__context__, KeyboardInterrupt):
+            logger.info('Stopped app with a KeyboardInterrupt')
+        else:
+            logger.exception('Failed to gracefully stop the app')
     finally:
         app.enp_state.clear_providers()
         await close_db()
