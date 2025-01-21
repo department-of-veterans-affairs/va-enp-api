@@ -62,6 +62,7 @@ skips = ["B101"]  # https://bandit.readthedocs.io/en/latest/plugins/b101_assert_
 omit = [
     "app/logging/*",
     "app/main.py",
+    "tests/app/test_main.py"
 ]
 
 [tool.coverage.report]

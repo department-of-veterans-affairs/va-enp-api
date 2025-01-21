@@ -94,12 +94,8 @@ def create_app() -> CustomFastAPI:
 
     return app
 
-try:
-    app: CustomFastAPI = create_app()
-except KeyboardInterrupt:
-    import sys
-    sys.exit(1)
 
+app: CustomFastAPI = create_app()
 
 
 @app.get('/')

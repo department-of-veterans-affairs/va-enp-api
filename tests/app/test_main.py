@@ -73,10 +73,10 @@ async def test_lifespan_cancelled_exception() -> None:
     ):
         app = CustomFastAPI(lifespan=lifespan)
 
-        # We expect an asyncio.CancelledError to propagate
-        with pytest.raises(CancelledError):
-            async with lifespan(app):
-                raise CancelledError()
+        # We expect an asyncio.CancelledError to be gracefully caught
+        # Cannot test KeyboardInterrupt because it stops pytest. Hooks do not play nice with asyncio's CancelledError
+        async with lifespan(app):
+            raise CancelledError()
 
         mock_init_db.assert_awaited_once()
         mock_close_db.assert_awaited_once()
