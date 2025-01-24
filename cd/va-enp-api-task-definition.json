@@ -1,0 +1,165 @@
+{
+  "family": "${ENV}-va-enp-api-task",
+  "executionRoleArn": "arn:${AWS_ARN_REGION}:iam::${AWS_ACCOUNT_NUMBER}:role/project/project-${ENV}-notification-api-task-execution-role",
+  "taskRoleArn": "arn:${AWS_ARN_REGION}:iam::${AWS_ACCOUNT_NUMBER}:role/project/project-${ENV}-notification-api-task-role",
+  "networkMode": "awsvpc",
+  "containerDefinitions": [
+    {
+      "name": "${ENV}-va-enp-api",
+      "essential": true,
+      "image": "{will-be-replaced-by-ci}",
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "${ENV}-va-enp-api-log-group",
+          "awslogs-region": "${AWS_REGION}",
+          "awslogs-stream-prefix": "ecs"
+        }
+      },
+      "portMappings": [
+        {
+          "containerPort": 6011,
+          "hostPort": 6011
+        }
+      ],
+      "environmentFiles": [
+        {
+          "type": "s3",
+          "value": "arn:${AWS_ARN_REGION}:s3:::vanotify-environment-variables-${ENV}/va-enp-api/${ENV}.env"
+        }
+      ],
+      "environment": [
+        {
+          "name": "DD_SERVICE",
+          "value": "va-enp-api"
+        },
+        {
+          "name": "FLASK_APP",
+          "value": "application.py"
+        }
+      ],
+      "secrets": ${TASK_DEFINITION_SECRETS_JSON},
+      "healthCheck": {
+        "command": [
+          "CMD-SHELL",
+          "./scripts/wait_for_it.sh 127.0.0.1:6011 -t 0 || exit 1"
+        ],
+        "interval": 30,
+        "retries": 5,
+        "timeout": 10
+      }
+    },
+    {
+      "name": "datadog-agent",
+      "image": "${AWS_ACCOUNT_NUMBER}.dkr.ecr.${AWS_REGION}.amazonaws.com/datadog/agent:7.57.2",
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "${ENV}-va-enp-api-datadog-log-group",
+          "awslogs-region": "${AWS_REGION}",
+          "awslogs-stream-prefix": "ecs"
+        }
+      },
+      "portMappings": [
+        {
+          "containerPort": 8125,
+          "hostPort": 8125,
+          "protocol": "udp"
+        },
+        {
+          "containerPort": 8126,
+          "hostPort": 8126,
+          "protocol": "tcp"
+        }
+      ],
+      "environment": [
+        {
+          "name": "DD_APM_NON_LOCAL_TRAFFIC",
+          "value": "true"
+        },
+        {
+          "name": "DD_LOGS_ENABLED",
+          "value": "true"
+        },
+        {
+          "name": "DD_APM_TELEMETRY_ENABLED",
+          "value": "false"
+        },
+        {
+          "name": "DD_PROCESS_AGENT_ENABLED",
+          "value": "true"
+        },
+        {
+          "name": "ECS_FARGATE",
+          "value": "true"
+        },
+        {
+          "name": "DD_SITE",
+          "value": "ddog-gov.com"
+        },
+        {
+          "name": "DD_APM_ENABLED",
+          "value": "true"
+        },
+        {
+          "name": "DD_ENV",
+          "value": "${ENV}"
+        },
+        {
+          "name": "DD_SERVICE",
+          "value": "va-enp-api"
+        },
+        {
+          "name": "DD_APM_FEATURES",
+          "value": "enable_cid_stats"
+        },
+        {
+          "name": "DD_PROFILING_ENABLE_CODE_PROVENANCE",
+          "value": "true"
+        }
+      ],
+      "secrets": [
+        {
+          "name": "DD_API_KEY",
+          "valueFrom": "${DD_API_KEY}"
+        }
+      ]
+    }
+  ],
+  "requiresCompatibilities": [
+    "FARGATE"
+  ],
+  "cpu": "2048",
+  "pidMode": "task",
+  "memory": "4096",
+  "tags": [
+    {
+      "key": "Stack",
+      "value": "application-deployment"
+    },
+    {
+      "key": "Environment",
+      "value": "${ENV}"
+    },
+    {
+      "key": "Team",
+      "value": "vanotify"
+    },
+    {
+      "key": "ManagedBy",
+      "value": "CI"
+    },
+    {
+      "key": "VAECID",
+      "value": "AWG20200714002"
+    },
+    {
+      "key": "ProjectName",
+      "value": "VA Notify"
+    },
+    {
+      "key": "ProjectShort",
+      "value": "NOTIFY"
+    }
+  ]
+}
