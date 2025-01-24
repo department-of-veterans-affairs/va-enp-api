@@ -27,7 +27,7 @@ jobs:
         with:
           ref: ${{ inputs.ref }}
 
-      - name: Renders task definition and deploys to 
+      - name: Renders task definition for ${{ inputs.environment }}
         uses: ./.github/actions/ecs-task-render-deploy
         with:
           task-definition-path: "./cd/va-enp-api-task-definition.json"
