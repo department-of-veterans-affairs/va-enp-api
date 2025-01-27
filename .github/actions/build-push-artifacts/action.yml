@@ -17,6 +17,11 @@ inputs:
     description: 'AWS role to assume'
     required: true
 
+outputs:
+  image-uri:
+    description: 'The Docker image URI that was built/pushed'
+    value: ${{ steps.set-output.outputs.image-uri }}
+
 runs:
   using: "composite"
   steps:
@@ -48,3 +53,11 @@ runs:
         context: .
         push: true
         tags: ${{ steps.login-ecr-vaec.outputs.registry }}/va_enp_api:${{ inputs.ref }},${{ steps.login-ecr-vaec.outputs.registry }}/va_enp_api:${{ github.sha }} ## Tagging with branch/tag and SHA to maintain SHA record and human readability
+
+    # This step sets the Docker image URI as an output from the composite action
+    - name: Set image output
+      id: set-output
+      shell: bash
+      run: |
+        # Using the ref tag as our main object to pass around
+        echo "image-uri=${{ steps.login-ecr-vaec.outputs.registry }}/va_enp_api:${{ inputs.ref }}" >> $GITHUB_OUTPUT

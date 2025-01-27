@@ -72,9 +72,9 @@ runs:
         image: ${{ inputs.image }}
 
     - name: Deploy API task definition to Fargate
-        uses: aws-actions/amazon-ecs-deploy-task-definition@v2
-        with:
-          task-definition: ./task-definition.json
-          service: ${{ inputs.environment }}-va-enp-api-service
-          cluster: ${{ inputs.environment }}-notification-cluster
-          wait-for-service-stability: true
+      uses: aws-actions/amazon-ecs-deploy-task-definition@v2
+      with:
+        task-definition: ./task-definition.json
+        service: ${{ inputs.environment }}-va-enp-api-service
+        cluster: ${{ inputs.environment }}-notification-cluster
+        wait-for-service-stability: true
