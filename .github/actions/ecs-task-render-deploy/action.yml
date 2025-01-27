@@ -22,6 +22,9 @@ inputs:
   role-to-assume:
     description: 'AWS role to assume'
     required: true
+  environment:
+    description: 'Environment to deploy to'
+    required: true
 
 runs:
   using: "composite"
@@ -53,7 +56,7 @@ runs:
         envsubst < "${{ inputs.task-definition-path }}" > pre-rendered-task-definition.json
     
     - name: Additional Rendering for Double Interpolation
-      id: pre_render
+      id: final_pre_render
       shell: bash
       run: |
         echo "Rendering template with envsubst..."
@@ -67,3 +70,11 @@ runs:
         task-definition: ./task-definition.json
         container-name: ${{ inputs.container-name }}
         image: ${{ inputs.image }}
+
+    - name: Deploy API task definition to Fargate
+        uses: aws-actions/amazon-ecs-deploy-task-definition@v2
+        with:
+          task-definition: ./task-definition.json
+          service: ${{ inputs.environment }}-va-enp-api-service
+          cluster: ${{ inputs.environment }}-notification-cluster
+          wait-for-service-stability: true

@@ -2,6 +2,9 @@ name: Deploy to ENV
  ## Right now, this workflow is being used to test the rendering of task definitions. This will be extended to be
  ## the workflow used that deploys to any arbitrary environment as part of https://github.com/department-of-veterans-affairs/va-enp-api/issues/76#issue-2669422105
 
+run-name: "Deploy to ${{ inputs.environment }}"
+
+
 on:
   workflow_dispatch:
     inputs:
@@ -26,6 +29,15 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: ${{ inputs.ref }}
+    
+      - name: Build and Push Artifacts
+        uses: ./.github/actions/build-push-artifacts
+        with:
+          ref: ${{ inputs.ref }}
+          aws-access-key-id: ${{ secrets.VAEC_AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.VAEC_AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+          role-to-assume: ${{ secrets.VAEC_DEPLOY_ROLE }}
 
       - name: Renders task definition for ${{ inputs.environment }}
         uses: ./.github/actions/ecs-task-render-deploy

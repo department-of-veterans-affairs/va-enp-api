@@ -47,4 +47,4 @@ runs:
         file: ci/Dockerfile
         context: .
         push: true
-        tags: ${{ steps.login-ecr-vaec.outputs.registry }}/notification_api:${{ inputs.ref }}
+        tags: ${{ steps.login-ecr-vaec.outputs.registry }}/va_enp_api:${{ inputs.ref }},${{ steps.login-ecr-vaec.outputs.registry }}/va_enp_api:${{ github.sha }} ## Tagging with branch/tag and SHA to maintain SHA record and human readability
