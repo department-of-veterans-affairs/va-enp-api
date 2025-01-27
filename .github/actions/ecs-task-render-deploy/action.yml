@@ -50,7 +50,15 @@ runs:
       run: |
         echo "Rendering template with envsubst..."
         # Substitute environment variables in the task definition file
-        envsubst < "${{ inputs.task-definition-path }}" > task-definition.json
+        envsubst < "${{ inputs.task-definition-path }}" > pre-rendered-task-definition.json
+    
+    - name: Additional Rendering for Double Interpolation
+      id: pre_render
+      shell: bash
+      run: |
+        echo "Rendering template with envsubst..."
+        # Substitute environment variables in the task definition file
+        envsubst < pre-rendered-task-definition.json > task-definition.json
 
     - name: Render Task Definition
       id: render
