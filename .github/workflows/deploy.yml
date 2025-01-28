@@ -1,7 +1,4 @@
 name: Deploy to ENV
- ## Right now, this workflow is being used to test the rendering of task definitions. This will be extended to be
- ## the workflow used that deploys to any arbitrary environment as part of https://github.com/department-of-veterans-affairs/va-enp-api/issues/76#issue-2669422105
-
 run-name: "Deploy to ${{ inputs.environment }}"
 
 
