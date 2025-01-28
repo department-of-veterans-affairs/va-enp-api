@@ -24,7 +24,8 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    
+    environment:
+      name: ${{ inputs.environment }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -40,7 +41,7 @@ jobs:
           aws-region: ${{ secrets.AWS_REGION }}
           role-to-assume: ${{ secrets.VAEC_DEPLOY_ROLE }}
 
-      - name: Renders task definition for ${{ inputs.environment }}
+      - name: Renders and deploys task definition for ${{ inputs.environment }}
         uses: ./.github/actions/ecs-task-render-deploy
         with:
           task-definition-path: "./cd/va-enp-api-task-definition.json"

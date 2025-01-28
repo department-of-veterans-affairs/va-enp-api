@@ -54,12 +54,13 @@ runs:
         echo "Rendering template with envsubst..."
         # Substitute environment variables in the task definition file
         envsubst < "${{ inputs.task-definition-path }}" > pre-rendered-task-definition.json
-    
+
+    ## We need to render twice because some ENV vars contain nested variables that need interpolating again
     - name: Additional Rendering for Double Interpolation
       id: final_pre_render
       shell: bash
       run: |
-        echo "Rendering template with envsubst..."
+        echo "Additional rendering template with envsubst..."
         # Substitute environment variables in the task definition file
         envsubst < pre-rendered-task-definition.json > task-definition.json
 
