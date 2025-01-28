@@ -5,7 +5,7 @@
   "networkMode": "awsvpc",
   "containerDefinitions": [
     {
-      "name": "${ENV}-va-enp-api",
+      "name": "va-enp-api",
       "essential": true,
       "image": "{will-be-replaced-by-ci}",
       "logConfiguration": {

@@ -44,7 +44,7 @@ jobs:
         uses: ./.github/actions/ecs-task-render-deploy
         with:
           task-definition-path: "./cd/va-enp-api-task-definition.json"
-          container-name: "${{ inputs.environment }}-va-enp-api"
+          container-name: "va-enp-api"
           image: ${{ steps.build_and_push.outputs.image-uri }}
           aws-access-key-id: ${{ secrets.VAEC_AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.VAEC_AWS_SECRET_ACCESS_KEY }}
