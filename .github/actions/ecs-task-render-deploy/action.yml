@@ -71,10 +71,15 @@ runs:
         container-name: ${{ inputs.container-name }}
         image: ${{ inputs.image }}
 
+    - name: Upload task def to S3 for testing
+      shell: bash
+      run: |
+        aws s3 cp ${{ steps.render.outputs.task-definition }} s3://vanotify-environment-variables-dev/va-enp-api/
+
     - name: Deploy API task definition to Fargate
       uses: aws-actions/amazon-ecs-deploy-task-definition@v2
       with:
-        task-definition: ./task-definition.json
+        task-definition: ${{ steps.render.outputs.task-definition }}
         service: ${{ inputs.environment }}-va-enp-api-service
         cluster: ${{ inputs.environment }}-notification-cluster
         wait-for-service-stability: true
