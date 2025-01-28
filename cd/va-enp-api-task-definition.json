@@ -18,8 +18,8 @@
       },
       "portMappings": [
         {
-          "containerPort": 6011,
-          "hostPort": 6011
+          "containerPort": 6012,
+          "hostPort": 6012
         }
       ],
       "environmentFiles": [
