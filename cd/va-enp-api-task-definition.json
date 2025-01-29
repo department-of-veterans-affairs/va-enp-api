@@ -42,7 +42,7 @@
       "healthCheck": {
         "command": [
           "CMD-SHELL",
-          "./scripts/wait_for_it.sh 127.0.0.1:6011 -t 0 || exit 1"
+          "./scripts/wait_for_it.sh 127.0.0.1:6012 -t 0 || exit 1"
         ],
         "interval": 30,
         "retries": 5,
