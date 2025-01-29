@@ -16,7 +16,7 @@ def test_simple_route(client: ENPTestClient) -> None:
         client (ENPTestClient): Custom FastAPI client fixture
 
     """
-    resp = client.get('/')
+    resp = client.get('/enp')
     assert resp.status_code == status.HTTP_200_OK
     assert resp.json() == {'Hello': 'World'}
 
@@ -30,7 +30,7 @@ def test_simple_route_logs_hello_world(mock_logger: Mock, client: ENPTestClient)
         client (ENPTestClient): Custom FastAPI client fixture
 
     """
-    client.get('/')
+    client.get('/enp')
 
     # Check if the logger.info was called with "Hello World"
     mock_logger.assert_called_with('Hello World')
