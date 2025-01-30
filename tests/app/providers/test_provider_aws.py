@@ -66,7 +66,10 @@ class TestProviderAWS:
         mock_client.publish.assert_called_once()
         assert reference_id == 'message_id'
 
-    async def test_send_push_notification_botocore_exceptions_not_retriable(self, mock_get_session: AsyncMock) -> None:
+    @pytest.mark.parametrize(('name', 'exc'), [(n, e) for n, e in botocore.exceptions.__dict__.items()])
+    async def test_send_push_notification_botocore_exceptions_not_retriable(
+        self, mock_get_session: AsyncMock, name: str, exc: botocore.exceptions.BotoCoreError
+    ) -> None:
         """Other than ClientError, Botocore exceptions are client-side exceptions that should not result in a retry.
 
         Exceptions in the provider code should re-raise ProviderNonRetryableError or ProviderRetryableError.
@@ -75,22 +78,24 @@ class TestProviderAWS:
         mock_get_session.return_value.create_client.return_value.__aenter__.return_value = mock_client
         push_model = PushModel(message='', target_arn='')
 
-        for name, exc in botocore.exceptions.__dict__.items():
-            if not isinstance(exc, type) or name in ('ClientError', 'EventStreamError'):
-                # ClientErrors might be retriable, and there doesn't seem to be an obvious way to mock
-                # an EventStreamError.
-                continue
-            elif name == 'WaiterError':
-                # Initializing this exception requires positional arguments.
-                mock_client.publish.side_effect = exc('', '', '')
-            elif name in botocore_exceptions_kwargs:
-                # Initializing these exceptions requires keyword arguments.
-                mock_client.publish.side_effect = exc(**{key: '' for key in botocore_exceptions_kwargs[name]})
-            else:
-                mock_client.publish.side_effect = exc()
+        raise_exc: bool = True
+        if not isinstance(exc, type) or name in ('ClientError', 'EventStreamError'):
+            # ClientErrors might be retriable, and there doesn't seem to be an obvious way to mock an EventStreamError.
+            raise_exc = False
+        elif name == 'WaiterError':
+            # Initializing this exception requires positional arguments.
+            mock_client.publish.side_effect = exc('', '', '')
+        elif name in botocore_exceptions_kwargs:
+            # Initializing these exceptions requires keyword arguments.
+            mock_client.publish.side_effect = exc(**{key: '' for key in botocore_exceptions_kwargs[name]})
+        else:
+            mock_client.publish.side_effect = exc()
 
+        if raise_exc:
             with pytest.raises(ProviderNonRetryableError):
                 await self.provider.send_notification(push_model)
+        else:
+            await self.provider.send_notification(push_model)
 
     @pytest.mark.parametrize(
         'exc',
