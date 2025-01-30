@@ -98,7 +98,7 @@ def create_app() -> CustomFastAPI:
 app: CustomFastAPI = create_app()
 
 
-@app.get('/')
+@app.get('/enp')
 def simple_route() -> dict[str, str]:
     """Return a hello world.
 
