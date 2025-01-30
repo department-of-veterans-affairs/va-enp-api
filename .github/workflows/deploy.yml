@@ -1,6 +1,6 @@
 name: Deploy to ENV
- ## Right now, this workflow is being used to test the rendering of task definitions. This will be extended to be
- ## the workflow used that deploys to any arbitrary environment as part of https://github.com/department-of-veterans-affairs/va-enp-api/issues/76#issue-2669422105
+run-name: "Deploy to ${{ inputs.environment }}"
+
 
 on:
   workflow_dispatch:
@@ -21,22 +21,34 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    
+    environment:
+      name: ${{ inputs.environment }}
     steps:
       - uses: actions/checkout@v4
         with:
           ref: ${{ inputs.ref }}
-
-      - name: Renders task definition for ${{ inputs.environment }}
-        uses: ./.github/actions/ecs-task-render-deploy
+    
+      - name: Build and Push Artifacts
+        id: build_and_push
+        uses: ./.github/actions/build-push-artifacts
         with:
-          task-definition-path: "./cd/va-enp-api-task-definition.json"
-          container-name: "${{ inputs.environment }}-va-enp-api"
-          image: nginx:latest ## using this for now because we don't have ENP images yet
+          ref: ${{ inputs.ref }}
           aws-access-key-id: ${{ secrets.VAEC_AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.VAEC_AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ secrets.AWS_REGION }}
           role-to-assume: ${{ secrets.VAEC_DEPLOY_ROLE }}
+
+      - name: Renders and deploys task definition for ${{ inputs.environment }}
+        uses: ./.github/actions/ecs-task-render-deploy
+        with:
+          task-definition-path: "./cd/va-enp-api-task-definition.json"
+          container-name: "va-enp-api"
+          image: ${{ steps.build_and_push.outputs.image-uri }}
+          aws-access-key-id: ${{ secrets.VAEC_AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.VAEC_AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+          role-to-assume: ${{ secrets.VAEC_DEPLOY_ROLE }}
+          environment: ${{ inputs.environment }}
         env:
           AWS_ARN_REGION: ${{ secrets.AWS_ARN_REGION }}
           AWS_ACCOUNT_NUMBER: ${{ secrets.AWS_ACCOUNT_NUMBER }}
