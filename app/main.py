@@ -113,7 +113,7 @@ def simple_route() -> dict[str, str]:
 @app.post('/db/test', status_code=status.HTTP_201_CREATED, dependencies=[Depends(JWTBearer())])
 async def db_create_test(
     *,
-    data: str,
+    data: str = 'hello',
     db_session: Annotated[async_scoped_session[AsyncSession], Depends(get_write_session_with_depends)],
 ) -> dict[str, list[dict[str, str]]]:
     """Test inserting Templates and Notifications into the database. This is a temporary test endpoint.
