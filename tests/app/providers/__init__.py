@@ -39,6 +39,7 @@ botocore_exceptions_kwargs = {
     'PaginationError': ('message',),
     'OperationNotPageableError': ('operation_name',),
     'ChecksumError': ('checksum_type', 'expected_checksum', 'actual_checksum'),
+    'InvalidChecksumConfigError': ('config_key', 'valid_options', 'config_value'),
     'UnseekableStreamError': ('stream_object',),
     'IncompleteReadError': ('actual_bytes', 'expected_bytes'),
     'InvalidExpressionError': ('expression',),
