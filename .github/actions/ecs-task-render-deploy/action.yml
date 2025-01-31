@@ -30,7 +30,7 @@ runs:
   using: "composite"
   steps:
     - name: Checkout Repository
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
           
     - name: Configure VAEC AWS Credentials
       uses: aws-actions/configure-aws-credentials@v4
