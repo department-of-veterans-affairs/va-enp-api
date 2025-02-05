@@ -51,7 +51,7 @@
     },
     {
       "name": "datadog-agent",
-      "image": "${AWS_ACCOUNT_NUMBER}.dkr.ecr.${AWS_REGION}.amazonaws.com/datadog/agent:7.57.2",
+      "image": "${AWS_ACCOUNT_NUMBER}.dkr.ecr.${AWS_REGION}.amazonaws.com/datadog/agent:7.62.1",
       "logConfiguration": {
         "logDriver": "awslogs",
         "options": {
