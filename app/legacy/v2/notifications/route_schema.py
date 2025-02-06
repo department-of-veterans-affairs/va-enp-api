@@ -1,8 +1,18 @@
 """Request and Response bodies for /v2/notifications."""
 
-from typing import ClassVar, Collection, Literal
+from typing import Annotated, ClassVar, Collection, Literal
 
-from pydantic import UUID4, AwareDatetime, BaseModel, EmailStr, Field, HttpUrl, model_validator
+from pydantic import (
+    UUID4,
+    AwareDatetime,
+    BaseModel,
+    ConfigDict,
+    EmailStr,
+    Field,
+    HttpUrl,
+    field_validator,
+    model_validator,
+)
 from typing_extensions import Self
 
 from app.constants import IdentifierType, MobileAppType, NotificationType, USNumberType
@@ -106,12 +116,36 @@ class V2GetSmsNotificationResponseModel(V2GetNotificationResponseModel):
 class V2PostNotificationRequestModel(BaseModel):
     """Common attributes for the POST /v2/notifications/<:notification_type> routes request."""
 
+    model_config = ConfigDict(populate_by_name=True)
+
     billing_code: str | None = Field(max_length=256, default=None)
     callback_url: HttpUrl | None = Field(max_length=255, default=None)
-    personalisation: dict[str, str | int | float] | None = None
+    personalisation: dict[str, str | int | float] | None = Field(default=None, alias='personalization')
     recipient_identifier: RecipientIdentifierModel | None = None
     reference: str | None = None
     template_id: UUID4
+
+    @field_validator('callback_url')
+    @classmethod
+    def validate_url_scheme(cls, url: HttpUrl | None) -> HttpUrl | None:
+        """Validator to enforce HTTPS scheme for callback URLs.
+
+        This method ensures that the `callback_url` is either:
+        - `None` (if not provided)
+        - A valid HTTPS URL (URLs with `http://` are rejected)
+
+        Args:
+            url (HttpUrl | None): The callback URL to validate.
+
+        Returns:
+            HttpUrl | None: The validated URL if it's HTTPS, or `None` if not provided.
+
+        Raises:
+            ValueError: If the provided URL is not using HTTPS.
+        """
+        if url and url.scheme != 'https':
+            raise ValueError('Only HTTPS URLs are allowed')
+        return url
 
 
 class V2PostEmailRequestModel(V2PostNotificationRequestModel):
@@ -141,7 +175,9 @@ class V2PostEmailRequestModel(V2PostNotificationRequestModel):
 class V2PostSmsRequestModel(V2PostNotificationRequestModel):
     """Attributes specific to requests to send SMS notifications."""
 
-    phone_number: USNumberType | None = None
+    model_config = ConfigDict(populate_by_name=True)
+
+    phone_number: Annotated[USNumberType | None, 'US phone number in E.164 format'] = None
     sms_sender_id: UUID4
 
     json_schema_extra: ClassVar[dict[str, dict[str, Collection[str]]]] = {
