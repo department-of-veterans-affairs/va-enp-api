@@ -79,6 +79,21 @@ def test_v2_post_sms_request_model_valid(data: dict[str, str | dict[str, str]]) 
 @pytest.mark.parametrize(
     'data',
     [
+        {'personalisation': {'field': 'value'}},
+        {'personalization': {'field': 'value'}},
+    ],
+)
+def test_v2_post_sms_request_model_personalsation_alias_valid(data: dict[str, str | dict[str, str]]) -> None:
+    """Valid data with either spelling of personalisation should not raise ValidationError."""
+    data['sms_sender_id'] = str(uuid4())
+    data['template_id'] = str(uuid4())
+    data['phone_number'] = '+17045555555'
+    assert isinstance(V2PostSmsRequestModel.model_validate(data), V2PostSmsRequestModel)
+
+
+@pytest.mark.parametrize(
+    'data',
+    [
         {},
         {'phone_number': '+17045555555', 'recipient_identifier': {'id_type': 'ICN', 'id_value': 'test'}},
         {'phone_number': '+5555555555'},
