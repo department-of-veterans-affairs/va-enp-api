@@ -29,7 +29,7 @@ class V2Template(BaseModel):
 class RecipientIdentifierModel(BaseModel):
     """Used to look up contact information from VA Profile or MPI."""
 
-    id_type: str
+    id_type: IdentifierType
     id_value: str
 
 
@@ -116,6 +116,7 @@ class V2GetSmsNotificationResponseModel(V2GetNotificationResponseModel):
 class V2PostNotificationRequestModel(BaseModel):
     """Common attributes for the POST /v2/notifications/<:notification_type> routes request."""
 
+    # needed for personalisation alias
     model_config = ConfigDict(populate_by_name=True)
 
     billing_code: str | None = Field(max_length=256, default=None)
@@ -175,7 +176,7 @@ class V2PostEmailRequestModel(V2PostNotificationRequestModel):
 class V2PostSmsRequestModel(V2PostNotificationRequestModel):
     """Attributes specific to requests to send SMS notifications."""
 
-    model_config = ConfigDict(populate_by_name=True)
+    # model_config = ConfigDict(populate_by_name=True)
 
     phone_number: Annotated[USNumberType | None, 'US phone number in E.164 format'] = None
     sms_sender_id: UUID4
@@ -221,7 +222,7 @@ class V2PostSmsRequestModel(V2PostNotificationRequestModel):
 
     @model_validator(mode='after')
     def phone_number_or_recipient_id(self) -> Self:
-        """One, and only one, of "phone_number" or "recipient_identifier" must not be None.
+        """At least one, of "phone_number" or "recipient_identifier" must not be None.
 
         Raises:
             ValueError: Bad input
@@ -230,10 +231,8 @@ class V2PostSmsRequestModel(V2PostNotificationRequestModel):
             Self: this instance
 
         """
-        if (self.phone_number is None and self.recipient_identifier is None) or (
-            self.phone_number is not None and self.recipient_identifier is not None
-        ):
-            raise ValueError('You must specify one of "phone_number" or "recipient identifier".')
+        if self.phone_number is None and self.recipient_identifier is None:
+            raise ValueError('You must specify at least one of "phone_number" or "recipient identifier".')
         return self
 
 
