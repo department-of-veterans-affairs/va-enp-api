@@ -46,25 +46,56 @@ def test_recipient_identifier_model_id_type_invalid(data: dict[str, str | dict[s
     'data',
     [
         {'personalisation': {'field': 'value'}},
-        {'personalization': {'field': 'value'}},
+        {'personalisation': {'field1': 'value1', 'field2': 'value2'}},
+        {'personalisation': {'field': ['value1', 'value2']}},
+        {'personalisation': {'field1': ['value1', 'value2'], 'field2': 'value2'}},
+        {'personalisation': {'field': {'file': 'U29tZSByYW5kb20gZmlsZSBkYXRh', 'filename': 'filename'}}},
+        {
+            'personalisation': {
+                'field': {'file': 'U29tZSByYW5kb20gZmlsZSBkYXRh', 'filename': 'filename', 'sending_method': 'attach'}
+            }
+        },
     ],
 )
-def test_v2_post_notification_request_model_personalisation_alias_valid(data: dict[str, str | dict[str, str]]) -> None:
+def test_v2_post_notification_request_model_personalisation_valid_data(
+    data: dict[str, str | list[str] | dict[str, str]],
+) -> None:
     """Valid required data with either spelling of personalisation should not raise ValidationError.
 
     Test fields common to models extending on V2PostNotificationRequestModel
     """
     data['template_id'] = str(uuid4())
-    model: V2PostNotificationRequestModel = V2PostNotificationRequestModel.model_validate(data)
 
     # model validates
-    assert isinstance(model, V2PostNotificationRequestModel)
+    assert isinstance(V2PostNotificationRequestModel.model_validate(data), V2PostNotificationRequestModel)
 
-    # personalisation present and populated
-    assert model.personalisation.get('field') == 'value' if model.personalisation else None
 
-    # personalization alias not present
-    assert not hasattr(model, 'personalization')
+@pytest.mark.parametrize(
+    'data',
+    [
+        {'personalisation': {'field': 100}},
+        {'personalisation': {'field': [100]}},
+        {'personalisation': {'field': ['value1', 100]}},
+        {'personalisation': {'field': {'file': 'U29tZSByYW5kb20gZmlsZSBkYXRh'}}},
+        {'personalisation': {'field': {'filename': 'filename'}}},
+        {
+            'personalisation': {
+                'field': {'file': 'U29tZSByYW5kb20gZmlsZSBkYXRh', 'filename': 'filename', 'sending_method': 'foo'}
+            }
+        },
+    ],
+)
+def test_v2_post_notification_request_model_personalisation_invalid_data(
+    data: dict[str, str | list[str] | dict[str, str]],
+) -> None:
+    """Valid required data with either spelling of personalisation should not raise ValidationError.
+
+    Test fields common to models extending on V2PostNotificationRequestModel
+    """
+    data['template_id'] = str(uuid4())
+
+    with pytest.raises(ValidationError):
+        V2PostNotificationRequestModel.model_validate(data)
 
 
 @pytest.mark.parametrize(

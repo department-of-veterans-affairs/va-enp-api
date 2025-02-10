@@ -15,6 +15,13 @@ RESPONSE_404 = 'Not found'
 RESPONSE_500 = 'Server error'
 
 
+class AttachmentSendingMethodType(StrEnum):
+    """Types of file attachment methods that can be used."""
+
+    ATTACH = 'attach'
+    LINK = 'link'
+
+
 class IdentifierType(StrEnum):
     """Types of Identifiers that can be used."""
 
