@@ -184,7 +184,7 @@ class V2PostSmsRequestModel(V2PostNotificationRequestModel):
     # model_config = ConfigDict(populate_by_name=True)
 
     phone_number: Annotated[USNumberType | None, 'US phone number in E.164 format'] = None
-    sms_sender_id: UUID4
+    sms_sender_id: UUID4 | None = None
 
     json_schema_extra: ClassVar[dict[str, dict[str, Collection[str]]]] = {
         'examples': {
