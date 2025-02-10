@@ -1,5 +1,5 @@
 services:
-  api:
+  enp:
     build:
       context: ..
       dockerfile: ./ci/Dockerfile
@@ -15,13 +15,12 @@ services:
     volumes:
       - "../app/:/app/app/:rw"
       - "../tests/:/app/tests/:rw"
+    logging:
+      driver: loki
+      options:
+        loki-url: "http://host.docker.internal:3100/loki/api/v1/push"
 
-  enp-db:
-    image: postgres:16
-    container_name: enp-db
-    ports:
-      - 5432:5432
-    environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: LocalPassword
-      POSTGRES_DB: va-enp-api-db
+networks:
+  default:
+    name: va-notify
+    external: true

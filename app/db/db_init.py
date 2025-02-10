@@ -34,7 +34,7 @@ async def init_db() -> None:
     await create_read_engine()
 
 
-async def create_write_engine() -> None:
+async def create_write_engine(context="enp") -> None:
     """Create the async write engine."""
     global _engine_write
     # Create the write database engine.
@@ -50,7 +50,7 @@ async def create_write_engine() -> None:
             pass
 
 
-async def create_read_engine() -> None:
+async def create_read_engine(context="enp") -> None:
     """Create the async read engine."""
     global _engine_read
     # Create the read database engine.

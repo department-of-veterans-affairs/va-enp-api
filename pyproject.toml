@@ -26,6 +26,7 @@ pydantic_extra_types = "*"
 sqlalchemy = {extras = ["asyncio"], version = "*"}
 tenacity = "*"
 uvicorn-worker = "*"
+prometheus-fastapi-instrumentator = "*"
 
 [tool.poetry.group.test]
 optional = true
@@ -45,6 +46,7 @@ mypy = "*"
 pre-commit = "*"
 ruff = "*"
 types-aiobotocore = {extras = ["essential"], version = "*"}
+ipython = "*"
 
 [tool.poetry.group.mkdocs]
 optional = true

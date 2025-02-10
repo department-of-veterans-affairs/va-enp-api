@@ -10,6 +10,7 @@ from typing import Annotated, Any, AsyncContextManager, Callable, List, Mapping,
 from fastapi import Depends, FastAPI, HTTPException, Query, status
 from fastapi.staticfiles import StaticFiles
 from loguru import logger
+from prometheus_fastapi_instrumentator import Instrumentator
 from sqlalchemy import extract, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession, async_scoped_session
 
@@ -96,6 +97,7 @@ def create_app() -> CustomFastAPI:
 
 
 app: CustomFastAPI = create_app()
+Instrumentator().instrument(app, metric_namespace="enp", metric_subsystem="api").expose(app)
 
 
 @app.get('/enp')
