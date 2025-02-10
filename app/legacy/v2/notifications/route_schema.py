@@ -1,6 +1,7 @@
 """Request and Response bodies for /v2/notifications."""
 
-from typing import Annotated, ClassVar, Collection, List, Literal
+import datetime
+from typing import Annotated, ClassVar, Collection, Literal
 
 from pydantic import (
     UUID4,
@@ -125,12 +126,12 @@ class V2PostNotificationRequestModel(BaseModel):
 
     billing_code: str | None = Field(max_length=256, default=None)
     callback_url: HttpUrl | None = Field(max_length=255, default=None)
-    personalisation: dict[str, str | List[str] | PersonalisationFileObject] | None = None
+    personalisation: dict[str, str | int | float | list[str | int | float] | PersonalisationFileObject] | None = None
 
     recipient_identifier: RecipientIdentifierModel | None = None
     reference: str | None = None
     template_id: UUID4
-    scheduled_for: str | None = None
+    scheduled_for: datetime.datetime | None = None
     email_reply_to_id: UUID4 | None = None
 
     @field_validator('callback_url')
@@ -181,8 +182,6 @@ class V2PostEmailRequestModel(V2PostNotificationRequestModel):
 
 class V2PostSmsRequestModel(V2PostNotificationRequestModel):
     """Attributes specific to requests to send SMS notifications."""
-
-    # model_config = ConfigDict(populate_by_name=True)
 
     phone_number: Annotated[USNumberType | None, 'US phone number in E.164 format'] = None
     sms_sender_id: UUID4 | None = None
@@ -256,7 +255,7 @@ class V2PostNotificationResponseModel(BaseModel):
     reference: str | None
     template: V2Template
     uri: HttpUrl
-    scheduled_for: str | None = None
+    scheduled_for: datetime.datetime | None = None
 
 
 class V2EmailContentModel(BaseModel):

@@ -46,6 +46,8 @@ def test_recipient_identifier_model_id_type_invalid(data: dict[str, str | dict[s
     'data',
     [
         {'personalisation': {'field': 'value'}},
+        {'personalisation': {'field': 100}},
+        {'personalisation': {'field': 100.1}},
         {'personalisation': {'field1': 'value1', 'field2': 'value2'}},
         {'personalisation': {'field': ['value1', 'value2']}},
         {'personalisation': {'field1': ['value1', 'value2'], 'field2': 'value2'}},
@@ -58,7 +60,7 @@ def test_recipient_identifier_model_id_type_invalid(data: dict[str, str | dict[s
     ],
 )
 def test_v2_post_notification_request_model_personalisation_valid_data(
-    data: dict[str, str | list[str] | dict[str, str]],
+    data: dict[str, str | int | float | list[str | int | float] | dict[str, str]],
 ) -> None:
     """Valid required data with either spelling of personalisation should not raise ValidationError.
 
@@ -73,9 +75,6 @@ def test_v2_post_notification_request_model_personalisation_valid_data(
 @pytest.mark.parametrize(
     'data',
     [
-        {'personalisation': {'field': 100}},
-        {'personalisation': {'field': [100]}},
-        {'personalisation': {'field': ['value1', 100]}},
         {'personalisation': {'field': {'file': 'U29tZSByYW5kb20gZmlsZSBkYXRh'}}},
         {'personalisation': {'field': {'filename': 'filename'}}},
         {
