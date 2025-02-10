@@ -1,6 +1,6 @@
 """Request and Response bodies for /v2/notifications."""
 
-from typing import Annotated, ClassVar, Collection, List, Literal, Union
+from typing import Annotated, ClassVar, Collection, List, Literal
 
 from pydantic import (
     UUID4,
@@ -125,7 +125,7 @@ class V2PostNotificationRequestModel(BaseModel):
 
     billing_code: str | None = Field(max_length=256, default=None)
     callback_url: HttpUrl | None = Field(max_length=255, default=None)
-    personalisation: dict[str, Union[str, List[str], PersonalisationFileObject]] | None = None
+    personalisation: dict[str, str | List[str] | PersonalisationFileObject] | None = None
 
     recipient_identifier: RecipientIdentifierModel | None = None
     reference: str | None = None
