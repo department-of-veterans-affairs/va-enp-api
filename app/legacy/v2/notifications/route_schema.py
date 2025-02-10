@@ -130,6 +130,8 @@ class V2PostNotificationRequestModel(BaseModel):
     recipient_identifier: RecipientIdentifierModel | None = None
     reference: str | None = None
     template_id: UUID4
+    scheduled_for: str | None = None
+    email_reply_to_id: UUID4 | None = None
 
     @field_validator('callback_url')
     @classmethod
@@ -158,7 +160,6 @@ class V2PostEmailRequestModel(V2PostNotificationRequestModel):
     """Attributes specific to requests to send e-mail notifications."""
 
     email_address: EmailStr | None = None
-    email_reply_to_id: UUID4
 
     @model_validator(mode='after')
     def email_or_recipient_id(self) -> Self:
@@ -255,6 +256,7 @@ class V2PostNotificationResponseModel(BaseModel):
     reference: str | None
     template: V2Template
     uri: HttpUrl
+    scheduled_for: str | None = None
 
 
 class V2EmailContentModel(BaseModel):
