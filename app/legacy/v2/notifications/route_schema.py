@@ -21,7 +21,7 @@ from typing_extensions import Self
 from app.constants import AttachmentSendingMethodType, IdentifierType, MobileAppType, NotificationType, PhoneNumberE164
 
 
-def uuid4_before_validator(value: str | UUID | None) -> UUID | None:
+def uuid4_before_validator(value: str | int | UUID | None) -> UUID | None:
     """Validates and converts input to a UUID v4 object allowing None for defaults.
 
     Args:
@@ -64,11 +64,13 @@ def parse_uuid4(value: str) -> UUID:
     """
     try:
         uuid_obj = UUID(value)
-        if uuid_obj.version != 4:
-            raise ValueError('UUID must be version 4')
-        return uuid_obj
     except ValueError:
         raise ValueError('Expected a valid UUID4 (string or UUID object)')
+
+    if uuid_obj.version != 4:
+        raise ValueError('UUID must be version 4')
+
+    return uuid_obj
 
 
 def validate_url_scheme(url: HttpUrl | None) -> HttpUrl | None:
