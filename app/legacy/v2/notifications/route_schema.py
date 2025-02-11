@@ -36,18 +36,20 @@ def uuid4_before_validator(value: str | int | UUID | None) -> UUID | None:
     Raises:
         ValueError: If the input is not a valid UUID v4 or cannot be converted into one.
     """
-    if value is None:
-        return None
+    result = None
 
     if isinstance(value, UUID):
         if value.version != 4:
             raise ValueError('UUID must be version 4')
-        return value
+        result = value
 
-    if isinstance(value, str):
-        return parse_uuid4(value)
+    elif isinstance(value, str):
+        result = parse_uuid4(value)
 
-    raise ValueError('Expected a valid UUID4 (string or UUID object)')
+    elif value is not None:
+        raise ValueError('Expected a valid UUID4 (string or UUID object)')
+
+    return result
 
 
 def parse_uuid4(value: str) -> UUID:
