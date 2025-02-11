@@ -2,14 +2,12 @@
 
 import datetime
 from typing import Annotated, ClassVar, Collection, Literal
-from uuid import UUID
 
 from pydantic import (
     UUID4,
     AfterValidator,
     AwareDatetime,
     BaseModel,
-    BeforeValidator,
     ConfigDict,
     EmailStr,
     Field,
@@ -19,60 +17,6 @@ from pydantic import (
 from typing_extensions import Self
 
 from app.constants import IdentifierType, MobileAppType, NotificationType, PhoneNumberE164
-
-
-def uuid4_before_validator(value: str | int | UUID | None) -> UUID | None:
-    """Validates and converts input to a UUID v4 object allowing None for defaults.
-
-    Args:
-        value (Any): The input value to validate. It can be:
-            - A UUID v4 object.
-            - A string representation of a UUID v4.
-            - None
-
-    Returns:
-        UUID | None: A validated UUID v4 object or None as a dafault.
-
-    Raises:
-        ValueError: If the input is not a valid UUID v4 or cannot be converted into one.
-    """
-    result = None
-
-    if isinstance(value, UUID):
-        if value.version != 4:
-            raise ValueError('UUID must be version 4')
-        result = value
-
-    elif isinstance(value, str):
-        result = parse_uuid4(value)
-
-    elif value is not None:
-        raise ValueError('Expected a valid UUID4 (string or UUID object)')
-
-    return result
-
-
-def parse_uuid4(value: str) -> UUID:
-    """Parses and validates a UUID v4 from a string.
-
-    Args:
-        value (str): A string representation of a UUID v4.
-
-    Returns:
-        UUID: A validated UUID v4 object or None as a dafault.
-
-    Raises:
-        ValueError: If the input cannot be converted to a UUID v4.
-    """
-    try:
-        uuid_obj = UUID(value)
-    except ValueError:
-        raise ValueError('Expected a valid UUID4 (string or UUID object)')
-
-    if uuid_obj.version != 4:
-        raise ValueError('UUID must be version 4')
-
-    return uuid_obj
 
 
 def validate_url_scheme(url: HttpUrl | None) -> HttpUrl | None:
@@ -105,7 +49,7 @@ class StrictBaseModel(BaseModel):
 class V2Template(StrictBaseModel):
     """V2 templates have an associated version to conform to the notification-api database schema."""
 
-    id: Annotated[UUID4, BeforeValidator(uuid4_before_validator)]
+    id: UUID4 | Annotated[str, UUID4]
     uri: HttpUrl
     version: int
 
@@ -188,7 +132,7 @@ class V2GetSmsNotificationResponseModel(V2GetNotificationResponseModel):
 
     email_address: None
     phone_number: PhoneNumberE164
-    sms_sender_id: Annotated[UUID4, BeforeValidator(uuid4_before_validator)]
+    sms_sender_id: UUID4 | Annotated[str, UUID4]
     subject: None
 
 
@@ -218,9 +162,9 @@ class V2PostNotificationRequestModel(StrictBaseModel):
 
     recipient_identifier: RecipientIdentifierModel | None = None
     reference: str | None = None
-    template_id: Annotated[UUID4, BeforeValidator(uuid4_before_validator)]
+    template_id: UUID4 | Annotated[str, UUID4]
     scheduled_for: datetime.datetime | None = None
-    email_reply_to_id: Annotated[UUID | None, BeforeValidator(uuid4_before_validator)] = None
+    email_reply_to_id: UUID4 | Annotated[str, UUID4] | None = None
 
 
 class V2PostEmailRequestModel(V2PostNotificationRequestModel):
@@ -250,7 +194,7 @@ class V2PostSmsRequestModel(V2PostNotificationRequestModel):
     """Attributes specific to requests to send SMS notifications."""
 
     phone_number: PhoneNumberE164 | None = None
-    sms_sender_id: Annotated[UUID | None, BeforeValidator(uuid4_before_validator)] = None
+    sms_sender_id: UUID4 | Annotated[str, UUID4] | None = None
 
     json_schema_extra: ClassVar[dict[str, dict[str, Collection[str]]]] = {
         'examples': {
@@ -315,7 +259,7 @@ class V2PostSmsRequestModel(V2PostNotificationRequestModel):
 class V2PostNotificationResponseModel(StrictBaseModel):
     """Common attributes for the POST /v2/notifications/<:notification_type> routes response."""
 
-    id: Annotated[UUID4, BeforeValidator(uuid4_before_validator)]
+    id: UUID4 | Annotated[str, UUID4]
     billing_code: str | None = Field(max_length=256, default=None)
     callback_url: HttpUrl | None = Field(max_length=255, default=None)
     reference: str | None

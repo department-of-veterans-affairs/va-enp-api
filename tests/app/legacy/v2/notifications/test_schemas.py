@@ -3,7 +3,7 @@
 The tests cover Pydantic models that have custom validation.
 """
 
-from uuid import UUID, uuid1, uuid4
+from uuid import uuid4
 
 import pytest
 from pydantic import ValidationError
@@ -14,58 +14,7 @@ from app.legacy.v2.notifications.route_schema import (
     V2PostEmailRequestModel,
     V2PostNotificationRequestModel,
     V2PostSmsRequestModel,
-    parse_uuid4,
-    uuid4_before_validator,
 )
-
-
-@pytest.mark.parametrize(
-    'value',
-    [None, uuid4(), str(uuid4())],
-)
-def test_uuid4_before_validator_valid_data(value: str | UUID | None) -> None:
-    """Valid data should retrun a UUID object."""
-    result = uuid4_before_validator(value)
-
-    if value is None:
-        assert result is None
-    else:
-        assert isinstance(result, UUID)
-
-
-@pytest.mark.parametrize(
-    ('value', 'error_msg'),
-    [
-        ('', 'Expected a valid UUID4'),
-        ('foo', 'Expected a valid UUID4'),
-        (1, 'Expected a valid UUID4'),
-        (uuid1(), 'UUID must be version 4'),
-    ],
-)
-def test_uuid4_before_validator_invalid_data(value: str | int | UUID, error_msg: str) -> None:
-    """Invalid data should throw ValueError exception."""
-    with pytest.raises(ValueError, match=error_msg):
-        uuid4_before_validator(value)
-
-
-def test_parse_uuid4_valid_data() -> None:
-    """Valid data should retrun a UUID object."""
-    assert isinstance(parse_uuid4(str(uuid4())), UUID)
-
-
-@pytest.mark.parametrize(
-    ('value', 'error_msg'),
-    [
-        ('', 'Expected a valid UUID4'),
-        ('foo', 'Expected a valid UUID4'),
-        ('1', 'Expected a valid UUID4'),
-        (str(uuid1()), 'UUID must be version 4'),
-    ],
-)
-def test_parse_uuid4_invalid_data(value: str, error_msg: str) -> None:
-    """Invalid data should throw ValueError exception."""
-    with pytest.raises(ValueError, match=error_msg):
-        parse_uuid4(value)
 
 
 @pytest.mark.parametrize('data', ({'id_type': id_type} for id_type in IdentifierType))
