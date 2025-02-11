@@ -66,7 +66,7 @@ def test_recipient_identifier_model_id_type_invalid(data: dict[str, str | dict[s
 def test_v2_post_notification_request_model_personalisation_valid_data(
     data: dict[str, str | int | float | list[str | int | float] | dict[str, str]],
 ) -> None:
-    """Valid required data with either spelling of personalisation should not raise ValidationError.
+    """Valid required data should not raise ValidationError.
 
     Test fields common to models extending on V2PostNotificationRequestModel
     """

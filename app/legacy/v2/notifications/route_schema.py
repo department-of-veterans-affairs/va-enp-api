@@ -5,13 +5,13 @@ from typing import Annotated, ClassVar, Collection, Literal
 
 from pydantic import (
     UUID4,
-    AfterValidator,
     AwareDatetime,
     BaseModel,
     ConfigDict,
     EmailStr,
     Field,
     HttpUrl,
+    UrlConstraints,
     model_validator,
 )
 from typing_extensions import Self
@@ -19,31 +19,16 @@ from typing_extensions import Self
 from app.constants import IdentifierType, MobileAppType, NotificationType, PhoneNumberE164
 
 
-def validate_url_scheme(url: HttpUrl | None) -> HttpUrl | None:
-    """Validator to enforce HTTPS scheme for callback URLs.
-
-    This method ensures that the `callback_url` is either:
-    - `None` (if not provided)
-    - A valid HTTPS URL (URLs with `http://` are rejected)
-
-    Args:
-        url (HttpUrl | None): The callback URL to validate.
-
-    Returns:
-        HttpUrl | None: The validated URL if it's HTTPS, or `None` if not provided.
-
-    Raises:
-        ValueError: If the provided URL is not using HTTPS.
-    """
-    if url and url.scheme != 'https':
-        raise ValueError('Only HTTPS URLs are allowed')
-    return url
-
-
 class StrictBaseModel(BaseModel):
     """Base model to enforce strict mode."""
 
     model_config = ConfigDict(strict=True)
+
+
+class HttpsUrl(HttpUrl):
+    """Enforced additional constraints on HttpUrl."""
+
+    _constraints = UrlConstraints(max_length=255, allowed_schemes=['https'])
 
 
 class V2Template(StrictBaseModel):
@@ -101,7 +86,7 @@ class V2GetNotificationResponseModel(StrictBaseModel):
     id: UUID4
     billing_code: str | None = Field(max_length=256, default=None)
     body: str
-    callback_url: HttpUrl | None = Field(max_length=255, default=None)
+    callback_url: HttpsUrl | None = None
     completed_at: AwareDatetime | None
     cost_in_millicents: float
     created_at: AwareDatetime
@@ -153,11 +138,7 @@ class V2PostNotificationRequestModel(StrictBaseModel):
     """Common attributes for the POST /v2/notifications/<:notification_type> routes request."""
 
     billing_code: str | None = Field(max_length=256, default=None)
-    callback_url: Annotated[
-        HttpUrl | None,
-        Field(max_length=255, default=None),
-        AfterValidator(validate_url_scheme),
-    ] = None
+    callback_url: HttpsUrl | None = None
     personalisation: dict[str, str | int | float | list[str | int | float] | PersonalisationFileObject] | None = None
 
     recipient_identifier: RecipientIdentifierModel | None = None
@@ -261,10 +242,10 @@ class V2PostNotificationResponseModel(StrictBaseModel):
 
     id: UUID4 | Annotated[str, UUID4]
     billing_code: str | None = Field(max_length=256, default=None)
-    callback_url: HttpUrl | None = Field(max_length=255, default=None)
+    callback_url: HttpsUrl | None = None
     reference: str | None
     template: V2Template
-    uri: HttpUrl
+    uri: HttpsUrl
     scheduled_for: datetime.datetime | None = None
 
 
