@@ -2,31 +2,111 @@
 
 import datetime
 from typing import Annotated, ClassVar, Collection, Literal
+from uuid import UUID
 
 from pydantic import (
     UUID4,
+    AfterValidator,
     AwareDatetime,
     BaseModel,
+    BeforeValidator,
+    ConfigDict,
     EmailStr,
     Field,
     HttpUrl,
-    field_validator,
     model_validator,
 )
 from typing_extensions import Self
 
-from app.constants import AttachmentSendingMethodType, IdentifierType, MobileAppType, NotificationType, USNumberType
+from app.constants import AttachmentSendingMethodType, IdentifierType, MobileAppType, NotificationType, PhoneNumberE164
 
 
-class V2Template(BaseModel):
+def uuid4_before_validator(value: str | UUID | None) -> UUID | None:
+    """Validates and converts input to a UUID v4 object allowing None for defaults.
+
+    Args:
+        value (Any): The input value to validate. It can be:
+            - A UUID v4 object.
+            - A string representation of a UUID v4.
+            - None
+
+    Returns:
+        UUID | None: A validated UUID v4 object or None as a dafault.
+
+    Raises:
+        ValueError: If the input is not a valid UUID v4 or cannot be converted into one.
+    """
+    if value is None:
+        return None
+
+    if isinstance(value, UUID):
+        if value.version != 4:
+            raise ValueError('UUID must be version 4')
+        return value
+
+    if isinstance(value, str):
+        return parse_uuid4(value)
+
+    raise ValueError('Expected a valid UUID4 (string or UUID object)')
+
+
+def parse_uuid4(value: str) -> UUID:
+    """Parses and validates a UUID v4 from a string.
+
+    Args:
+        value (str): A string representation of a UUID v4.
+
+    Returns:
+        UUID: A validated UUID v4 object or None as a dafault.
+
+    Raises:
+        ValueError: If the input cannot be converted to a UUID v4.
+    """
+    try:
+        uuid_obj = UUID(value)
+        if uuid_obj.version != 4:
+            raise ValueError('UUID must be version 4')
+        return uuid_obj
+    except ValueError:
+        raise ValueError('Expected a valid UUID4 (string or UUID object)')
+
+
+def validate_url_scheme(url: HttpUrl | None) -> HttpUrl | None:
+    """Validator to enforce HTTPS scheme for callback URLs.
+
+    This method ensures that the `callback_url` is either:
+    - `None` (if not provided)
+    - A valid HTTPS URL (URLs with `http://` are rejected)
+
+    Args:
+        url (HttpUrl | None): The callback URL to validate.
+
+    Returns:
+        HttpUrl | None: The validated URL if it's HTTPS, or `None` if not provided.
+
+    Raises:
+        ValueError: If the provided URL is not using HTTPS.
+    """
+    if url and url.scheme != 'https':
+        raise ValueError('Only HTTPS URLs are allowed')
+    return url
+
+
+class StrictBaseModel(BaseModel):
+    """Base model to enforce strict mode."""
+
+    model_config = ConfigDict(strict=True)
+
+
+class V2Template(StrictBaseModel):
     """V2 templates have an associated version to conform to the notification-api database schema."""
 
-    id: UUID4
+    id: Annotated[UUID4, BeforeValidator(uuid4_before_validator)]
     uri: HttpUrl
     version: int
 
 
-class RecipientIdentifierModel(BaseModel):
+class RecipientIdentifierModel(StrictBaseModel):
     """Used to look up contact information from VA Profile or MPI."""
 
     id_type: IdentifierType
@@ -38,10 +118,10 @@ class RecipientIdentifierModel(BaseModel):
 ##################################################
 
 
-class V2PostPushRequestModel(BaseModel):
+class V2PostPushRequestModel(StrictBaseModel):
     """Request model for the v2 push notification endpoint."""
 
-    class ICNRecipientIdentifierModel(BaseModel):
+    class ICNRecipientIdentifierModel(StrictBaseModel):
         """Model for ICN recipient identifier."""
 
         # Created a specific enum for ICN so api spec is clear, and only "ICN" is allowed.
@@ -55,7 +135,7 @@ class V2PostPushRequestModel(BaseModel):
     personalisation: dict[str, str | int | float] | None = None
 
 
-class V2PostPushResponseModel(BaseModel):
+class V2PostPushResponseModel(StrictBaseModel):
     """Response model for v2 push notification endpoint."""
 
     result: str = 'success'
@@ -66,7 +146,7 @@ class V2PostPushResponseModel(BaseModel):
 ##################################################
 
 
-class V2GetNotificationResponseModel(BaseModel):
+class V2GetNotificationResponseModel(StrictBaseModel):
     """Common attributes for the GET /v2/notifications/<:id> route response."""
 
     id: UUID4
@@ -102,9 +182,8 @@ class V2GetSmsNotificationResponseModel(V2GetNotificationResponseModel):
     """Additional attributes when getting an SMS notification."""
 
     email_address: None
-    # Restrict this to a valid phone number, in the 'US' region.
-    phone_number: USNumberType
-    sms_sender_id: UUID4
+    phone_number: PhoneNumberE164
+    sms_sender_id: Annotated[UUID4, BeforeValidator(uuid4_before_validator)]
     subject: None
 
 
@@ -113,7 +192,7 @@ class V2GetSmsNotificationResponseModel(V2GetNotificationResponseModel):
 ##################################################
 
 
-class PersonalisationFileObject(BaseModel):
+class PersonalisationFileObject(StrictBaseModel):
     """Personalisation file attachment object."""
 
     file: str
@@ -121,40 +200,22 @@ class PersonalisationFileObject(BaseModel):
     sending_method: AttachmentSendingMethodType | None = None
 
 
-class V2PostNotificationRequestModel(BaseModel):
+class V2PostNotificationRequestModel(StrictBaseModel):
     """Common attributes for the POST /v2/notifications/<:notification_type> routes request."""
 
     billing_code: str | None = Field(max_length=256, default=None)
-    callback_url: HttpUrl | None = Field(max_length=255, default=None)
+    callback_url: Annotated[
+        HttpUrl | None,
+        Field(max_length=255, default=None),
+        AfterValidator(validate_url_scheme),
+    ] = None
     personalisation: dict[str, str | int | float | list[str | int | float] | PersonalisationFileObject] | None = None
 
     recipient_identifier: RecipientIdentifierModel | None = None
     reference: str | None = None
-    template_id: UUID4
+    template_id: Annotated[UUID4, BeforeValidator(uuid4_before_validator)]
     scheduled_for: datetime.datetime | None = None
-    email_reply_to_id: UUID4 | None = None
-
-    @field_validator('callback_url')
-    @classmethod
-    def validate_url_scheme(cls, url: HttpUrl | None) -> HttpUrl | None:
-        """Validator to enforce HTTPS scheme for callback URLs.
-
-        This method ensures that the `callback_url` is either:
-        - `None` (if not provided)
-        - A valid HTTPS URL (URLs with `http://` are rejected)
-
-        Args:
-            url (HttpUrl | None): The callback URL to validate.
-
-        Returns:
-            HttpUrl | None: The validated URL if it's HTTPS, or `None` if not provided.
-
-        Raises:
-            ValueError: If the provided URL is not using HTTPS.
-        """
-        if url and url.scheme != 'https':
-            raise ValueError('Only HTTPS URLs are allowed')
-        return url
+    email_reply_to_id: Annotated[UUID | None, BeforeValidator(uuid4_before_validator)] = None
 
 
 class V2PostEmailRequestModel(V2PostNotificationRequestModel):
@@ -183,8 +244,8 @@ class V2PostEmailRequestModel(V2PostNotificationRequestModel):
 class V2PostSmsRequestModel(V2PostNotificationRequestModel):
     """Attributes specific to requests to send SMS notifications."""
 
-    phone_number: Annotated[USNumberType | None, 'US phone number in E.164 format'] = None
-    sms_sender_id: UUID4 | None = None
+    phone_number: PhoneNumberE164 | None = None
+    sms_sender_id: Annotated[UUID | None, BeforeValidator(uuid4_before_validator)] = None
 
     json_schema_extra: ClassVar[dict[str, dict[str, Collection[str]]]] = {
         'examples': {
@@ -227,7 +288,7 @@ class V2PostSmsRequestModel(V2PostNotificationRequestModel):
 
     @model_validator(mode='after')
     def phone_number_or_recipient_id(self) -> Self:
-        """At least one, of "phone_number" or "recipient_identifier" must not be None.
+        """At least one, of 'phone_number' or 'recipient_identifier' must not be None.
 
         Raises:
             ValueError: Bad input
@@ -246,10 +307,10 @@ class V2PostSmsRequestModel(V2PostNotificationRequestModel):
 ##################################################
 
 
-class V2PostNotificationResponseModel(BaseModel):
+class V2PostNotificationResponseModel(StrictBaseModel):
     """Common attributes for the POST /v2/notifications/<:notification_type> routes response."""
 
-    id: UUID4
+    id: Annotated[UUID4, BeforeValidator(uuid4_before_validator)]
     billing_code: str | None = Field(max_length=256, default=None)
     callback_url: HttpUrl | None = Field(max_length=255, default=None)
     reference: str | None
@@ -258,7 +319,7 @@ class V2PostNotificationResponseModel(BaseModel):
     scheduled_for: datetime.datetime | None = None
 
 
-class V2EmailContentModel(BaseModel):
+class V2EmailContentModel(StrictBaseModel):
     """The content body of a response for sending an e-mail notification."""
 
     body: str
@@ -271,11 +332,11 @@ class V2PostEmailResponseModel(V2PostNotificationResponseModel):
     content: V2EmailContentModel
 
 
-class V2SmsContentModel(BaseModel):
+class V2SmsContentModel(StrictBaseModel):
     """The content body of a response for sending an SMS notification."""
 
     body: str
-    from_number: USNumberType
+    from_number: PhoneNumberE164
 
 
 class V2PostSmsResponseModel(V2PostNotificationResponseModel):

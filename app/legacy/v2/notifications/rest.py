@@ -9,7 +9,7 @@ from loguru import logger
 from pydantic import HttpUrl
 
 from app.auth import JWTBearer
-from app.constants import USNumberType
+from app.constants import PhoneNumberE164
 from app.dao.notifications_dao import dao_create_notification
 from app.db.models import Notification, Template
 from app.legacy.v2.notifications.route_schema import (
@@ -124,6 +124,6 @@ async def create_sms_notification(
         uri=HttpUrl('https://example.com'),
         content=V2SmsContentModel(
             body='example',
-            from_number=USNumberType('+18005550101'),
+            from_number=PhoneNumberE164('+18005550101'),
         ),
     )

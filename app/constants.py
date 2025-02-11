@@ -54,8 +54,7 @@ class OSPlatformType(StrEnum):
     IOS = 'IOS'
 
 
-class USNumberType(PhoneNumber):
-    """Annotated type for US phone numbers."""
+class PhoneNumberE164(PhoneNumber):
+    """Annotated type for phone numbers in E164 format."""
 
-    supported_regions = ['US']  # noqa: RUF012
     phone_format: str = PhoneNumberFormat.to_string(PhoneNumberFormat.E164)

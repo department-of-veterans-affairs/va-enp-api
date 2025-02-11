@@ -8,7 +8,7 @@ from uuid import uuid4
 import pytest
 from pydantic import ValidationError
 
-from app.constants import IdentifierType
+from app.constants import AttachmentSendingMethodType, IdentifierType
 from app.legacy.v2.notifications.route_schema import (
     RecipientIdentifierModel,
     V2PostEmailRequestModel,
@@ -54,7 +54,11 @@ def test_recipient_identifier_model_id_type_invalid(data: dict[str, str | dict[s
         {'personalisation': {'field': {'file': 'U29tZSByYW5kb20gZmlsZSBkYXRh', 'filename': 'filename'}}},
         {
             'personalisation': {
-                'field': {'file': 'U29tZSByYW5kb20gZmlsZSBkYXRh', 'filename': 'filename', 'sending_method': 'attach'}
+                'field': {
+                    'file': 'U29tZSByYW5kb20gZmlsZSBkYXRh',
+                    'filename': 'filename',
+                    'sending_method': AttachmentSendingMethodType.ATTACH,
+                }
             }
         },
     ],
@@ -148,7 +152,7 @@ def test_v2_post_notification_request_model_callback_url_invalid(url: str) -> No
     'data',
     [
         {'email_address': 'test@va.gov'},
-        {'recipient_identifier': {'id_type': 'ICN', 'id_value': 'test'}},
+        {'recipient_identifier': {'id_type': IdentifierType.ICN, 'id_value': 'test'}},
     ],
     ids=(
         'e-mail address',
@@ -195,8 +199,11 @@ invalid_phone_number = '+5555555555'
     'data',
     [
         {'phone_number': valid_phone_number},
-        {'recipient_identifier': {'id_type': 'ICN', 'id_value': 'test'}},
-        {'phone_number': valid_phone_number, 'recipient_identifier': {'id_type': 'ICN', 'id_value': 'test'}},
+        {'recipient_identifier': {'id_type': IdentifierType.ICN, 'id_value': 'test'}},
+        {
+            'phone_number': valid_phone_number,
+            'recipient_identifier': {'id_type': IdentifierType.ICN, 'id_value': 'test'},
+        },
     ],
     ids=(
         'phone number',
