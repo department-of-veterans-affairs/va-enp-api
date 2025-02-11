@@ -18,7 +18,7 @@ from pydantic import (
 )
 from typing_extensions import Self
 
-from app.constants import AttachmentSendingMethodType, IdentifierType, MobileAppType, NotificationType, PhoneNumberE164
+from app.constants import IdentifierType, MobileAppType, NotificationType, PhoneNumberE164
 
 
 def uuid4_before_validator(value: str | int | UUID | None) -> UUID | None:
@@ -200,7 +200,7 @@ class PersonalisationFileObject(StrictBaseModel):
 
     file: str
     filename: str = Field(..., min_length=3, max_length=255)
-    sending_method: Annotated[AttachmentSendingMethodType | None, Field(strict=False)] = None
+    sending_method: Literal['attach', 'link'] | None = None
 
 
 class V2PostNotificationRequestModel(StrictBaseModel):
