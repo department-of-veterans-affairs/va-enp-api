@@ -111,7 +111,8 @@ class V2Template(StrictBaseModel):
 class RecipientIdentifierModel(StrictBaseModel):
     """Used to look up contact information from VA Profile or MPI."""
 
-    id_type: IdentifierType
+    # StrEnum validation should not need strict coercion
+    id_type: Annotated[IdentifierType, Field(strict=False)]
     id_value: str
 
 
@@ -130,7 +131,7 @@ class V2PostPushRequestModel(StrictBaseModel):
         id_type: Literal[IdentifierType.ICN]
         id_value: str
 
-    mobile_app: MobileAppType
+    mobile_app: Annotated[MobileAppType, Field(strict=False)]
     # This is a string in the Flask API. It will be a UUID4 in v3.
     template_id: str
     recipient_identifier: ICNRecipientIdentifierModel
@@ -168,7 +169,7 @@ class V2GetNotificationResponseModel(StrictBaseModel):
     status: str
     status_reason: str | None
     template: V2Template
-    type: NotificationType
+    type: Annotated[NotificationType, Field(strict=False)]
 
 
 class V2GetEmailNotificationResponseModel(V2GetNotificationResponseModel):
@@ -199,7 +200,7 @@ class PersonalisationFileObject(StrictBaseModel):
 
     file: str
     filename: str = Field(..., min_length=3, max_length=255)
-    sending_method: AttachmentSendingMethodType | None = None
+    sending_method: Annotated[AttachmentSendingMethodType | None, Field(strict=False)] = None
 
 
 class V2PostNotificationRequestModel(StrictBaseModel):
