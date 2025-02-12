@@ -6,13 +6,17 @@ from uuid import uuid4
 
 from fastapi import APIRouter, BackgroundTasks, Body, Depends, HTTPException, Request, status
 from loguru import logger
-from pydantic import HttpUrl
+from pydantic import UUID4, HttpUrl
+from sqlalchemy import text
+from sqlalchemy.ext.asyncio import AsyncSession, async_scoped_session
 
 from app.auth import JWTBearer
 from app.constants import USNumberType
 from app.dao.notifications_dao import dao_create_notification
+from app.db.db_init import get_api_read_session_with_depends
 from app.db.models import Notification, Template
 from app.legacy.v2.notifications.route_schema import (
+    V2GetNotificationResponseModel,
     V2PostPushRequestModel,
     V2PostPushResponseModel,
     V2PostSmsRequestModel,
@@ -127,3 +131,54 @@ async def create_sms_notification(
             from_number=USNumberType('+18005550101'),
         ),
     )
+
+
+@v2_legacy_notification_router.get(
+    '/{notification_id}',
+    status_code=status.HTTP_200_OK,
+)
+async def get_notification(
+    notification_id: UUID4,
+    db_session: Annotated[async_scoped_session[AsyncSession], Depends(get_api_read_session_with_depends)],
+) -> V2GetNotificationResponseModel:
+    """Get a notification.
+
+    Args:
+        notification_id (UUID4): The notification to get
+
+    Raises:
+        HTTPException: If the notification is not found
+
+    Returns:
+        UUID4: The notification object
+
+    """
+    async with db_session() as session:
+        sql = 'SELECT * FROM notifications WHERE id = :notification_id'
+        result = await session.execute(text(sql), {'notification_id': str(notification_id)})
+        logger.debug(vars(result))
+        notification = result.fetchone()
+        logger.debug(notification)
+        if not notification:
+            logger.error(f'Notification with id {notification_id} not found')
+            raise HTTPException(status_code=404, detail='Notification not found')
+
+        return V2GetNotificationResponseModel(
+            id=notification.id,
+            billing_code=notification.billing_code,
+            callback_url=notification.callback_url,
+            cost_in_millicents=notification.cost_in_millicents,
+            created_at=notification.created_at,
+            created_by_name=notification.created_by_id,
+            reference=notification.reference,
+            segments_count=notification.segments_count,
+            sent_at=notification.sent_at,
+            sent_by=notification.sent_by,
+            status=notification.notification_status,
+            status_reason=notification.status_reason,
+            template=V2Template(
+                id=notification.template_id,
+                version=notification.template_version,
+            ),
+            type=notification.notification_type,
+        )

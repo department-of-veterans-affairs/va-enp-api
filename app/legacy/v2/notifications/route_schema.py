@@ -2,7 +2,7 @@
 
 from typing import ClassVar, Collection, Literal
 
-from pydantic import UUID4, AwareDatetime, BaseModel, EmailStr, Field, HttpUrl, model_validator
+from pydantic import UUID4, AwareDatetime, BaseModel, EmailStr, Field, HttpUrl, NaiveDatetime, model_validator
 from typing_extensions import Self
 
 from app.constants import IdentifierType, MobileAppType, NotificationType, USNumberType
@@ -12,7 +12,7 @@ class V2Template(BaseModel):
     """V2 templates have an associated version to conform to the notification-api database schema."""
 
     id: UUID4
-    uri: HttpUrl
+    uri: HttpUrl | None = None
     version: int
 
 
@@ -61,14 +61,13 @@ class V2GetNotificationResponseModel(BaseModel):
 
     id: UUID4
     billing_code: str | None = Field(max_length=256, default=None)
-    body: str
+    body: str | None = None
     callback_url: HttpUrl | None = Field(max_length=255, default=None)
-    completed_at: AwareDatetime | None
     cost_in_millicents: float
-    created_at: AwareDatetime
+    created_at: NaiveDatetime
     created_by_name: str | None
-    provider_reference: str | None
-    recipient_identifiers: list[RecipientIdentifierModel] | None
+    provider_reference: str | None = None
+    recipient_identifiers: list[RecipientIdentifierModel] | None = None
     reference: str | None
     segments_count: int
     sent_at: AwareDatetime | None
