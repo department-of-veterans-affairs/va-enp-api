@@ -31,56 +31,23 @@ async def init_db() -> None:
     # call to "run_sync" will not create anything.
     import app.db.models  # noqa
 
-    # These methods are copy/paste due to globals.
-    await create_api_read_engine()
-    await create_api_write_engine()
-    await create_read_engine()
-    await create_write_engine()
-
-async def create_api_write_engine() -> None:
-    """Create the async write engine."""
-    global _engine_api_write
-    # Create the write database engine.
-    # echo=True logs the queries that are executed.  Set it to False to disable these logs.
-    _engine_api_write = create_async_engine(API_DB_WRITE_URI)
-
-
-async def create_write_engine() -> None:
-    """Create the async write engine."""
-    global _engine_write
-    # Create the write database engine.
-    # echo=True logs the queries that are executed.  Set it to False to disable these logs.
-    _engine_write = create_async_engine(DB_WRITE_URI, echo=False)
-    async with _engine_write.begin() as conn:
-        try:
-            await conn.run_sync(Base.metadata.create_all)
-            # assert False
-        except IntegrityError:  # pragma: no cover
-            # Async workers on a fresh container will try to create tables at the same time - No deployed impact
-            pass
-
-
-async def create_api_read_engine() -> None:
-    """Create the async read engine."""
-    global _engine_api_read
-    # Create the read database engine.
-    # echo=True logs the queries that are executed.  Set it to False to disable these logs.
-    _engine_api_read = create_async_engine(API_DB_READ_URI, echo=False)
-    async with create_async_engine(API_DB_READ_URI).begin() as conn:
-        try:
-            await conn.run_sync(Base.metadata.create_all)
-        except IntegrityError:  # pragma: no cover
-            # Async workers on a fresh container will try to create tables at the same time - No deployed impact    
-            pass
-
-
-async def create_read_engine(context="enp") -> None:
-    """Create the async read engine."""
     global _engine_read
-    # Create the read database engine.
+    global _engine_write
+    global _engine_api_read
+    global _engine_api_write
+
+    _engine_read = create_async_engine(DB_READ_URI, echo=False)
+    _engine_write = create_async_engine(DB_WRITE_URI, echo=False)
+    _engine_api_read = create_async_engine(API_DB_READ_URI, echo=False) 
+    _engine_api_write = create_async_engine(API_DB_WRITE_URI, echo=False)
+
+    await init_enp_engine(_engine_read)
+    await init_enp_engine(_engine_write)
+
+
+async def init_enp_engine(engine) -> None:
     # echo=True logs the queries that are executed.  Set it to False to disable these logs.
-    _engine_read = create_async_engine(DB_READ_URI)
-    async with _engine_read.begin() as conn:
+    async with engine.begin() as conn:
         try:
             await conn.run_sync(Base.metadata.create_all)
         except IntegrityError:  # pragma: no cover
