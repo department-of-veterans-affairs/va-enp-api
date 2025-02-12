@@ -1,6 +1,5 @@
 """Request and Response bodies for /v2/notifications."""
 
-import datetime
 from typing import Annotated, ClassVar, Collection, Literal
 
 from pydantic import (
@@ -247,7 +246,7 @@ class V2PostNotificationResponseModel(StrictBaseModel):
     reference: str | None
     template: V2Template
     uri: HttpsUrl
-    scheduled_for: datetime.datetime | None = None
+    scheduled_for: Annotated[AwareDatetime, Field(strict=False)] | None = None
 
 
 class V2EmailContentModel(StrictBaseModel):
