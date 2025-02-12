@@ -7,7 +7,7 @@ import pytest
 from fastapi import BackgroundTasks, status
 from fastapi.encoders import jsonable_encoder
 
-from app.constants import IdentifierType, MobileAppType, USNumberType
+from app.constants import IdentifierType, MobileAppType, PhoneNumberE164
 from app.db.models import Template
 from app.legacy.v2.notifications.route_schema import (
     V2PostPushRequestModel,
@@ -188,7 +188,7 @@ class TestNotificationRouter:
         request = V2PostSmsRequestModel(
             reference='test',
             template_id=template_id,
-            phone_number=USNumberType('+18005550101'),
+            phone_number=PhoneNumberE164('+18005550101'),
             sms_sender_id=sms_sender_id,
         )
         payload = jsonable_encoder(request)

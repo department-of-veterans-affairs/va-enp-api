@@ -97,7 +97,7 @@ def create_app() -> CustomFastAPI:
 
 
 app: CustomFastAPI = create_app()
-Instrumentator().instrument(app, metric_namespace="enp", metric_subsystem="api").expose(app)
+Instrumentator().instrument(app, metric_namespace='enp', metric_subsystem='api').expose(app)
 
 
 @app.get('/enp')

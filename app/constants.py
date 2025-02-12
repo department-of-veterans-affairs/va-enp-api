@@ -15,6 +15,13 @@ RESPONSE_404 = 'Not found'
 RESPONSE_500 = 'Server error'
 
 
+class AttachmentType(StrEnum):
+    """Types of file attachment methods that can be used."""
+
+    ATTACH = 'attach'
+    LINK = 'link'
+
+
 class IdentifierType(StrEnum):
     """Types of Identifiers that can be used."""
 
@@ -47,8 +54,7 @@ class OSPlatformType(StrEnum):
     IOS = 'IOS'
 
 
-class USNumberType(PhoneNumber):
-    """Annotated type for US phone numbers."""
+class PhoneNumberE164(PhoneNumber):
+    """Annotated type for phone numbers in E164 format."""
 
-    supported_regions = ['US']  # noqa: RUF012
     phone_format: str = PhoneNumberFormat.to_string(PhoneNumberFormat.E164)

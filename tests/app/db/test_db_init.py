@@ -46,7 +46,7 @@ async def test_close_db(
     mock_engine_read: AsyncMock,
     mock_engine_write: AsyncMock,
     mock_engine_api_read: AsyncMock,
-    mock_engine_api_write: AsyncMock
+    mock_engine_api_write: AsyncMock,
 ) -> None:
     """Test the close_db function to ensure db engines are closed when called."""
     mock_engine_api_read.dispose = AsyncMock()
@@ -60,6 +60,7 @@ async def test_close_db(
     mock_engine_api_write.dispose.assert_called_once()
     mock_engine_read.dispose.assert_called_once()
     mock_engine_write.dispose.assert_called_once()
+
 
 def test_get_db_session_success() -> None:
     """Test the get_db_session function returns the expected values."""

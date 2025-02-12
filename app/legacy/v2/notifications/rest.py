@@ -6,16 +6,17 @@ from uuid import uuid4
 
 from fastapi import APIRouter, BackgroundTasks, Body, Depends, HTTPException, Request, status
 from loguru import logger
-from pydantic import UUID4, HttpUrl
+from pydantic import UUID4
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession, async_scoped_session
 
 from app.auth import JWTBearer
-from app.constants import USNumberType
+from app.constants import PhoneNumberE164
 from app.dao.notifications_dao import dao_create_notification
 from app.db.db_init import get_api_read_session_with_depends
 from app.db.models import Notification, Template
 from app.legacy.v2.notifications.route_schema import (
+    HttpsUrl,
     V2GetNotificationResponseModel,
     V2PostPushRequestModel,
     V2PostPushResponseModel,
@@ -118,17 +119,17 @@ async def create_sms_notification(
     return V2PostSmsResponseModel(
         id=uuid4(),
         billing_code='123456',
-        callback_url=HttpUrl('https://example.com'),
+        callback_url=HttpsUrl('https://example.com'),
         reference='123456',
         template=V2Template(
             id=uuid4(),
-            uri=HttpUrl('https://example.com'),
+            uri=HttpsUrl('https://example.com'),
             version=1,
         ),
-        uri=HttpUrl('https://example.com'),
+        uri=HttpsUrl('https://example.com'),
         content=V2SmsContentModel(
             body='example',
-            from_number=USNumberType('+18005550101'),
+            from_number=PhoneNumberE164('+18005550101'),
         ),
     )
 
@@ -145,12 +146,13 @@ async def get_notification(
 
     Args:
         notification_id (UUID4): The notification to get
+        db_session (async_scoped_session): The database session
 
     Raises:
         HTTPException: If the notification is not found
 
-    Returnslist:
-        UUID4: The notification object
+    Returns:
+        V2GetNotificationResponseModel: The notification
 
     """
     async with db_session() as session:
