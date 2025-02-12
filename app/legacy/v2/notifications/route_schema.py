@@ -130,6 +130,8 @@ class PersonalisationFileObject(StrictBaseModel):
     file: str
     filename: str = Field(..., min_length=3, max_length=255)
     # Note: Annotated strEnum SHOULD work but doesn't here
+    # a) This object is used for email attachments.
+    # b) This should be revisitied when email is worked.
     # sending_method: Annotated[AttachmentType, Field(strict=False)] | None = None
     sending_method: Literal['attach', 'link'] | None = None
 
