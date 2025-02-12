@@ -35,22 +35,31 @@ async def test_init_db(mock_create_async_engine: Mock, read_uri_value: str) -> N
 
     await init_db()
 
-    assert mock_create_async_engine.call_count == 2 if read_uri_value else 1
-    # assert mock_conn.run_sync.call_count == 2 if DB_READ_URI else 1
+    assert mock_create_async_engine.call_count == 5 if read_uri_value else 1
 
 
+@patch('app.db.db_init._engine_api_read', spec=AsyncEngine)
+@patch('app.db.db_init._engine_api_write', spec=AsyncEngine)
 @patch('app.db.db_init._engine_write', spec=AsyncMock)
 @patch('app.db.db_init._engine_read', spec=AsyncMock)
-async def test_close_db(mock_engine_read: AsyncMock, mock_engine_write: AsyncMock) -> None:
+async def test_close_db(
+    mock_engine_read: AsyncMock,
+    mock_engine_write: AsyncMock,
+    mock_engine_api_read: AsyncMock,
+    mock_engine_api_write: AsyncMock
+) -> None:
     """Test the close_db function to ensure db engines are closed when called."""
+    mock_engine_api_read.dispose = AsyncMock()
+    mock_engine_api_write.dispose = AsyncMock()
     mock_engine_read.dispose = AsyncMock()
     mock_engine_write.dispose = AsyncMock()
 
     await close_db()
 
+    mock_engine_api_read.dispose.assert_called_once()
+    mock_engine_api_write.dispose.assert_called_once()
     mock_engine_read.dispose.assert_called_once()
     mock_engine_write.dispose.assert_called_once()
-
 
 def test_get_db_session_success() -> None:
     """Test the get_db_session function returns the expected values."""

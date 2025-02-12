@@ -149,7 +149,7 @@ async def get_notification(
     Raises:
         HTTPException: If the notification is not found
 
-    Returns:
+    Returnslist:
         UUID4: The notification object
 
     """
