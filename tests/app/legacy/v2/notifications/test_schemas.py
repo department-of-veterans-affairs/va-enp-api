@@ -14,6 +14,9 @@ from app.legacy.v2.notifications.route_schema import (
     V2PostSmsRequestModel,
 )
 
+VALID_PHONE_NUMBER = '+17045555555'
+INVALID_PHONE_NUMBER = '+5555555555'
+
 ######################################################################
 # Test POST e-mail schemas
 ######################################################################
@@ -62,17 +65,13 @@ def test_v2_post_email_request_model_invalid(data: dict[str, str | dict[str, str
 ######################################################################
 
 
-valid_phone_number = '+17045555555'
-invalid_phone_number = '+5555555555'
-
-
 @pytest.mark.parametrize(
     'data',
     [
-        {'phone_number': valid_phone_number},
+        {'phone_number': VALID_PHONE_NUMBER},
         {'recipient_identifier': {'id_type': IdentifierType.ICN, 'id_value': 'test'}},
         {
-            'phone_number': valid_phone_number,
+            'phone_number': VALID_PHONE_NUMBER,
             'recipient_identifier': {'id_type': IdentifierType.ICN, 'id_value': 'test'},
         },
     ],
@@ -93,7 +92,7 @@ def test_v2_post_sms_request_model_valid(data: dict[str, str | dict[str, str]]) 
     'data',
     [
         {},
-        {'phone_number': invalid_phone_number},
+        {'phone_number': INVALID_PHONE_NUMBER},
     ],
     ids=(
         'neither phone number nor recipient ID',
