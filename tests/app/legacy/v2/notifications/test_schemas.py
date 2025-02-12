@@ -8,7 +8,14 @@ from uuid import uuid4
 import pytest
 from pydantic import ValidationError
 
-from app.legacy.v2.notifications.route_schema import V2PostEmailRequestModel, V2PostSmsRequestModel
+from app.constants import IdentifierType
+from app.legacy.v2.notifications.route_schema import (
+    V2PostEmailRequestModel,
+    V2PostSmsRequestModel,
+)
+
+VALID_PHONE_NUMBER = '+17045555555'
+INVALID_PHONE_NUMBER = '+5555555555'
 
 ######################################################################
 # Test POST e-mail schemas
@@ -19,7 +26,7 @@ from app.legacy.v2.notifications.route_schema import V2PostEmailRequestModel, V2
     'data',
     [
         {'email_address': 'test@va.gov'},
-        {'recipient_identifier': {'id_type': 'ICN', 'id_value': 'test'}},
+        {'recipient_identifier': {'id_type': IdentifierType.ICN, 'id_value': 'test'}},
     ],
     ids=(
         'e-mail address',
@@ -61,16 +68,21 @@ def test_v2_post_email_request_model_invalid(data: dict[str, str | dict[str, str
 @pytest.mark.parametrize(
     'data',
     [
-        {'phone_number': '+17045555555'},
-        {'recipient_identifier': {'id_type': 'ICN', 'id_value': 'test'}},
+        {'phone_number': VALID_PHONE_NUMBER},
+        {'recipient_identifier': {'id_type': IdentifierType.ICN, 'id_value': 'test'}},
+        {
+            'phone_number': VALID_PHONE_NUMBER,
+            'recipient_identifier': {'id_type': IdentifierType.ICN, 'id_value': 'test'},
+        },
     ],
     ids=(
         'phone number',
         'recipient ID',
+        'phone number and recipient ID',
     ),
 )
 def test_v2_post_sms_request_model_valid(data: dict[str, str | dict[str, str]]) -> None:
-    """Valid data with an e-mail address should not raise ValidationError."""
+    """Valid required data should not raise ValidationError."""
     data['sms_sender_id'] = str(uuid4())
     data['template_id'] = str(uuid4())
     assert isinstance(V2PostSmsRequestModel.model_validate(data), V2PostSmsRequestModel)
@@ -80,12 +92,10 @@ def test_v2_post_sms_request_model_valid(data: dict[str, str | dict[str, str]]) 
     'data',
     [
         {},
-        {'phone_number': '+17045555555', 'recipient_identifier': {'id_type': 'ICN', 'id_value': 'test'}},
-        {'phone_number': '+5555555555'},
+        {'phone_number': INVALID_PHONE_NUMBER},
     ],
     ids=(
         'neither phone number nor recipient ID',
-        'phone number and recipient ID',
         'invalid us phone number',
     ),
 )
