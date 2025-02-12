@@ -34,7 +34,7 @@ class HttpsUrl(HttpUrl):
 class V2Template(StrictBaseModel):
     """V2 templates have an associated version to conform to the notification-api database schema."""
 
-    id: UUID4 | Annotated[str, UUID4]
+    id: Annotated[UUID4, Field(strict=False)]
     uri: HttpUrl
     version: int
 
@@ -42,7 +42,6 @@ class V2Template(StrictBaseModel):
 class RecipientIdentifierModel(StrictBaseModel):
     """Used to look up contact information from VA Profile or MPI."""
 
-    # StrEnum validation should not need strict coercion
     id_type: Annotated[IdentifierType, Field(strict=False)]
     id_value: str
 
@@ -83,7 +82,7 @@ class V2PostPushResponseModel(StrictBaseModel):
 class V2GetNotificationResponseModel(StrictBaseModel):
     """Common attributes for the GET /v2/notifications/<:id> route response."""
 
-    id: UUID4
+    id: Annotated[UUID4, Field(strict=False)]
     billing_code: str | None = Field(max_length=256, default=None)
     body: str
     callback_url: HttpsUrl | None = None
@@ -117,7 +116,7 @@ class V2GetSmsNotificationResponseModel(V2GetNotificationResponseModel):
 
     email_address: None
     phone_number: PhoneNumberE164
-    sms_sender_id: UUID4 | Annotated[str, UUID4]
+    sms_sender_id: Annotated[UUID4, Field(strict=False)]
     subject: None
 
 
@@ -131,6 +130,8 @@ class PersonalisationFileObject(StrictBaseModel):
 
     file: str
     filename: str = Field(..., min_length=3, max_length=255)
+    # Note: Annotated strEnum SHOULD work but doesn't here
+    # sending_method: Annotated[AttachmentType, Field(strict=False)] | None = None
     sending_method: Literal['attach', 'link'] | None = None
 
 
@@ -143,9 +144,9 @@ class V2PostNotificationRequestModel(StrictBaseModel):
 
     recipient_identifier: RecipientIdentifierModel | None = None
     reference: str | None = None
-    template_id: UUID4 | Annotated[str, UUID4]
-    scheduled_for: datetime.datetime | None = None
-    email_reply_to_id: UUID4 | Annotated[str, UUID4] | None = None
+    template_id: Annotated[UUID4, Field(strict=False)]
+    scheduled_for: Annotated[AwareDatetime, Field(strict=False)] | None = None
+    email_reply_to_id: Annotated[UUID4, Field(strict=False)] | None = None
 
 
 class V2PostEmailRequestModel(V2PostNotificationRequestModel):
@@ -175,7 +176,7 @@ class V2PostSmsRequestModel(V2PostNotificationRequestModel):
     """Attributes specific to requests to send SMS notifications."""
 
     phone_number: PhoneNumberE164 | None = None
-    sms_sender_id: UUID4 | Annotated[str, UUID4] | None = None
+    sms_sender_id: Annotated[UUID4, Field(strict=False)] | None = None
 
     json_schema_extra: ClassVar[dict[str, dict[str, Collection[str]]]] = {
         'examples': {
@@ -240,7 +241,7 @@ class V2PostSmsRequestModel(V2PostNotificationRequestModel):
 class V2PostNotificationResponseModel(StrictBaseModel):
     """Common attributes for the POST /v2/notifications/<:notification_type> routes response."""
 
-    id: UUID4 | Annotated[str, UUID4]
+    id: Annotated[UUID4, Field(strict=False)]
     billing_code: str | None = Field(max_length=256, default=None)
     callback_url: HttpsUrl | None = None
     reference: str | None

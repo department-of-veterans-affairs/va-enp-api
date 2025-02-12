@@ -15,7 +15,7 @@ RESPONSE_404 = 'Not found'
 RESPONSE_500 = 'Server error'
 
 
-class AttachmentSendingMethodType(StrEnum):
+class AttachmentType(StrEnum):
     """Types of file attachment methods that can be used."""
 
     ATTACH = 'attach'
