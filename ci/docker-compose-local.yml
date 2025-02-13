@@ -4,7 +4,7 @@ services:
       context: ..
       dockerfile: ./ci/Dockerfile
       args:
-        POETRY_ARGS: --with static_tools,test,mkdocs
+        POETRY_ARGS: --with static_tools,test,mkdocs,dev_tools
         TEST_FOLDER: tests
     container_name: enp-api
     ports:
