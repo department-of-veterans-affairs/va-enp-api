@@ -26,7 +26,6 @@ pydantic_extra_types = "*"
 sqlalchemy = {extras = ["asyncio"], version = "*"}
 tenacity = "*"
 uvicorn-worker = "*"
-prometheus-fastapi-instrumentator = "*"
 
 [tool.poetry.group.test]
 optional = true
@@ -46,7 +45,6 @@ mypy = "*"
 pre-commit = "*"
 ruff = "*"
 types-aiobotocore = {extras = ["essential"], version = "*"}
-ipython = "*"
 
 [tool.poetry.group.mkdocs]
 optional = true
@@ -56,6 +54,13 @@ mkdocs = "*"
 mkdocstrings = {extras = ["python"], version = "*"}
 mkdocs-material = "*"
 mkdocs-gen-files = "*"
+
+[tool.poetry.group.dev_tools]
+optional = true
+
+[tool.poetry.group.dev_tools.dependencies]
+pdbpp = "*"
+ipython = "*"
 
 [tool.bandit]
 skips = ["B101"]  # https://bandit.readthedocs.io/en/latest/plugins/b101_assert_used.html
