@@ -156,14 +156,18 @@ async def get_notification(
 
     """
     async with db_session() as session:
-        sql = 'SELECT * FROM notifications WHERE id = :notification_id'
+        cols = (
+            "id, billing_code, callback_url, cost_in_millicents, created_at, created_by_id, reference, segments_count, "
+            "sent_at, sent_by, notification_status, status_reason, template_id, template_version, notification_type"
+        )
+        sql = f'SELECT {cols} FROM notifications WHERE id = :notification_id'
         result = await session.execute(text(sql), {'notification_id': str(notification_id)})
         logger.debug(vars(result))
         notification = result.fetchone()
         logger.debug(notification)
         if not notification:
             logger.error(f'Notification with id {notification_id} not found')
-            raise HTTPException(status_code=404, detail='Notification not found')
+            raise HTTPException(status_code=404, detail=f'Notification {notification_id} not found')
 
         return V2GetNotificationResponseModel(
             id=notification.id,
