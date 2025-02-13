@@ -13,7 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_scoped_session
 from app.auth import JWTBearer
 from app.constants import PhoneNumberE164
 from app.dao.notifications_dao import dao_create_notification
-from app.db.db_init import get_api_read_session_with_depends
+from app.db.db_init import get_read_session_with_depends
 from app.db.models import Notification, Template
 from app.legacy.v2.notifications.route_schema import (
     HttpsUrl,
@@ -140,7 +140,8 @@ async def create_sms_notification(
 )
 async def get_notification(
     notification_id: UUID4,
-    db_session: Annotated[async_scoped_session[AsyncSession], Depends(get_api_read_session_with_depends)],
+    db_session: Annotated[async_scoped_session[AsyncSession], Depends(get_read_session_with_depends)],
+    db_source: str = 'api',
 ) -> V2GetNotificationResponseModel:
     """Get a notification.
 
