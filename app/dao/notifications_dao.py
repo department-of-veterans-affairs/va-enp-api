@@ -1,6 +1,8 @@
 """The data access objects for notifications."""
 
-from app.db.db_init import get_write_session_with_context
+from pydantic import UUID4
+from sqlalchemy import text
+from app.db.db_init import get_api_read_session_with_context, get_write_session_with_context, _metadata_legacy
 from app.db.models import Notification
 
 
@@ -21,4 +23,12 @@ async def dao_create_notification(notification: Notification) -> Notification:  
         await session.commit()
         await session.refresh(notification)
 
+    return notification
+
+
+async def dao_get_notification(notification_id: UUID4):
+    async with get_api_read_session_with_context() as session:
+        query = text('SELECT * FROM notifications WHERE id = :id')
+        result = await session.execute(query, {'id': notification_id})
+        notification = result.fetchone()
     return notification
