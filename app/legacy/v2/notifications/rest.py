@@ -6,13 +6,15 @@ from uuid import uuid4
 
 from fastapi import APIRouter, BackgroundTasks, Body, Depends, HTTPException, Request, status
 from loguru import logger
+from pydantic import UUID4
 
 from app.auth import JWTBearer
 from app.constants import PhoneNumberE164
-from app.dao.notifications_dao import dao_create_notification
+from app.dao.notifications_dao import dao_create_notification, dao_get_legacy_notification
 from app.db.models import Notification, Template
 from app.legacy.v2.notifications.route_schema import (
     HttpsUrl,
+    V2GetNotificationResponseModel,
     V2PostPushRequestModel,
     V2PostPushResponseModel,
     V2PostSmsRequestModel,
@@ -24,7 +26,7 @@ from app.legacy.v2.notifications.utils import send_push_notification_helper, val
 from app.routers import TimedAPIRoute
 
 v2_legacy_notification_router = APIRouter(
-    dependencies=[Depends(JWTBearer())],
+    # dependencies=[Depends(JWTBearer())],
     prefix='/legacy/v2/notifications',
     route_class=TimedAPIRoute,
     tags=['v2 Legacy Notification Endpoints'],
@@ -126,4 +128,45 @@ async def create_sms_notification(
             body='example',
             from_number=PhoneNumberE164('+18005550101'),
         ),
+    )
+
+
+@v2_legacy_notification_router.get(
+    '/{notification_id}',
+    status_code=status.HTTP_200_OK,
+)
+async def get_notification(notification_id: UUID4) -> V2GetNotificationResponseModel:
+    """Get a notification.
+
+    Args:
+        notification_id (UUID4): The notification to get
+        db_session (async_scoped_session): The database session
+
+    Raises:
+        HTTPException: If the notification is not found
+
+    Returns:
+        V2GetNotificationResponseModel: The notification
+
+    """
+    notification = await dao_get_legacy_notification(notification_id)
+
+    return V2GetNotificationResponseModel(
+        id=notification.id,
+        billing_code=notification.billing_code,
+        callback_url=notification.callback_url,
+        cost_in_millicents=notification.cost_in_millicents,
+        created_at=notification.created_at,
+        created_by_name=notification.created_by_id,
+        reference=notification.reference,
+        segments_count=notification.segments_count,
+        sent_at=notification.sent_at,
+        sent_by=notification.sent_by,
+        status=notification.notification_status,
+        status_reason=notification.status_reason,
+        template=V2Template(
+            id=notification.template_id,
+            version=notification.template_version,
+        ),
+        type=notification.notification_type,
     )

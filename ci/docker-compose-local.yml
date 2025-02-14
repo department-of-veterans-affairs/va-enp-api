@@ -1,10 +1,10 @@
 services:
-  api:
+  enp:
     build:
       context: ..
       dockerfile: ./ci/Dockerfile
       args:
-        POETRY_ARGS: --with static_tools,test,mkdocs
+        POETRY_ARGS: --with static_tools,test,mkdocs,dev_tools
         TEST_FOLDER: tests
     container_name: enp-api
     ports:
@@ -16,12 +16,16 @@ services:
       - "../app/:/app/app/:rw"
       - "../tests/:/app/tests/:rw"
 
-  enp-db:
-    image: postgres:16
-    container_name: enp-db
+  postgres:
+    image: postgres:15
+    restart: unless-stopped
     ports:
       - 5432:5432
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: LocalPassword
-      POSTGRES_DB: va-enp-api-db
+      - POSTGRES_DB=notification_api
+      - POSTGRES_PASSWORD=LocalPassword
+
+networks:
+  default:
+    name: va-notify
+    external: true

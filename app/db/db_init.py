@@ -5,6 +5,7 @@ from typing import AsyncIterator
 
 from fastapi.concurrency import asynccontextmanager
 from loguru import logger
+from sqlalchemy import MetaData
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import (
     AsyncEngine,
@@ -14,11 +15,14 @@ from sqlalchemy.ext.asyncio import (
     create_async_engine,
 )
 
-from app.db import DB_READ_URI, DB_WRITE_URI
+from app.db import API_DB_READ_URI, API_DB_WRITE_URI, DB_READ_URI, DB_WRITE_URI
 from app.db.base import Base
 
 _engine_read = None
 _engine_write = None
+_engine_api_read = None
+_engine_api_write = None
+_metadata_legacy = MetaData()
 
 
 async def init_db() -> None:
@@ -29,39 +33,51 @@ async def init_db() -> None:
     # call to "run_sync" will not create anything.
     import app.db.models  # noqa
 
-    # These methods are copy/paste due to globals.
-    await create_write_engine()
-    await create_read_engine()
-
-
-async def create_write_engine() -> None:
-    """Create the async write engine."""
-    global _engine_write
-    # Create the write database engine.
-    # echo=True logs the queries that are executed.  Set it to False to disable these logs.
-    _engine_write = create_async_engine(DB_WRITE_URI, echo=False)
-    async with _engine_write.begin() as conn:
-        try:
-            print(f'{_engine_write} - {conn}')
-            await conn.run_sync(Base.metadata.create_all)
-            # assert False
-        except IntegrityError:  # pragma: no cover
-            # Async workers on a fresh container will try to create tables at the same time - No deployed impact
-            pass
-
-
-async def create_read_engine() -> None:
-    """Create the async read engine."""
     global _engine_read
-    # Create the read database engine.
-    # echo=True logs the queries that are executed.  Set it to False to disable these logs.
+    global _engine_write
+    global _engine_api_read
+    global _engine_api_write
+
     _engine_read = create_async_engine(DB_READ_URI, echo=False)
-    async with _engine_read.begin() as conn:
+    _engine_write = create_async_engine(DB_WRITE_URI, echo=False)
+    _engine_api_read = create_async_engine(API_DB_READ_URI, echo=False)
+    _engine_api_write = create_async_engine(API_DB_WRITE_URI, echo=False)
+
+    await init_enp_engine(_engine_read)
+    await init_enp_engine(_engine_write)
+
+    await init_api_engine(_engine_api_read)
+    await init_api_engine(_engine_api_write)
+
+
+async def init_enp_engine(engine: AsyncEngine) -> None:
+    """Initialize the ENP database engine.
+
+    Args:
+        engine: The database engine to initialize
+
+    """
+    # echo=True logs the queries that are executed.  Set it to False to disable these logs.
+    async with engine.begin() as conn:
         try:
             await conn.run_sync(Base.metadata.create_all)
         except IntegrityError:  # pragma: no cover
             # Async workers on a fresh container will try to create tables at the same time - No deployed impact
             pass
+
+
+async def init_api_engine(engine: AsyncEngine) -> None:
+    """Initialize the API database engine.
+
+    Args:
+        engine: The database engine to initialize
+
+    """
+    global _metadata_legacy
+
+    async with engine.connect() as conn:
+        # Reflect the api tables, using the api read engine, and ApiBase.
+        await conn.run_sync(_metadata_legacy.reflect)
 
 
 async def close_db() -> None:
@@ -71,6 +87,12 @@ async def close_db() -> None:
 
     if _engine_write is not None:
         await _engine_write.dispose()
+
+    if _engine_api_read is not None:
+        await _engine_api_read.dispose()
+
+    if _engine_api_write is not None:
+        await _engine_api_write.dispose()
 
 
 def get_db_session(db_engine: AsyncEngine | None, engine_type: str) -> async_sessionmaker[AsyncSession]:
@@ -112,6 +134,23 @@ async def get_read_session_with_depends() -> AsyncIterator[async_scoped_session[
         await session.close()
 
 
+async def get_api_read_session_with_depends() -> AsyncIterator[async_scoped_session[AsyncSession]]:
+    """Retrieve an async read session context that self-closes.
+
+    Yields:
+        session (async_scoped_session): An asynchronous `read` scoped session
+
+    """
+    session = async_scoped_session(
+        session_factory=get_db_session(_engine_api_read, 'read'),
+        scopefunc=current_task,
+    )
+    try:
+        yield session
+    finally:
+        await session.close()
+
+
 @asynccontextmanager
 async def get_read_session_with_context() -> AsyncIterator[async_scoped_session[AsyncSession]]:
     """Retrieve an async read session context that self-closes. This should be used when NOT using FastAPI's Depends.
@@ -122,6 +161,24 @@ async def get_read_session_with_context() -> AsyncIterator[async_scoped_session[
     """
     session = async_scoped_session(
         session_factory=get_db_session(_engine_read, 'read'),
+        scopefunc=current_task,
+    )
+    try:
+        yield session
+    finally:
+        await session.close()
+
+
+@asynccontextmanager
+async def get_api_read_session_with_context() -> AsyncIterator[async_scoped_session[AsyncSession]]:
+    """Retrieve an async read session context that self-closes. This should be used when NOT using FastAPI's Depends.
+
+    Yields:
+        session (async_scoped_session): An asynchronous `read` scoped session
+
+    """
+    session = async_scoped_session(
+        session_factory=get_db_session(_engine_api_read, 'read'),
         scopefunc=current_task,
     )
     try:

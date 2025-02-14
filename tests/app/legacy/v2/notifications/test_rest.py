@@ -212,3 +212,34 @@ class TestNotificationRouter:
         response = client.post(route)
 
         assert response.status_code == status.HTTP_400_BAD_REQUEST
+
+    async def test_returns_404_with_missing_notification(
+        self,
+        client: ENPTestClient,
+    ) -> None:
+        """Test route can return 404.
+
+        Args:
+            client (ENPTestClient): Custom FastAPI client fixture
+
+        """
+        response = client.get('/v2/notifications/123456')
+
+        assert response.status_code == status.HTTP_404_NOT_FOUND
+        assert response.json() == {'detail': 'Notification not found.'}
+
+    async def test_returns_200_with_notification(
+        self,
+        client: ENPTestClient,
+    ) -> None:
+        """Test route can return 200.
+
+        Args:
+            client (ENPTestClient): Custom FastAPI client fixture
+
+        """
+        # Create a notification in the api database
+
+        response = client.get('/v2/notifications/123456')
+
+        assert response.status_code == status.HTTP_200_OK

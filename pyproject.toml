@@ -55,6 +55,13 @@ mkdocstrings = {extras = ["python"], version = "*"}
 mkdocs-material = "*"
 mkdocs-gen-files = "*"
 
+[tool.poetry.group.dev_tools]
+optional = true
+
+[tool.poetry.group.dev_tools.dependencies]
+pdbpp = "*"
+ipython = "*"
+
 [tool.bandit]
 skips = ["B101"]  # https://bandit.readthedocs.io/en/latest/plugins/b101_assert_used.html
 

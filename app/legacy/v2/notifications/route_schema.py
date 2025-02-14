@@ -10,6 +10,7 @@ from pydantic import (
     EmailStr,
     Field,
     HttpUrl,
+    NaiveDatetime,
     UrlConstraints,
     model_validator,
 )
@@ -34,7 +35,7 @@ class V2Template(StrictBaseModel):
     """V2 templates have an associated version to conform to the notification-api database schema."""
 
     id: Annotated[UUID4, Field(strict=False)]
-    uri: HttpUrl
+    uri: HttpUrl | None = None
     version: int
 
 
@@ -83,14 +84,13 @@ class V2GetNotificationResponseModel(StrictBaseModel):
 
     id: Annotated[UUID4, Field(strict=False)]
     billing_code: str | None = Field(max_length=256, default=None)
-    body: str
+    body: str | None = None
     callback_url: HttpsUrl | None = None
-    completed_at: AwareDatetime | None
     cost_in_millicents: float
-    created_at: AwareDatetime
+    created_at: NaiveDatetime
     created_by_name: str | None
-    provider_reference: str | None
-    recipient_identifiers: list[RecipientIdentifierModel] | None
+    provider_reference: str | None = None
+    recipient_identifiers: list[RecipientIdentifierModel] | None = None
     reference: str | None
     segments_count: int
     sent_at: AwareDatetime | None
