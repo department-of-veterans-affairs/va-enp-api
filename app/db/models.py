@@ -95,6 +95,3 @@ class Template(TimestampMixin, Base):
         # This method supports #26.  When this class contains more columns, including the template
         # body, finish this implementation, and remove any associated mocking in the tests for #26.
         raise NotImplementedError
-
-
-    
