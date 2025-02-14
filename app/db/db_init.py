@@ -40,7 +40,7 @@ async def init_db() -> None:
 
     _engine_read = create_async_engine(DB_READ_URI, echo=False)
     _engine_write = create_async_engine(DB_WRITE_URI, echo=False)
-    _engine_api_read = create_async_engine(API_DB_READ_URI, echo=False) 
+    _engine_api_read = create_async_engine(API_DB_READ_URI, echo=False)
     _engine_api_write = create_async_engine(API_DB_WRITE_URI, echo=False)
 
     await init_enp_engine(_engine_read)
@@ -50,7 +50,13 @@ async def init_db() -> None:
     await init_api_engine(_engine_api_write)
 
 
-async def init_enp_engine(engine) -> None:
+async def init_enp_engine(engine: AsyncEngine) -> None:
+    """Initialize the ENP database engine.
+
+    Args:
+        engine: The database engine to initialize
+
+    """
     # echo=True logs the queries that are executed.  Set it to False to disable these logs.
     async with engine.begin() as conn:
         try:
@@ -60,7 +66,8 @@ async def init_enp_engine(engine) -> None:
             pass
 
 
-async def init_api_engine(engine) -> None:
+async def init_api_engine(engine: AsyncEngine) -> None:
+    global _metadata_legacy
     # echo=True logs the queries that are executed.  Set it to False to disable these logs.
     async with engine.connect() as conn:
         # Reflect the api tables, using the api read engine, and ApiBase.
@@ -77,7 +84,7 @@ async def close_db() -> None:
 
     if _engine_api_read is not None:
         await _engine_api_read.dispose()
-    
+
     if _engine_api_write is not None:
         await _engine_api_write.dispose()
 
@@ -171,7 +178,7 @@ async def get_api_read_session_with_context() -> AsyncIterator[async_scoped_sess
     try:
         yield session
     finally:
-        await session.close()   
+        await session.close()
 
 
 # I believe @asynccontextmanager is not needed here as long as we are using it as a dependency with Depends

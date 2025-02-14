@@ -7,13 +7,10 @@ from uuid import uuid4
 from fastapi import APIRouter, BackgroundTasks, Body, Depends, HTTPException, Request, status
 from loguru import logger
 from pydantic import UUID4
-from sqlalchemy import text
-from sqlalchemy.ext.asyncio import AsyncSession, async_scoped_session
 
 from app.auth import JWTBearer
 from app.constants import PhoneNumberE164
 from app.dao.notifications_dao import dao_create_notification, dao_get_legacy_notification
-from app.db.db_init import get_read_session_with_depends
 from app.db.models import Notification, Template
 from app.legacy.v2.notifications.route_schema import (
     HttpsUrl,
@@ -27,11 +24,9 @@ from app.legacy.v2.notifications.route_schema import (
 )
 from app.legacy.v2.notifications.utils import send_push_notification_helper, validate_template
 from app.routers import TimedAPIRoute
-from app.v3.notifications.route_schema import NotificationSingleResponse
-
 
 v2_legacy_notification_router = APIRouter(
-    dependencies=[Depends(JWTBearer())],
+    # dependencies=[Depends(JWTBearer())],
     prefix='/legacy/v2/notifications',
     route_class=TimedAPIRoute,
     tags=['v2 Legacy Notification Endpoints'],
@@ -140,8 +135,7 @@ async def create_sms_notification(
     '/{notification_id}',
     status_code=status.HTTP_200_OK,
 )
-async def get_notification(
-    notification_id: UUID4) -> V2GetNotificationResponseModel:
+async def get_notification(notification_id: UUID4) -> V2GetNotificationResponseModel:
     """Get a notification.
 
     Args:

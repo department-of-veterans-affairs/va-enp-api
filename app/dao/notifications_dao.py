@@ -1,8 +1,10 @@
 """The data access objects for notifications."""
 
+from loguru import logger
 from pydantic import UUID4
-from sqlalchemy import text
-from app.db.db_init import get_api_read_session_with_context, get_write_session_with_context, _metadata_legacy
+from sqlalchemy import Row, select
+
+from app.db.db_init import _metadata_legacy, get_api_read_session_with_context, get_write_session_with_context
 from app.db.models import Notification
 
 
@@ -26,9 +28,27 @@ async def dao_create_notification(notification: Notification) -> Notification:  
     return notification
 
 
-async def dao_get_legacy_notification(notification_id: UUID4):
+async def dao_get_legacy_notification(notification_id: UUID4) -> tuple[Row]:
+    """Get a notification from the legacy database. This should be considered a placeholder.
+
+    Args:
+        notification_id (UUID4): The ID of the notification to get
+
+    Raises:
+        ValueError: If the notification with the given ID is not found
+
+    Returns:
+        Notification: The notification from the legacy database
+
+    """
+    legacy_notifications = _metadata_legacy.tables['notifications']
+    stmt = select(legacy_notifications).where(legacy_notifications.c.id == notification_id)
     async with get_api_read_session_with_context() as session:
-        query = text('SELECT * FROM notifications WHERE id = :id')
-        result = await session.execute(query, {'id': notification_id})
+        result = await session.execute(stmt)
         notification = result.fetchone()
-    return notification
+        logger.info(dir(notification))
+        logger.info(notification.tuple())
+    if not notification:
+        raise ValueError(f'Notification with ID {notification_id} not found')
+
+    return notification.tuple()
