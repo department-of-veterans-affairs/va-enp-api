@@ -12,7 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_scoped_session
 
 from app.auth import JWTBearer
 from app.constants import PhoneNumberE164
-from app.dao.notifications_dao import dao_create_notification, dao_get_notification
+from app.dao.notifications_dao import dao_create_notification, dao_get_legacy_notification
 from app.db.db_init import get_read_session_with_depends
 from app.db.models import Notification, Template
 from app.legacy.v2.notifications.route_schema import (
@@ -155,7 +155,7 @@ async def get_notification(
         V2GetNotificationResponseModel: The notification
 
     """
-    notification = await dao_get_notification(notification_id)
+    notification = await dao_get_legacy_notification(notification_id)
 
     return V2GetNotificationResponseModel(
         id=notification.id,
