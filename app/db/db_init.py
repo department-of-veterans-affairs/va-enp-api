@@ -67,8 +67,14 @@ async def init_enp_engine(engine: AsyncEngine) -> None:
 
 
 async def init_api_engine(engine: AsyncEngine) -> None:
+    """Initialize the API database engine.
+
+    Args:
+        engine: The database engine to initialize
+
+    """
     global _metadata_legacy
-    # echo=True logs the queries that are executed.  Set it to False to disable these logs.
+
     async with engine.connect() as conn:
         # Reflect the api tables, using the api read engine, and ApiBase.
         await conn.run_sync(_metadata_legacy.reflect)

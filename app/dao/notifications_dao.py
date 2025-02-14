@@ -28,7 +28,7 @@ async def dao_create_notification(notification: Notification) -> Notification:  
     return notification
 
 
-async def dao_get_legacy_notification(notification_id: UUID4) -> tuple[Row]:
+async def dao_get_legacy_notification(notification_id: UUID4) -> Row:
     """Get a notification from the legacy database. This should be considered a placeholder.
 
     Args:
@@ -46,9 +46,7 @@ async def dao_get_legacy_notification(notification_id: UUID4) -> tuple[Row]:
     async with get_api_read_session_with_context() as session:
         result = await session.execute(stmt)
         notification = result.fetchone()
-        logger.info(dir(notification))
-        logger.info(notification.tuple())
     if not notification:
         raise ValueError(f'Notification with ID {notification_id} not found')
 
-    return notification.tuple()
+    return notification
