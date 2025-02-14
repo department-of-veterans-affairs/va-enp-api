@@ -15,10 +15,15 @@ services:
     volumes:
       - "../app/:/app/app/:rw"
       - "../tests/:/app/tests/:rw"
-    logging:
-      driver: loki
-      options:
-        loki-url: "http://host.docker.internal:3100/loki/api/v1/push"
+
+  postgres:
+    image: postgres:15
+    restart: unless-stopped
+    ports:
+      - 5432:5432
+    environment:
+      - POSTGRES_DB=notification_api
+      - POSTGRES_PASSWORD=LocalPassword
 
 networks:
   default:
