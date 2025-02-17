@@ -6,6 +6,7 @@ from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from datetime import datetime
 from typing import Annotated, Any, AsyncContextManager, Callable, List, Mapping, Never
+from uuid import UUID
 
 from fastapi import Depends, FastAPI, HTTPException, Query, status
 from fastapi.staticfiles import StaticFiles
@@ -256,3 +257,17 @@ async def db_read_test(
         items.extend(await fetch_notifications(session, year_list))
 
     return items
+
+
+# @app.get('/legacy/notifications/{notification_id}', status_code=status.HTTP_200_OK, dependencies=[Depends(JWTBearer())])
+@app.get('/legacy/notifications/{notification_id}', status_code=status.HTTP_200_OK)
+async def get_legacy_notification(notification_id: UUID) -> None:
+    """Get a legacy Notification.
+
+    Args:
+        notification_id (UUID): id of the notification
+    """
+    from app.dao.legacy.notifications_dao import LegacyNotificationDao
+
+    data = await LegacyNotificationDao.get_notification(notification_id)
+    logger.info('Notification data: {}', data._asdict())

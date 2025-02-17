@@ -5,6 +5,7 @@ from typing import AsyncIterator
 
 from fastapi.concurrency import asynccontextmanager
 from loguru import logger
+from sqlalchemy import MetaData
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import (
     AsyncEngine,
@@ -14,11 +15,14 @@ from sqlalchemy.ext.asyncio import (
     create_async_engine,
 )
 
-from app.db import DB_READ_URI, DB_WRITE_URI
+from app.db import API_DB_READ_URI, API_DB_WRITE_URI, DB_READ_URI, DB_WRITE_URI
 from app.db.base import Base
 
-_engine_read = None
-_engine_write = None
+_engine_enp_read: AsyncEngine
+_engine_enp_write: AsyncEngine
+_engine_napi_read: AsyncEngine
+_engine_napi_write: AsyncEngine
+metadata_legacy: MetaData
 
 
 async def init_db() -> None:
@@ -33,44 +37,71 @@ async def init_db() -> None:
     await create_write_engine()
     await create_read_engine()
 
+    # notification_api database connections
+    await init_napi_metadata()
+
 
 async def create_write_engine() -> None:
     """Create the async write engine."""
-    global _engine_write
+    global _engine_enp_write, _engine_napi_write
     # Create the write database engine.
     # echo=True logs the queries that are executed.  Set it to False to disable these logs.
-    _engine_write = create_async_engine(DB_WRITE_URI, echo=False)
-    async with _engine_write.begin() as conn:
+    _engine_enp_write = create_async_engine(DB_WRITE_URI, echo=False)
+    async with _engine_enp_write.begin() as conn:
         try:
-            print(f'{_engine_write} - {conn}')
+            print(f'{_engine_enp_write} - {conn}')
             await conn.run_sync(Base.metadata.create_all)
             # assert False
         except IntegrityError:  # pragma: no cover
             # Async workers on a fresh container will try to create tables at the same time - No deployed impact
             pass
+    # Connect to the notification_api database
+    _engine_napi_write = create_async_engine(API_DB_WRITE_URI, echo=False)
 
 
 async def create_read_engine() -> None:
     """Create the async read engine."""
-    global _engine_read
+    global _engine_enp_read, _engine_napi_read
     # Create the read database engine.
     # echo=True logs the queries that are executed.  Set it to False to disable these logs.
-    _engine_read = create_async_engine(DB_READ_URI, echo=False)
-    async with _engine_read.begin() as conn:
+    _engine_enp_read = create_async_engine(DB_READ_URI, echo=False)
+    async with _engine_enp_read.begin() as conn:
         try:
             await conn.run_sync(Base.metadata.create_all)
         except IntegrityError:  # pragma: no cover
             # Async workers on a fresh container will try to create tables at the same time - No deployed impact
             pass
+    # Connect to the notification_api database
+    _engine_napi_read = create_async_engine(API_DB_READ_URI, echo=False)
+
+
+async def init_napi_metadata() -> None:
+    """Initialize the API database engine.
+
+    Args:
+        engine: The database engine to initialize
+    """
+    global metadata_legacy
+
+    metadata_legacy = MetaData()
+    async with _engine_napi_read.connect() as conn:
+        # Reflect the api tables, using the api read engine, and ApiBase.
+        await conn.run_sync(metadata_legacy.reflect)
 
 
 async def close_db() -> None:
     """Close the database engines."""
-    if _engine_read is not None:
-        await _engine_read.dispose()
+    if _engine_enp_read is not None:
+        await _engine_enp_read.dispose()
 
-    if _engine_write is not None:
-        await _engine_write.dispose()
+    if _engine_enp_write is not None:
+        await _engine_enp_write.dispose()
+
+    if _engine_napi_read is not None:
+        await _engine_napi_read.dispose()
+
+    if _engine_napi_write is not None:
+        await _engine_napi_write.dispose()
 
 
 def get_db_session(db_engine: AsyncEngine | None, engine_type: str) -> async_sessionmaker[AsyncSession]:
@@ -95,15 +126,18 @@ def get_db_session(db_engine: AsyncEngine | None, engine_type: str) -> async_ses
 
 # I believe @asynccontextmanager is not needed here as long as we are using it as a dependency with Depends
 # https://fastapi.tiangolo.com/tutorial/dependencies/dependencies-with-yield/
-async def get_read_session_with_depends() -> AsyncIterator[async_scoped_session[AsyncSession]]:
+async def get_read_session_with_depends(enp: bool = True) -> AsyncIterator[async_scoped_session[AsyncSession]]:
     """Retrieve an async read session context that self-closes.
+
+    Args:
+        enp (bool): True for enp otherwise notification-api
 
     Yields:
         session (async_scoped_session): An asynchronous `read` scoped session
 
     """
     session = async_scoped_session(
-        session_factory=get_db_session(_engine_read, 'read'),
+        session_factory=get_db_session(_engine_enp_read if enp else _engine_napi_read, 'read'),
         scopefunc=current_task,
     )
     try:
@@ -113,15 +147,18 @@ async def get_read_session_with_depends() -> AsyncIterator[async_scoped_session[
 
 
 @asynccontextmanager
-async def get_read_session_with_context() -> AsyncIterator[async_scoped_session[AsyncSession]]:
+async def get_read_session_with_context(enp: bool = True) -> AsyncIterator[async_scoped_session[AsyncSession]]:
     """Retrieve an async read session context that self-closes. This should be used when NOT using FastAPI's Depends.
+
+    Args:
+        enp (bool): True for enp otherwise notification-api
 
     Yields:
         session (async_scoped_session): An asynchronous `read` scoped session
 
     """
     session = async_scoped_session(
-        session_factory=get_db_session(_engine_read, 'read'),
+        session_factory=get_db_session(_engine_enp_read if enp else _engine_napi_read, 'read'),
         scopefunc=current_task,
     )
     try:
@@ -132,15 +169,18 @@ async def get_read_session_with_context() -> AsyncIterator[async_scoped_session[
 
 # I believe @asynccontextmanager is not needed here as long as we are using it as a dependency with Depends
 # https://fastapi.tiangolo.com/tutorial/dependencies/dependencies-with-yield/
-async def get_write_session_with_depends() -> AsyncIterator[async_scoped_session[AsyncSession]]:
+async def get_write_session_with_depends(enp: bool = True) -> AsyncIterator[async_scoped_session[AsyncSession]]:
     """Retrieve an async write session context that self-closes. This should be used when using FastAPI's Depends.
+
+    Args:
+        enp (bool): True for enp otherwise notification-api
 
     Yields:
         session (async_scoped_session): An asynchronous `write` scoped session
 
     """
     session = async_scoped_session(
-        session_factory=get_db_session(_engine_write, 'write'),
+        session_factory=get_db_session(_engine_enp_write if enp else _engine_napi_write, 'write'),
         scopefunc=current_task,
     )
     try:
@@ -150,15 +190,18 @@ async def get_write_session_with_depends() -> AsyncIterator[async_scoped_session
 
 
 @asynccontextmanager
-async def get_write_session_with_context() -> AsyncIterator[async_scoped_session[AsyncSession]]:
+async def get_write_session_with_context(enp: bool = True) -> AsyncIterator[async_scoped_session[AsyncSession]]:
     """Retrieve an async write session context that self-closes.
+
+    Args:
+        enp (bool): True for enp otherwise notification-api
 
     Yields:
         session (async_scoped_session): An asynchronous `write` scoped session
 
     """
     session = async_scoped_session(
-        session_factory=get_db_session(_engine_write, 'write'),
+        session_factory=get_db_session(_engine_enp_write if enp else _engine_napi_write, 'write'),
         scopefunc=current_task,
     )
     try:
