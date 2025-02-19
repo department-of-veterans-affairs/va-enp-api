@@ -42,7 +42,6 @@ async def create_write_engine() -> None:
     _engine_write = create_async_engine(DB_WRITE_URI, echo=False)
     async with _engine_write.begin() as conn:
         try:
-            print(f'{_engine_write} - {conn}')
             await conn.run_sync(Base.metadata.create_all)
             # assert False
         except IntegrityError:  # pragma: no cover
