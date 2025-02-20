@@ -15,7 +15,7 @@ from sqlalchemy.ext.asyncio import (
     create_async_engine,
 )
 
-from app.db import DB_READ_URI, DB_WRITE_URI, NAPI_DB_READ_URI, NAPI_DB_WRITE_URI
+from app.db import ENP_DB_READ_URI, ENP_DB_WRITE_URI, NAPI_DB_READ_URI, NAPI_DB_WRITE_URI
 from app.db.base import Base
 
 _engine_enp_read: AsyncEngine
@@ -46,7 +46,7 @@ async def create_write_engine() -> None:
     global _engine_enp_write, _engine_napi_write
     # Create the write database engine.
     # echo=True logs the queries that are executed.  Set it to False to disable these logs.
-    _engine_enp_write = create_async_engine(DB_WRITE_URI, echo=False)
+    _engine_enp_write = create_async_engine(ENP_DB_WRITE_URI, echo=False)
     async with _engine_enp_write.begin() as conn:
         try:
             await conn.run_sync(Base.metadata.create_all)
@@ -62,7 +62,7 @@ async def create_read_engine() -> None:
     global _engine_enp_read, _engine_napi_read
     # Create the read database engine.
     # echo=True logs the queries that are executed.  Set it to False to disable these logs.
-    _engine_enp_read = create_async_engine(DB_READ_URI, echo=False)
+    _engine_enp_read = create_async_engine(ENP_DB_READ_URI, echo=False)
     async with _engine_enp_read.begin() as conn:
         try:
             await conn.run_sync(Base.metadata.create_all)
