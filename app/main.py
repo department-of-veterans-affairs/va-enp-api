@@ -266,7 +266,7 @@ async def get_legacy_notification(notification_id: UUID) -> None:
     Args:
         notification_id (UUID): id of the notification
     """
-    from app.dao.legacy.notifications_dao import LegacyNotificationDao
+    from app.legacy.dao.notifications_dao import LegacyNotificationDao
 
     data = await LegacyNotificationDao.get_notification(notification_id)
     logger.info('Notification data: {}', data._asdict())
