@@ -2,11 +2,11 @@ fileignoreconfig:
 - filename: .env.example
   checksum: f04bd8b8a51131d412bea4b8098e714ca01f4c7475eeb0a40d196d922070ba43
 - filename: .env.local
-  checksum: ec5c9a6223505ba5900b4670c47ff813d0fd3625c7eeb75e362c1f573c5adde5
+  checksum: e64221548efb0246db08e35ce2122157d9a7e985f748367f42c9171f172884c0
 - filename: app/auth.py
   checksum: 06eb4b4c65191921104dc39381a937843a6ce155eeac7dc72990b5d10b5eb275
 - filename: app/db/__init__.py
-  checksum: f1d07a065db17e738b9cab8fd731ea899974b7c798b3e5310d3484a5e806b331
+  checksum: 7373a948a440a47b385309ba07ec140a74c87fcfb6ce933544b0ccc8932da455
 - filename: app/db/models.py
   checksum: 4ef96985d2353c00b229b30078f150ac80b15bd804b2d31c34784671793fec42
 - filename: app/providers/provider_aws.py

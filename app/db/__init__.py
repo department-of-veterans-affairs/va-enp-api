@@ -9,8 +9,8 @@ ENP_DB_WRITE_URI = os.getenv(
 )
 
 NAPI_DB_READ_URI = os.getenv(
-    'API_DB_READ_URI', 'postgresql+psycopg://postgres:LocalPassword@localhost:5432/notification_api'
+    'NAPI_DB_READ_URI', 'postgresql+psycopg://postgres:LocalPassword@localhost:5432/notification_api'
 )
 NAPI_DB_WRITE_URI = os.getenv(
-    'API_DB_WRITE_URI', 'postgresql+psycopg://postgres:LocalPassword@localhost:5432/notification_api'
+    'NAPI_DB_WRITE_URI', 'postgresql+psycopg://postgres:LocalPassword@localhost:5432/notification_api'
 )
