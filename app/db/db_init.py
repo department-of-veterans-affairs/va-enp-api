@@ -33,6 +33,8 @@ async def init_db() -> None:
     await create_write_engine()
     await create_read_engine()
 
+    logger.info('...database engines initialized.')
+
 
 async def create_write_engine() -> None:
     """Create the async write engine."""
