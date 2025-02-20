@@ -15,7 +15,7 @@ from sqlalchemy.ext.asyncio import (
     create_async_engine,
 )
 
-from app.db import API_DB_READ_URI, API_DB_WRITE_URI, DB_READ_URI, DB_WRITE_URI
+from app.db import DB_READ_URI, DB_WRITE_URI, NAPI_DB_READ_URI, NAPI_DB_WRITE_URI
 from app.db.base import Base
 
 _engine_enp_read: AsyncEngine
@@ -49,14 +49,12 @@ async def create_write_engine() -> None:
     _engine_enp_write = create_async_engine(DB_WRITE_URI, echo=False)
     async with _engine_enp_write.begin() as conn:
         try:
-            print(f'{_engine_enp_write} - {conn}')
             await conn.run_sync(Base.metadata.create_all)
-            # assert False
         except IntegrityError:  # pragma: no cover
             # Async workers on a fresh container will try to create tables at the same time - No deployed impact
             pass
     # Connect to the notification_api database
-    _engine_napi_write = create_async_engine(API_DB_WRITE_URI, echo=False)
+    _engine_napi_write = create_async_engine(NAPI_DB_WRITE_URI, echo=False)
 
 
 async def create_read_engine() -> None:
@@ -72,15 +70,11 @@ async def create_read_engine() -> None:
             # Async workers on a fresh container will try to create tables at the same time - No deployed impact
             pass
     # Connect to the notification_api database
-    _engine_napi_read = create_async_engine(API_DB_READ_URI, echo=False)
+    _engine_napi_read = create_async_engine(NAPI_DB_READ_URI, echo=False)
 
 
 async def init_napi_metadata() -> None:
-    """Initialize the API database engine.
-
-    Args:
-        engine: The database engine to initialize
-    """
+    """Initialize the API database engine."""
     global metadata_legacy
 
     metadata_legacy = MetaData()
