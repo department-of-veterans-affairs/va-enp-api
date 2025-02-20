@@ -259,8 +259,7 @@ async def db_read_test(
     return items
 
 
-# @app.get('/legacy/notifications/{notification_id}', status_code=status.HTTP_200_OK, dependencies=[Depends(JWTBearer())])
-@app.get('/legacy/notifications/{notification_id}', status_code=status.HTTP_200_OK)
+@app.get('/legacy/notifications/{notification_id}', status_code=status.HTTP_200_OK, dependencies=[Depends(JWTBearer())])
 async def get_legacy_notification(notification_id: UUID) -> None:
     """Get a legacy Notification.
 
