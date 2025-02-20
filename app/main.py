@@ -10,6 +10,7 @@ from typing import Annotated, Any, AsyncContextManager, Callable, List, Mapping,
 from fastapi import Depends, FastAPI, HTTPException, Query, status
 from fastapi.staticfiles import StaticFiles
 from loguru import logger
+from pydantic import UUID4
 from sqlalchemy import extract, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession, async_scoped_session
 
@@ -256,3 +257,16 @@ async def db_read_test(
         items.extend(await fetch_notifications(session, year_list))
 
     return items
+
+
+@app.get('/legacy/notifications/{notification_id}', status_code=status.HTTP_200_OK, dependencies=[Depends(JWTBearer())])
+async def get_legacy_notification(notification_id: UUID4) -> None:
+    """Get a legacy Notification.
+
+    Args:
+        notification_id (UUID4): id of the notification
+    """
+    from app.legacy.dao.notifications_dao import LegacyNotificationDao
+
+    data = await LegacyNotificationDao.get_notification(notification_id)
+    logger.info('Notification data: {}', data._asdict())

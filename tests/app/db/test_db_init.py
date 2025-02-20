@@ -35,21 +35,32 @@ async def test_init_db(mock_create_async_engine: Mock, read_uri_value: str) -> N
 
     await init_db()
 
-    assert mock_create_async_engine.call_count == 2 if read_uri_value else 1
-    # assert mock_conn.run_sync.call_count == 2 if DB_READ_URI else 1
+    assert mock_create_async_engine.call_count == 4 if read_uri_value else 2
 
 
-@patch('app.db.db_init._engine_write', spec=AsyncMock)
-@patch('app.db.db_init._engine_read', spec=AsyncMock)
-async def test_close_db(mock_engine_read: AsyncMock, mock_engine_write: AsyncMock) -> None:
+# TODO 171, replace these with tests to a running database
+@patch('app.db.db_init._engine_enp_write', spec=AsyncMock)
+@patch('app.db.db_init._engine_enp_read', spec=AsyncMock)
+@patch('app.db.db_init._engine_napi_write', spec=AsyncMock)
+@patch('app.db.db_init._engine_napi_read', spec=AsyncMock)
+async def test_close_db(
+    mock_engine_read_enp: AsyncMock,
+    mock_engine_write_enp: AsyncMock,
+    mock_engine_read_napi: AsyncMock,
+    mock_engine_write_napi: AsyncMock,
+) -> None:
     """Test the close_db function to ensure db engines are closed when called."""
-    mock_engine_read.dispose = AsyncMock()
-    mock_engine_write.dispose = AsyncMock()
+    mock_engine_read_enp.dispose = AsyncMock()
+    mock_engine_write_enp.dispose = AsyncMock()
+    mock_engine_read_napi.dispose = AsyncMock()
+    mock_engine_write_napi.dispose = AsyncMock()
 
     await close_db()
 
-    mock_engine_read.dispose.assert_called_once()
-    mock_engine_write.dispose.assert_called_once()
+    mock_engine_read_enp.dispose.assert_called_once()
+    mock_engine_write_enp.dispose.assert_called_once()
+    mock_engine_read_napi.dispose.assert_called_once()
+    mock_engine_write_napi.dispose.assert_called_once()
 
 
 def test_get_db_session_success() -> None:
@@ -68,8 +79,10 @@ def test_get_db_session_failure() -> None:
 
 
 @patch('app.db.db_init.async_scoped_session', return_value=Mock(spec=async_scoped_session))
-@patch('app.db.db_init._engine_read', Mock(spec=AsyncEngine))
-@patch('app.db.db_init._engine_write', Mock(spec=AsyncEngine))
+@patch('app.db.db_init._engine_enp_read', Mock(spec=AsyncEngine))
+@patch('app.db.db_init._engine_enp_write', Mock(spec=AsyncEngine))
+@patch('app.db.db_init._engine_napi_read', Mock(spec=AsyncEngine))
+@patch('app.db.db_init._engine_napi_write', Mock(spec=AsyncEngine))
 class TestReadWriteSessions:
     """Test the read and write session functions."""
 
@@ -102,35 +115,41 @@ class TestReadWriteSessions:
         mock_session.assert_called_once()
 
 
-@patch('app.db.db_init._engine_write', None)
-@patch('app.db.db_init._engine_read', None)
+@patch('app.db.db_init._engine_enp_write', None)
+@patch('app.db.db_init._engine_enp_read', None)
+@patch('app.db.db_init._engine_napi_write', None)
+@patch('app.db.db_init._engine_napi_read', None)
 class TestReadWriteSessionsFailure:
     """Test the read and write session functions."""
 
-    async def test_get_read_session_failure(self) -> None:
+    @pytest.mark.parametrize('enp', [True, False])
+    async def test_get_read_session_failure(self, enp: bool) -> None:
         """Test the get_read_session function raises a ValueError when the db engine is None."""
         with pytest.raises(ValueError, match=r'The db read engine has not been initialized. None type received.'):
             # fmt: off
-            async for _session in get_read_session_with_depends(): pass  # noqa: E701
+            async for _session in get_read_session_with_depends(enp): pass  # noqa: E701
             # fmt: off
 
-    async def test_get_read_session_with_context_failure(self) -> None:
+    @pytest.mark.parametrize('enp', [True, False])
+    async def test_get_read_session_with_context_failure(self, enp: bool) -> None:
         """Test the get_read_session_with_context function raises a ValueError when the db engine is None."""
         with pytest.raises(ValueError, match=r'The db read engine has not been initialized. None type received.'):
             # fmt: off
-            async with get_read_session_with_context(): pass  # noqa: E701
+            async with get_read_session_with_context(enp): pass  # noqa: E701
             # fmt: on
 
-    async def test_get_write_session_failure(self) -> None:
+    @pytest.mark.parametrize('enp', [True, False])
+    async def test_get_write_session_failure(self, enp: bool) -> None:
         """Test the get_write_session function raises a ValueError when the db engine is None."""
         with pytest.raises(ValueError, match=r'The db write engine has not been initialized. None type received.'):
             # fmt: off
-            async for _session in get_write_session_with_depends(): pass  # noqa: E701
+            async for _session in get_write_session_with_depends(enp): pass  # noqa: E701
             # fmt: on
 
-    async def test_get_write_session_with_context_failure(self) -> None:
+    @pytest.mark.parametrize('enp', [True, False])
+    async def test_get_write_session_with_context_failure(self, enp: bool) -> None:
         """Test the get_write_session_with_context function raises a ValueError when the db engine is None."""
         with pytest.raises(ValueError, match=r'The db write engine has not been initialized. None type received.'):
             # fmt: off
-            async with get_write_session_with_context(): pass  # noqa: E701
+            async with get_write_session_with_context(enp): pass  # noqa: E701
             # fmt: on

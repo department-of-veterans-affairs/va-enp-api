@@ -11,7 +11,7 @@ services:
       - 8000:8000
     entrypoint: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
     env_file:
-      - .env.local
+      - .env.docker
     volumes:
       - "../app/:/app/app/:rw"
       - "../tests/:/app/tests/:rw"
@@ -20,7 +20,7 @@ services:
     image: postgres:16
     container_name: enp-db
     ports:
-      - 5432:5432
+      - 5433:5432
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: LocalPassword
