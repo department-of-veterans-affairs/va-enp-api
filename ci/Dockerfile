@@ -63,4 +63,4 @@ RUN if echo "$POETRY_ARGS" | grep -q "mkdocs"; then \
 USER vanotify
 
 # CMD here for running when deployed to infra
-CMD ["gunicorn", "app.main:app", "-b", "0.0.0.0:8000", "-k", "uvicorn_worker.UvicornWorker", "-w", "4"]
+CMD ["gunicorn", "app.main:app", "-b", "0.0.0.0:6012", "-k", "uvicorn_worker.UvicornWorker", "-w", "4"]

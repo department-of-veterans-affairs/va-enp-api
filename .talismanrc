@@ -4,13 +4,13 @@ fileignoreconfig:
 - filename: app/auth.py
   checksum: 06eb4b4c65191921104dc39381a937843a6ce155eeac7dc72990b5d10b5eb275
 - filename: app/db/__init__.py
-  checksum: b079eb426725423f18be76949e3e10ca50ebfdd419f8768c2b7b58ddc41e5e01
+  checksum: 2ed1157e47c229089e0fa226a3215c6741fcd2f092884b488083dd4691aaa24e
 - filename: app/db/models.py
   checksum: 4ef96985d2353c00b229b30078f150ac80b15bd804b2d31c34784671793fec42
 - filename: app/providers/provider_aws.py
   checksum: f345ea8dea997d72c8d40a0cac2a2b1aacacef8959088ba5cc2ea9e5df57c9fd
 - filename: ci/.env.local
-  checksum: cd9c91e000ab1e53c5a89e9e2b316d7c12e7655843ce5af4b361b5edb328774c
+  checksum: b9a695faea7f7f98ad3b1f221938144cc70667f70a8ab9e3828499fe1005d556
 - filename: ci/.local.env
   checksum: 47e9f19fdfb3655ceb51cfee25242e87d45bb05618a1cca6ac2bc8a709e0cdf9
 - filename: ci/docker-compose-local.yml
