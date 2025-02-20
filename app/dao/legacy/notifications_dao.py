@@ -9,7 +9,11 @@ from app.db.db_init import get_read_session_with_context, metadata_legacy
 
 
 class LegacyNotificationDao:
-    """."""
+    """A class to handle the data access for notifications in the legacy database.
+
+    Methods:
+        get_notification: Get a Notification from the legacy database.
+    """
 
     @staticmethod
     async def get_notification(id: UUID4) -> Row[Any]:
