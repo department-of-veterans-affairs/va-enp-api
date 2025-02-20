@@ -38,6 +38,7 @@ async def test_init_db(mock_create_async_engine: Mock, read_uri_value: str) -> N
     assert mock_create_async_engine.call_count == 4 if read_uri_value else 2
 
 
+# TODO 171, replace these with tests to a running database
 @patch('app.db.db_init._engine_enp_write', spec=AsyncMock)
 @patch('app.db.db_init._engine_enp_read', spec=AsyncMock)
 @patch('app.db.db_init._engine_napi_write', spec=AsyncMock)
