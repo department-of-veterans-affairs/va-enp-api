@@ -118,11 +118,11 @@ def is_valid_recipient_id_value(id_type: IdentifierType, id_value: str) -> bool:
 
     """
     id_patterns = {
-        IdentifierType.VA_PROFILE_ID: r'^.+$',  # Any non-empty string
-        IdentifierType.EDIPI: r'^\d{10}$',  # 10-digit numeric string
+        IdentifierType.VA_PROFILE_ID: r'^\d+$',  # Any numeric string
+        IdentifierType.EDIPI: r'^\d+$',  # Any numeric string
         IdentifierType.PID: r'^\d+$',  # Any numeric string
         IdentifierType.ICN: r'^\d{10}V\d{6}$',  # 10 digits + 'V' + 6 digits
-        IdentifierType.BIRLSID: r'^.+$',  # Any non-empty string
+        IdentifierType.BIRLSID: r'^\d+$',  # Any numeric string
     }
 
     # Validate ID format if a pattern exists for the given id_type
