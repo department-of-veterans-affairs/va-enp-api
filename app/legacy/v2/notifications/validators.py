@@ -41,7 +41,8 @@ def validate_and_format_phone_number_pydantic(phone_number: str, international: 
     try:
         return validate_and_format_phone_number(phone_number, international)
     except InvalidPhoneError as e:
-        raise ValueError(e.message)  # Pydantic will catch and format this
+        # Pydantic will catch and format a ValueError
+        raise ValueError(e.message)
 
 
 def validate_and_format_phone_number(phone_number: str, international: bool = False) -> str:
