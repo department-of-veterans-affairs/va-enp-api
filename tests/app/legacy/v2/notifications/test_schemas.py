@@ -16,6 +16,7 @@ from app.legacy.v2.notifications.route_schema import (
 
 VALID_PHONE_NUMBER = '+17045555555'
 INVALID_PHONE_NUMBER = '+5555555555'
+VALID_ICN_VALUE = '1234567890V123456'
 
 ######################################################################
 # Test POST e-mail schemas
@@ -26,7 +27,7 @@ INVALID_PHONE_NUMBER = '+5555555555'
     'data',
     [
         {'email_address': 'test@va.gov'},
-        {'recipient_identifier': {'id_type': IdentifierType.ICN, 'id_value': 'test'}},
+        {'recipient_identifier': {'id_type': IdentifierType.ICN, 'id_value': VALID_ICN_VALUE}},
     ],
     ids=(
         'e-mail address',
@@ -69,10 +70,10 @@ def test_v2_post_email_request_model_invalid(data: dict[str, str | dict[str, str
     'data',
     [
         {'phone_number': VALID_PHONE_NUMBER},
-        {'recipient_identifier': {'id_type': IdentifierType.ICN, 'id_value': 'test'}},
+        {'recipient_identifier': {'id_type': IdentifierType.ICN, 'id_value': VALID_ICN_VALUE}},
         {
             'phone_number': VALID_PHONE_NUMBER,
-            'recipient_identifier': {'id_type': IdentifierType.ICN, 'id_value': 'test'},
+            'recipient_identifier': {'id_type': IdentifierType.ICN, 'id_value': VALID_ICN_VALUE},
         },
     ],
     ids=(

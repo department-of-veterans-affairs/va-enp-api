@@ -17,7 +17,10 @@ from pydantic import (
 from typing_extensions import Self
 
 from app.constants import IdentifierType, MobileAppType, NotificationType
-from app.legacy.v2.notifications.validators import validate_and_format_phone_number_pydantic
+from app.legacy.v2.notifications.validators import (
+    is_valid_recipient_id_value,
+    validate_and_format_phone_number_pydantic,
+)
 
 
 class StrictBaseModel(BaseModel):
@@ -45,6 +48,20 @@ class RecipientIdentifierModel(StrictBaseModel):
 
     id_type: Annotated[IdentifierType, Field(strict=False)]
     id_value: str
+
+    @model_validator(mode='after')
+    def validate_id(self) -> Self:
+        """Validate recipient id_value based on id_type.
+
+        Raises:
+            ValueError: Bad input
+
+        Returns:
+            Self: this instance
+        """
+        if not is_valid_recipient_id_value(self.id_type, self.id_value):
+            raise ValueError(f"Invalid id_value for id_type '{self.id_type}'")
+        return self
 
 
 # Phone number string validated and converted to E164

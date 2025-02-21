@@ -2,7 +2,12 @@
 
 import pytest
 
-from app.legacy.v2.notifications.validators import InvalidPhoneError, validate_and_format_phone_number
+from app.constants import IdentifierType
+from app.legacy.v2.notifications.validators import (
+    InvalidPhoneError,
+    is_valid_recipient_id_value,
+    validate_and_format_phone_number,
+)
 
 
 @pytest.mark.parametrize(
@@ -123,3 +128,27 @@ def test_validate_and_format_phone_number_semicolon(phone_number: str, descripti
     """Invalid phone numbers should raise InvalidPhoneError."""
     with pytest.raises(InvalidPhoneError, match='Not a valid number'):
         validate_and_format_phone_number(phone_number)
+
+
+@pytest.mark.parametrize(
+    ('id_type', 'id_value, expected'),
+    [
+        # Valid Cases (Should Return True)
+        (IdentifierType.VA_PROFILE_ID, 'VA-123', True),  # Any non-empty string
+        (IdentifierType.EDIPI, '1234567890', True),  # 10-digit numeric string
+        (IdentifierType.PID, '987654321', True),  # Any numeric string
+        (IdentifierType.ICN, '1234567890V123456', True),  # 10 digits + 'V' + 6 digits
+        (IdentifierType.BIRLSID, 'BIRLS123', True),  # Any non-empty string
+        # Invalid Cases (Should Return False)
+        (IdentifierType.EDIPI, '1234ABC567', False),  # Non-numeric EDIPI
+        (IdentifierType.ICN, '1234567890123456', False),  # Missing 'V' separator
+        (IdentifierType.ICN, '123456789V123456', False),  # Missing a digit before 'V'
+        (IdentifierType.PID, 'PID123', False),  # Non-numeric PID
+        (IdentifierType.PID, ' ', False),  # Empty string should fail
+        (IdentifierType.BIRLSID, '', False),  # Empty string should fail
+        ('UNKNOWN_TYPE', '12345', False),  # Unknown id_type should return False
+    ],
+)
+def test_is_valid_recipient_id_value(id_type: IdentifierType, id_value: str, expected: bool) -> None:
+    """Test is_valid_recipient_id_value with multiple valid and invalid cases."""
+    assert is_valid_recipient_id_value(id_type, id_value) == expected
