@@ -69,10 +69,6 @@ def validate_and_format_phone_number(phone_number: str, international: bool = Fa
 
     parsed_number = parse_phone_number(phone_number, region)
 
-    # Check if the number is valid
-    if not phonenumbers.is_valid_number(parsed_number):
-        raise InvalidPhoneError('Not a valid number')
-
     # Format to E.164
     e164_number = phonenumbers.format_number(parsed_number, phonenumbers.PhoneNumberFormat.E164)
 

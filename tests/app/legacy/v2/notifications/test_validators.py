@@ -63,6 +63,7 @@ def test_validate_and_format_phone_number_local(phone_number: str, description: 
         ('0919 000 0000', 'Unassigned mobile number prefix (000)'),
         ('0917123456', 'One digit missing in mobile number'),
         ('0917 123 45678', 'One extra digit in mobile number'),
+        ('123-456-7890', 'Invalid area code'),
     ],
 )
 def test_validate_and_format_phone_number_invalid_local(phone_number: str, description: str) -> None:
@@ -107,5 +108,18 @@ def test_validate_and_format_phone_number_international(phone_number: str, descr
 )
 def test_validate_and_format_phone_number_invalid_international(phone_number: str, description: str) -> None:
     """Invalid international phone numbers should raise InvalidPhoneError."""
+    with pytest.raises(InvalidPhoneError, match='Not a valid number'):
+        validate_and_format_phone_number(phone_number)
+
+
+@pytest.mark.parametrize(
+    ('phone_number', 'description'),
+    [
+        ('2025550123;', 'Local with semi-colon'),
+        ('+63 917 123 4567;', 'Philippines with semicolon'),
+    ],
+)
+def test_validate_and_format_phone_number_semicolon(phone_number: str, description: str) -> None:
+    """Invalid phone numbers should raise InvalidPhoneError."""
     with pytest.raises(InvalidPhoneError, match='Not a valid number'):
         validate_and_format_phone_number(phone_number)
