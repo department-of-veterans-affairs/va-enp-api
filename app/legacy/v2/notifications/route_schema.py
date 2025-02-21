@@ -6,6 +6,7 @@ from pydantic import (
     UUID4,
     AwareDatetime,
     BaseModel,
+    BeforeValidator,
     ConfigDict,
     EmailStr,
     Field,
@@ -15,7 +16,8 @@ from pydantic import (
 )
 from typing_extensions import Self
 
-from app.constants import IdentifierType, MobileAppType, NotificationType, PhoneNumberE164
+from app.constants import IdentifierType, MobileAppType, NotificationType
+from app.legacy.v2.notifications.validators import validate_and_format_phone_number_pydantic
 
 
 class StrictBaseModel(BaseModel):
@@ -43,6 +45,10 @@ class RecipientIdentifierModel(StrictBaseModel):
 
     id_type: Annotated[IdentifierType, Field(strict=False)]
     id_value: str
+
+
+# Phone number string validated and converted to E164
+PhoneNumberE164 = Annotated[str, BeforeValidator(validate_and_format_phone_number_pydantic)]
 
 
 ##################################################

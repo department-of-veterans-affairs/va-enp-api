@@ -7,9 +7,10 @@ import pytest
 from fastapi import BackgroundTasks, status
 from fastapi.encoders import jsonable_encoder
 
-from app.constants import IdentifierType, MobileAppType, PhoneNumberE164
+from app.constants import IdentifierType, MobileAppType
 from app.db.models import Template
 from app.legacy.v2.notifications.route_schema import (
+    PhoneNumberE164,
     V2PostPushRequestModel,
     V2PostPushResponseModel,
     V2PostSmsRequestModel,

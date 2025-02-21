@@ -9,9 +9,39 @@ PHONE_REGION_CODE = os.getenv('PHONE_REGION_CODE', 'US')
 
 
 class InvalidPhoneError(Exception):
-    """Invalid phone number."""
+    """Exception raised for invalid phone numbers.
 
-    pass
+    Attributes:
+        message (str): Explanation of the error.
+    """
+
+    def __init__(self, message: str) -> None:
+        """Initialize the exception with a message.
+
+        Args:
+            message (str): The error message describing the invalid phone number.
+        """
+        super().__init__(message)
+        self.message = message
+
+
+def validate_and_format_phone_number_pydantic(phone_number: str, international: bool = False) -> str:
+    """Wrapper to catch InvalidPhoneError and re-raise as ValueError to work as Pydantic validator.
+
+    Args:
+        phone_number (str): A string containing a phone number
+        international (bool): Look for an international number
+
+    Returns:
+        str: A valid phone number in E.164 format
+
+    Raises:
+        ValueError: Unable to parse or number is invalid
+    """
+    try:
+        return validate_and_format_phone_number(phone_number, international)
+    except InvalidPhoneError as e:
+        raise ValueError(e.message)  # Pydantic will catch and format this
 
 
 def validate_and_format_phone_number(phone_number: str, international: bool = False) -> str:

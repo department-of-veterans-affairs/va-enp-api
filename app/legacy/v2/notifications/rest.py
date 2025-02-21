@@ -8,11 +8,11 @@ from fastapi import APIRouter, BackgroundTasks, Body, Depends, HTTPException, Re
 from loguru import logger
 
 from app.auth import JWTBearer
-from app.constants import PhoneNumberE164
 from app.dao.notifications_dao import dao_create_notification
 from app.db.models import Notification, Template
 from app.legacy.v2.notifications.route_schema import (
     HttpsUrl,
+    PhoneNumberE164,
     V2PostPushRequestModel,
     V2PostPushResponseModel,
     V2PostSmsRequestModel,
