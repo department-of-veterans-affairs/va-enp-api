@@ -125,9 +125,9 @@
   "requiresCompatibilities": [
     "FARGATE"
   ],
-  "cpu": "4096",
+  "cpu": "2048",
   "pidMode": "task",
-  "memory": "8192",
+  "memory": "4096",
   "tags": [
     {
       "key": "Stack",
