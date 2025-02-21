@@ -1,14 +1,22 @@
 fileignoreconfig:
 - filename: .env.example
   checksum: f04bd8b8a51131d412bea4b8098e714ca01f4c7475eeb0a40d196d922070ba43
+- filename: .env.local
+  checksum: 60e7f10e36a8635b33bc26945e6336ae183fe603a15169e462027339360a00f4
 - filename: app/auth.py
   checksum: 06eb4b4c65191921104dc39381a937843a6ce155eeac7dc72990b5d10b5eb275
 - filename: app/db/__init__.py
-  checksum: 2ed1157e47c229089e0fa226a3215c6741fcd2f092884b488083dd4691aaa24e
+  checksum: 66575249d84eff02f539737ad2fa9f5a59b1b8982b5a3b8ff114e309ef62303d
 - filename: app/db/models.py
   checksum: 4ef96985d2353c00b229b30078f150ac80b15bd804b2d31c34784671793fec42
 - filename: app/providers/provider_aws.py
   checksum: f345ea8dea997d72c8d40a0cac2a2b1aacacef8959088ba5cc2ea9e5df57c9fd
+- filename: cd/dev.env
+  checksum: 69e405f610647040ff6050811c17422977d19801150ac8e3789f0c4b95b30e42
+- filename: cd/perf.env
+  checksum: e59cd00f3753077027cc2da8448f0bca1cc67207503542e2f823510a1fadd36c
+- filename: ci/.env.docker
+  checksum: 890be824556699720207a1465a09336cc1b48a4227152523401f7ba4f1d393b0
 - filename: ci/.env.local
   checksum: b9a695faea7f7f98ad3b1f221938144cc70667f70a8ab9e3828499fe1005d556
 - filename: ci/.local.env
@@ -16,7 +24,7 @@ fileignoreconfig:
 - filename: ci/docker-compose-local.yml
   checksum: c73beda98c39232441d86f6d6f6f2858274f9703f8a462eac1effacfbb9aa39d
 - filename: poetry.lock
-  checksum: 0d37167f4fd23e1ace7119c3e7b6f3703785876d349897b3f56aed64eeedf237
+  checksum: ff9d7c27a7784c0c340db4d302245ef9a951b62b9998a36d8408d49cdb0ee227
 - filename: scripts/run_tests.sh
   checksum: 80cd986074c12205493156f86b43e732777e2fae75683780006fb1baea90b82b
 - filename: tests/app/providers/__init__.py
