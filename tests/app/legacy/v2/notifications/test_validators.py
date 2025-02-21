@@ -46,7 +46,7 @@ def test_validate_and_format_phone_number_local(phone_number: str, description: 
     This list covers the local number formats accepted by legacy v2 validation
     """
     validated = validate_and_format_phone_number(phone_number)
-    assert validated, description
+    assert validated == '+12025550123', description
 
 
 @pytest.mark.parametrize(
@@ -89,7 +89,7 @@ def test_validate_and_format_phone_number_international(phone_number: str, descr
     This list covers the international number formats accepted by legacy v2 validation
     """
     validated = validate_and_format_phone_number(phone_number)
-    assert validated, description
+    assert validated == '+639171234567', description
 
 
 @pytest.mark.parametrize(
