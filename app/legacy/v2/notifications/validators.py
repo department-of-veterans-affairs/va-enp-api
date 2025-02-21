@@ -14,7 +14,7 @@ class InvalidPhoneError(Exception):
     pass
 
 
-def validate_and_format_phone_number(phone_number: str, international: bool = True) -> str:
+def validate_and_format_phone_number(phone_number: str, international: bool = False) -> str:
     """Validate a phone number string and return its E.164 formatted version if valid.
 
     Args:
@@ -69,8 +69,8 @@ def parse_phone_number(phone_number: str, region: str | None = None) -> phonenum
 
     if match is None:
         if region is None:
-            raise InvalidPhoneError('Not a valid local number')
-        else:
             raise InvalidPhoneError('Not a valid number')
+        else:
+            raise InvalidPhoneError('Not a valid local number')
 
     return match.number

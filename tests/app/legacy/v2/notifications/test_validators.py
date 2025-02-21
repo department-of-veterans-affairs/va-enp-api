@@ -2,7 +2,7 @@
 
 import pytest
 
-from app.legacy.v2.notifications.validators import validate_and_format_phone_number
+from app.legacy.v2.notifications.validators import InvalidPhoneError, validate_and_format_phone_number
 
 
 @pytest.mark.parametrize(
@@ -45,8 +45,30 @@ def test_validate_and_format_phone_number_local(phone_number: str, description: 
 
     This list covers the local number formats accepted by legacy v2 validation
     """
-    validated = validate_and_format_phone_number(phone_number, international=False)
+    validated = validate_and_format_phone_number(phone_number)
     assert validated, description
+
+
+@pytest.mark.parametrize(
+    ('phone_number', 'description'),
+    [
+        ('', 'Empty string (no number provided)'),
+        ('09', 'Incomplete mobile prefix'),
+        ('091', 'Incomplete mobile prefix'),
+        ('0917123', 'Too short for a mobile number'),
+        ('091712345678', 'Too long for a mobile number'),
+        ('000912345678', 'Invalid mobile prefix (000)'),
+        ('0917-ABC-4567', 'Contains non-numeric characters'),
+        ('0917 876 543X', 'Non-numeric character in the number'),
+        ('0919 000 0000', 'Unassigned mobile number prefix (000)'),
+        ('0917123456', 'One digit missing in mobile number'),
+        ('0917 123 45678', 'One extra digit in mobile number'),
+    ],
+)
+def test_validate_and_format_phone_number_invalid_local(phone_number: str, description: str) -> None:
+    """Invalid local phone numbers should raise InvalidPhoneError."""
+    with pytest.raises(InvalidPhoneError, match='Not a valid local number'):
+        validate_and_format_phone_number(phone_number)
 
 
 @pytest.mark.parametrize(
@@ -61,6 +83,29 @@ def test_validate_and_format_phone_number_local(phone_number: str, description: 
     ],
 )
 def test_validate_and_format_phone_number_international(phone_number: str, description: str) -> None:
-    """Valid international phone numbers should not raise ValidationError."""
-    validated = validate_and_format_phone_number(phone_number, international=True)
+    """Valid international phone numbers should not raise ValidationError.
+
+    This list covers the international number formats accepted by legacy v2 validation
+    """
+    validated = validate_and_format_phone_number(phone_number)
     assert validated, description
+
+
+@pytest.mark.parametrize(
+    ('phone_number', 'description'),
+    [
+        ('+63', 'Missing subscriber number'),
+        ('+639', 'Incomplete mobile prefix'),
+        ('+6391', 'Incomplete mobile prefix'),
+        ('+63-917-12345', 'Too short for a valid mobile number'),
+        ('+63-917-123-456789', 'Too long for a valid mobile number'),
+        ('+63-000-123-4567', 'Invalid mobile prefix (000)'),
+        ('+63-901-123', 'Too short for a mobile number'),
+        ('+63 917-ABC-4567', 'Contains non-numeric characters'),
+        ('+63 919 876 543X', 'Non-numeric character in the number'),
+    ],
+)
+def test_validate_and_format_phone_number_invalid_international(phone_number: str, description: str) -> None:
+    """Invalid international phone numbers should raise InvalidPhoneError."""
+    with pytest.raises(InvalidPhoneError, match='Not a valid number'):
+        validate_and_format_phone_number(phone_number)
