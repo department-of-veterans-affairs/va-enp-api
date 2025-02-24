@@ -1,14 +1,18 @@
 fileignoreconfig:
 - filename: .env.example
   checksum: f04bd8b8a51131d412bea4b8098e714ca01f4c7475eeb0a40d196d922070ba43
+- filename: .env.local
+  checksum: e64221548efb0246db08e35ce2122157d9a7e985f748367f42c9171f172884c0
 - filename: app/auth.py
   checksum: 06eb4b4c65191921104dc39381a937843a6ce155eeac7dc72990b5d10b5eb275
 - filename: app/db/__init__.py
-  checksum: b079eb426725423f18be76949e3e10ca50ebfdd419f8768c2b7b58ddc41e5e01
+  checksum: 7373a948a440a47b385309ba07ec140a74c87fcfb6ce933544b0ccc8932da455
 - filename: app/db/models.py
   checksum: 4ef96985d2353c00b229b30078f150ac80b15bd804b2d31c34784671793fec42
 - filename: app/providers/provider_aws.py
   checksum: f345ea8dea997d72c8d40a0cac2a2b1aacacef8959088ba5cc2ea9e5df57c9fd
+- filename: ci/.env.docker
+  checksum: 890be824556699720207a1465a09336cc1b48a4227152523401f7ba4f1d393b0
 - filename: ci/.env.local
   checksum: cd9c91e000ab1e53c5a89e9e2b316d7c12e7655843ce5af4b361b5edb328774c
 - filename: ci/.local.env
