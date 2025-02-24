@@ -14,13 +14,19 @@ DB_PASSWORD = DB_AUTH['password']
 ENP_DB_HOSTNAME = os.getenv('DB_HOSTNAME', 'localhost')
 ENP_DB_HOSTNAME_READ = os.getenv('DB_HOSTNAME_READ', 'localhost')
 
-
+# get the notification api database URI
 NAPI_DB_READ_URI = os.getenv(
     'NAPI_DB_READ_URI', f'{DB_ENGINE}://postgres:LocalPassword@localhost:5432/notification_api'
 )
 NAPI_DB_WRITE_URI = os.getenv(
     'NAPI_DB_WRITE_URI', f'{DB_ENGINE}://postgres:LocalPassword@localhost:5432/notification_api'
 )
+
+# Ensure the DB_ENGINE is correct
+if not NAPI_DB_READ_URI.startswith(DB_ENGINE):
+    NAPI_DB_READ_URI = DB_ENGINE + '://' + NAPI_DB_READ_URI.split('://')[1]
+if not NAPI_DB_WRITE_URI.startswith(DB_ENGINE):
+    NAPI_DB_WRITE_URI = DB_ENGINE + '://' + NAPI_DB_WRITE_URI.split('://')[1]
 
 ENP_DB_READ_URI = f'{DB_ENGINE}://{DB_USERNAME}:{DB_PASSWORD}@{ENP_DB_HOSTNAME_READ}:{ENP_DB_PORT}/{ENP_DB_NAME}'
 ENP_DB_WRITE_URI = f'{DB_ENGINE}://{DB_USERNAME}:{DB_PASSWORD}@{ENP_DB_HOSTNAME}:{ENP_DB_PORT}/{ENP_DB_NAME}'

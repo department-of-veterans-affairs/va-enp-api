@@ -16,7 +16,7 @@ fileignoreconfig:
 - filename: cd/perf.env
   checksum: e59cd00f3753077027cc2da8448f0bca1cc67207503542e2f823510a1fadd36c
 - filename: ci/.env.docker
-  checksum: 890be824556699720207a1465a09336cc1b48a4227152523401f7ba4f1d393b0
+  checksum: 89c9897e4d29e36b9c001d98a0c0cd28b08858d367771b5e1ec50e398bc19e23
 - filename: ci/.env.local
   checksum: b9a695faea7f7f98ad3b1f221938144cc70667f70a8ab9e3828499fe1005d556
 - filename: ci/.local.env
