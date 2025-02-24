@@ -86,8 +86,8 @@ class PhoneNumberValidator_RejectVanity(PhoneNumberValidator):
             # strip extensions
             cleaned_value = re.sub(r'\s*(x|ext|extension)\s*\d+$', '', phone_number, flags=re.IGNORECASE).strip()
 
-            # do not letters in phone number (vanity)
-            if re.search(r'[A-Za-z]', cleaned_value):
+            # do not allow letters in phone number (vanity)
+            if re.search(r'[A-Za-z]', cleaned_value) is not None:
                 raise PydanticCustomError('value_error', 'value is not a valid phone number')
 
         return phone_number

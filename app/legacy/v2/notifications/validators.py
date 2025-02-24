@@ -26,8 +26,7 @@ def is_valid_recipient_id_value(id_type: IdentifierType, id_value: str) -> bool:
 
     # Validate ID format if a pattern exists for the given id_type
     if id_type in id_patterns:
-        pattern = id_patterns[id_type]
-        is_valid = bool(re.match(pattern, id_value))
+        is_valid = bool(re.match(id_patterns[id_type], id_value))
     else:
         is_valid = False
 
