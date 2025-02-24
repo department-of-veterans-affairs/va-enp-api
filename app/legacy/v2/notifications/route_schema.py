@@ -3,6 +3,7 @@
 import re
 from typing import Annotated, Any, ClassVar, Collection, Literal
 
+from phonenumbers import PhoneNumber
 from pydantic import (
     UUID4,
     AwareDatetime,
@@ -16,7 +17,7 @@ from pydantic import (
     model_validator,
 )
 from pydantic_core import PydanticCustomError, core_schema
-from pydantic_extra_types.phone_numbers import PhoneNumber, PhoneNumberValidator
+from pydantic_extra_types.phone_numbers import PhoneNumberValidator
 from typing_extensions import Self
 
 from app.constants import IdentifierType, MobileAppType, NotificationType
@@ -65,10 +66,12 @@ class RecipientIdentifierModel(StrictBaseModel):
 
 
 class PhoneNumberValidator_RejectVanity(PhoneNumberValidator):
-    """PhoneNumberValidator subclass that rejects vanity phone numbers."""
+    """PhoneNumberValidator subclass that rejects vanity phone numbers when parsing from string."""
 
     def _vanity_check(self, phone_number: str | PhoneNumber) -> str | PhoneNumber:
-        """Reject phone numbers with letters, after stripping known extension formats.
+        """Reject phone number strings with letters, after stripping known extension formats.
+
+        Non-string argument passed through since they would have already been parsed or will be validated by base class.
 
         Args:
             phone_number (str | PhoneNumber): Input value.
@@ -77,17 +80,15 @@ class PhoneNumberValidator_RejectVanity(PhoneNumberValidator):
             PydanticCustomError: Invalid phone number.
 
         Returns:
-            str | PhoneNumber: Pass through value if valid.
+            str | PhoneNumber: Pass through value if valid or pre-processed PhoneNumber.
         """
-        if not isinstance(phone_number, str):
-            raise PydanticCustomError('value_error', 'value is not a valid phone number')
+        if isinstance(phone_number, str):
+            # strip extensions
+            cleaned_value = re.sub(r'\s*(x|ext|extension)\s*\d+$', '', phone_number, flags=re.IGNORECASE).strip()
 
-        # strip extensions
-        cleaned_value = re.sub(r'\s*(x|ext|extension)\s*\d+$', '', phone_number, flags=re.IGNORECASE).strip()
-
-        # do not letters in phone number (vanity)
-        if re.search(r'[A-Za-z]', cleaned_value):
-            raise PydanticCustomError('value_error', 'value is not a valid phone number, vanity')
+            # do not letters in phone number (vanity)
+            if re.search(r'[A-Za-z]', cleaned_value):
+                raise PydanticCustomError('value_error', 'value is not a valid phone number, vanity')
 
         return phone_number
 
@@ -110,7 +111,7 @@ class PhoneNumberValidator_RejectVanity(PhoneNumberValidator):
 
 
 ValidatedPhoneNumber = Annotated[
-    PhoneNumber,
+    str,
     PhoneNumberValidator_RejectVanity(default_region='US', number_format='E164'),
 ]
 
