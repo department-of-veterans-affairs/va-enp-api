@@ -3,9 +3,6 @@
 import os
 from enum import StrEnum
 
-from phonenumbers import PhoneNumberFormat
-from pydantic_extra_types.phone_numbers import PhoneNumber
-
 # This should be 2886 when deployed to retry for a full 24 hours.
 # Defaulting to 3 so local testing doesn't take too long.
 MAX_RETRIES = int(os.getenv('MAX_RETRIES', 3))
@@ -52,9 +49,3 @@ class OSPlatformType(StrEnum):
 
     ANDROID = 'ANDROID'
     IOS = 'IOS'
-
-
-class PhoneNumberE164(PhoneNumber):
-    """Annotated type for phone numbers in E164 format."""
-
-    phone_format: str = PhoneNumberFormat.to_string(PhoneNumberFormat.E164)

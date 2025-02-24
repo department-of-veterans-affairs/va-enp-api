@@ -1,7 +1,9 @@
 """Request and Response bodies for /v2/notifications."""
 
-from typing import Annotated, ClassVar, Collection, Literal
+import re
+from typing import Annotated, Any, ClassVar, Collection, Literal
 
+from phonenumbers import PhoneNumber
 from pydantic import (
     UUID4,
     AwareDatetime,
@@ -9,13 +11,17 @@ from pydantic import (
     ConfigDict,
     EmailStr,
     Field,
+    GetCoreSchemaHandler,
     HttpUrl,
     UrlConstraints,
     model_validator,
 )
+from pydantic_core import PydanticCustomError, core_schema
+from pydantic_extra_types.phone_numbers import PhoneNumberValidator
 from typing_extensions import Self
 
-from app.constants import IdentifierType, MobileAppType, NotificationType, PhoneNumberE164
+from app.constants import IdentifierType, MobileAppType, NotificationType
+from app.legacy.v2.notifications.validators import is_valid_recipient_id_value
 
 
 class StrictBaseModel(BaseModel):
@@ -43,6 +49,71 @@ class RecipientIdentifierModel(StrictBaseModel):
 
     id_type: Annotated[IdentifierType, Field(strict=False)]
     id_value: str
+
+    @model_validator(mode='after')
+    def validate_id(self) -> Self:
+        """Validate recipient id_value based on id_type.
+
+        Raises:
+            ValueError: Bad input
+
+        Returns:
+            Self: this instance
+        """
+        if not is_valid_recipient_id_value(self.id_type, self.id_value):
+            raise ValueError(f"Invalid id_value for id_type '{self.id_type}'")
+        return self
+
+
+class PhoneNumberValidator_RejectVanity(PhoneNumberValidator):
+    """PhoneNumberValidator subclass that rejects vanity phone numbers when parsing from string."""
+
+    def _vanity_check(self, phone_number: str | PhoneNumber) -> str | PhoneNumber:
+        """Reject phone number strings with letters, after stripping known extension formats.
+
+        Non-string argument passed through since they would have already been parsed or will be validated by base class.
+
+        Args:
+            phone_number (str | PhoneNumber): Input value.
+
+        Raises:
+            PydanticCustomError: Invalid phone number.
+
+        Returns:
+            str | PhoneNumber: Pass through value if valid or pre-processed PhoneNumber.
+        """
+        if isinstance(phone_number, str):
+            # strip extensions
+            cleaned_value = re.sub(r'\s*(x|ext|extension)\s*\d+$', '', phone_number, flags=re.IGNORECASE).strip()
+
+            # do not allow letters in phone number (vanity)
+            if re.search(r'[A-Za-z]', cleaned_value) is not None:
+                raise PydanticCustomError('value_error', 'value is not a valid phone number')
+
+        return phone_number
+
+    def __get_pydantic_core_schema__(self, source: type[Any], handler: GetCoreSchemaHandler) -> core_schema.CoreSchema:
+        """Construct Pydantic core validation schema to enforce proper validation order.
+
+        Args:
+            source (type[Any]): The source type of the field being validated.
+            handler (GetCoreSchemaHandler): A handler that provides additional schema validation.
+
+        Returns:
+            core_schema.CoreSchema: A Pydantic validation schema.
+        """
+        return core_schema.chain_schema(
+            [
+                core_schema.no_info_before_validator_function(self._vanity_check, core_schema.str_schema()),
+                super().__get_pydantic_core_schema__(source, handler),
+            ]
+        )
+
+
+ValidatedPhoneNumber = Annotated[
+    str,
+    PhoneNumberValidator_RejectVanity(default_region='US', number_format='E164'),
+]
 
 
 ##################################################
@@ -114,7 +185,7 @@ class V2GetSmsNotificationResponseModel(V2GetNotificationResponseModel):
     """Additional attributes when getting an SMS notification."""
 
     email_address: None
-    phone_number: PhoneNumberE164
+    phone_number: ValidatedPhoneNumber
     sms_sender_id: Annotated[UUID4, Field(strict=False)]
     subject: None
 
@@ -176,7 +247,8 @@ class V2PostEmailRequestModel(V2PostNotificationRequestModel):
 class V2PostSmsRequestModel(V2PostNotificationRequestModel):
     """Attributes specific to requests to send SMS notifications."""
 
-    phone_number: PhoneNumberE164 | None = None
+    # phone_number: PhoneNumberE164 | None = None
+    phone_number: ValidatedPhoneNumber | None = None
     sms_sender_id: Annotated[UUID4, Field(strict=False)] | None = None
 
     json_schema_extra: ClassVar[dict[str, dict[str, Collection[str]]]] = {
@@ -268,7 +340,7 @@ class V2SmsContentModel(StrictBaseModel):
     """The content body of a response for sending an SMS notification."""
 
     body: str
-    from_number: PhoneNumberE164
+    from_number: ValidatedPhoneNumber
 
 
 class V2PostSmsResponseModel(V2PostNotificationResponseModel):
