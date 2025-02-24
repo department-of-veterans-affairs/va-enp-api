@@ -14,7 +14,8 @@ from app.legacy.v2.notifications.route_schema import (
     V2PostSmsRequestModel,
 )
 
-VALID_PHONE_NUMBER = '+17045555555x5'
+VALID_PHONE_NUMBER = '2025550123'
+VALID_PHONE_NUMBER_E164 = '+12025550123'
 INVALID_PHONE_NUMBER = '+5555555555'
 VALID_ICN_VALUE = '1234567890V123456'
 
@@ -108,7 +109,7 @@ def test_v2_post_sms_request_model_valid(data: dict[str, str | dict[str, str]]) 
     assert isinstance(request, V2PostSmsRequestModel)
 
     if request.phone_number is not None:
-        assert request.phone_number == '+17045555555'
+        assert request.phone_number == VALID_PHONE_NUMBER_E164
 
 
 @pytest.mark.parametrize(
