@@ -88,7 +88,7 @@ class PhoneNumberValidator_RejectVanity(PhoneNumberValidator):
 
             # do not letters in phone number (vanity)
             if re.search(r'[A-Za-z]', cleaned_value):
-                raise PydanticCustomError('value_error', 'value is not a valid phone number, vanity')
+                raise PydanticCustomError('value_error', 'value is not a valid phone number')
 
         return phone_number
 
