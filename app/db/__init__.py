@@ -22,11 +22,10 @@ NAPI_DB_WRITE_URI = os.getenv(
     'NAPI_DB_WRITE_URI', f'{DB_ENGINE}://postgres:LocalPassword@localhost:5432/notification_api'
 )
 
-# Ensure the DB_ENGINE is correct
-if not NAPI_DB_READ_URI.startswith(DB_ENGINE):
-    NAPI_DB_READ_URI = DB_ENGINE + '://' + NAPI_DB_READ_URI.split('://')[1]
-if not NAPI_DB_WRITE_URI.startswith(DB_ENGINE):
-    NAPI_DB_WRITE_URI = DB_ENGINE + '://' + NAPI_DB_WRITE_URI.split('://')[1]
+# Ensure the correct DB_ENGINE is used. This is necessary when deployed.
+NAPI_DB_READ_URI = DB_ENGINE + '://' + NAPI_DB_READ_URI.split('://')[1]
+NAPI_DB_WRITE_URI = DB_ENGINE + '://' + NAPI_DB_WRITE_URI.split('://')[1]
 
+# Construct the ENP database URIs
 ENP_DB_READ_URI = f'{DB_ENGINE}://{DB_USERNAME}:{DB_PASSWORD}@{ENP_DB_HOSTNAME_READ}:{ENP_DB_PORT}/{ENP_DB_NAME}'
 ENP_DB_WRITE_URI = f'{DB_ENGINE}://{DB_USERNAME}:{DB_PASSWORD}@{ENP_DB_HOSTNAME}:{ENP_DB_PORT}/{ENP_DB_NAME}'

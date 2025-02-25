@@ -12,9 +12,9 @@ fileignoreconfig:
 - filename: app/providers/provider_aws.py
   checksum: f345ea8dea997d72c8d40a0cac2a2b1aacacef8959088ba5cc2ea9e5df57c9fd
 - filename: cd/dev.env
-  checksum: 69e405f610647040ff6050811c17422977d19801150ac8e3789f0c4b95b30e42
+  checksum: 4c582cfb6a6b0a3dd9274c0fc8c7bfecc0b8c36eb46f1f09ddc21e66e6c786d1
 - filename: cd/perf.env
-  checksum: e59cd00f3753077027cc2da8448f0bca1cc67207503542e2f823510a1fadd36c
+  checksum: 5c50afeea60016a131f94dacd3086db9cbb4c6af573be19c7de91bbb51e04db7
 - filename: ci/.env.docker
   checksum: 89c9897e4d29e36b9c001d98a0c0cd28b08858d367771b5e1ec50e398bc19e23
 - filename: ci/.env.local
