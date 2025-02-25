@@ -111,7 +111,7 @@ def simple_route() -> dict[str, str]:
     return {'Hello': 'World'}
 
 
-@app.post('/db/test', status_code=status.HTTP_201_CREATED, dependencies=[Depends(JWTBearer())])
+@app.post('/enp/db/test', status_code=status.HTTP_201_CREATED, dependencies=[Depends(JWTBearer())])
 async def db_create_test(
     *,
     data: str = 'hello',
@@ -220,7 +220,7 @@ async def fetch_notifications(session: AsyncSession, year_list: List[int]) -> Li
     return notifications
 
 
-@app.get('/db/test', status_code=status.HTTP_200_OK, dependencies=[Depends(JWTBearer())])
+@app.get('/enp/db/test', status_code=status.HTTP_200_OK, dependencies=[Depends(JWTBearer())])
 async def db_read_test(
     db_session: Annotated[async_scoped_session[AsyncSession], Depends(get_read_session_with_depends)],
     years: str | None = Query(

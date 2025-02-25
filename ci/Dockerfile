@@ -35,6 +35,9 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 WORKDIR /app
 
+# need bash for running scripts
+RUN apk add --no-cache bash
+
 # add user and give ownership of app dir
 RUN adduser -h /app -D vanotify
 
@@ -42,7 +45,7 @@ RUN adduser -h /app -D vanotify
 COPY app/ app
 
 # necessary files for mkdocs
-COPY scripts/create_mkdoc_files.py /app/scripts/create_mkdoc_files.py
+COPY scripts/* /app/scripts/
 COPY mkdocs.yml /app/mkdocs.yml
 
 # Tests, using glob pattern to avoid copying
@@ -50,8 +53,6 @@ COPY $TEST_FOLDER/ tests
 
 # Copy builder files - venv
 COPY --from=builder /app/.venv /app/.venv
-
-RUN echo "$POETRY_ARGS"
 
 # these need to run only when POETRY_ARGS contain the proper setting
 RUN if echo "$POETRY_ARGS" | grep -q "mkdocs"; then \
@@ -63,4 +64,4 @@ RUN if echo "$POETRY_ARGS" | grep -q "mkdocs"; then \
 USER vanotify
 
 # CMD here for running when deployed to infra
-CMD ["gunicorn", "app.main:app", "-b", "0.0.0.0:8000", "-k", "uvicorn_worker.UvicornWorker", "-w", "4"]
+CMD ["gunicorn", "app.main:app", "-b", "0.0.0.0:6012", "-k", "uvicorn_worker.UvicornWorker", "-w", "4"]

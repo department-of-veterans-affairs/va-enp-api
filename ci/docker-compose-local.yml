@@ -7,9 +7,11 @@ services:
         POETRY_ARGS: --with static_tools,test,mkdocs
         TEST_FOLDER: tests
     container_name: enp-api
+    depends_on:
+      - enp-db
     ports:
-      - 8000:8000
-    entrypoint: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+      - 6012:6012
+    entrypoint: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "6012", "--reload"]
     env_file:
       - .env.docker
     volumes:
@@ -24,4 +26,4 @@ services:
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: LocalPassword
-      POSTGRES_DB: va-enp-api-db
+      POSTGRES_DB: va_enp_api

@@ -32,10 +32,6 @@
         {
           "name": "DD_SERVICE",
           "value": "va-enp-api"
-        },
-        {
-          "name": "FLASK_APP",
-          "value": "application.py"
         }
       ],
       "secrets": ${TASK_DEFINITION_SECRETS_JSON},

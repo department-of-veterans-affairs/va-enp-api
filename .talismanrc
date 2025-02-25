@@ -2,25 +2,31 @@ fileignoreconfig:
 - filename: .env.example
   checksum: f04bd8b8a51131d412bea4b8098e714ca01f4c7475eeb0a40d196d922070ba43
 - filename: .env.local
-  checksum: e64221548efb0246db08e35ce2122157d9a7e985f748367f42c9171f172884c0
+  checksum: 60e7f10e36a8635b33bc26945e6336ae183fe603a15169e462027339360a00f4
 - filename: app/auth.py
   checksum: 06eb4b4c65191921104dc39381a937843a6ce155eeac7dc72990b5d10b5eb275
 - filename: app/db/__init__.py
-  checksum: 7373a948a440a47b385309ba07ec140a74c87fcfb6ce933544b0ccc8932da455
+  checksum: 66575249d84eff02f539737ad2fa9f5a59b1b8982b5a3b8ff114e309ef62303d
 - filename: app/db/models.py
   checksum: 4ef96985d2353c00b229b30078f150ac80b15bd804b2d31c34784671793fec42
 - filename: app/providers/provider_aws.py
   checksum: f345ea8dea997d72c8d40a0cac2a2b1aacacef8959088ba5cc2ea9e5df57c9fd
+- filename: cd/dev.env
+  checksum: 4c582cfb6a6b0a3dd9274c0fc8c7bfecc0b8c36eb46f1f09ddc21e66e6c786d1
+- filename: cd/perf.env
+  checksum: 5c50afeea60016a131f94dacd3086db9cbb4c6af573be19c7de91bbb51e04db7
 - filename: ci/.env.docker
-  checksum: 890be824556699720207a1465a09336cc1b48a4227152523401f7ba4f1d393b0
+  checksum: 89c9897e4d29e36b9c001d98a0c0cd28b08858d367771b5e1ec50e398bc19e23
 - filename: ci/.env.local
-  checksum: cd9c91e000ab1e53c5a89e9e2b316d7c12e7655843ce5af4b361b5edb328774c
+  checksum: b9a695faea7f7f98ad3b1f221938144cc70667f70a8ab9e3828499fe1005d556
 - filename: ci/.local.env
   checksum: 47e9f19fdfb3655ceb51cfee25242e87d45bb05618a1cca6ac2bc8a709e0cdf9
 - filename: ci/docker-compose-local.yml
   checksum: c73beda98c39232441d86f6d6f6f2858274f9703f8a462eac1effacfbb9aa39d
 - filename: poetry.lock
-  checksum: 0d37167f4fd23e1ace7119c3e7b6f3703785876d349897b3f56aed64eeedf237
+  checksum: ff9d7c27a7784c0c340db4d302245ef9a951b62b9998a36d8408d49cdb0ee227
+- filename: postman/enp-api.postman_collection.json
+  checksum: 06c086251fe022a3f42f4f88d316e2034044a53e6a6ce4f32bc4c56395f7485b
 - filename: scripts/run_tests.sh
   checksum: 80cd986074c12205493156f86b43e732777e2fae75683780006fb1baea90b82b
 - filename: tests/app/providers/__init__.py

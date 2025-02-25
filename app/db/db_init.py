@@ -40,6 +40,8 @@ async def init_db() -> None:
     # notification_api database connections
     await init_napi_metadata()
 
+    logger.info('...database engines initialized.')
+
 
 async def create_write_engine() -> None:
     """Create the async write engine."""
