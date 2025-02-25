@@ -8,7 +8,6 @@ from fastapi import APIRouter, BackgroundTasks, Body, Depends, HTTPException, Re
 from loguru import logger
 
 from app.auth import JWTBearer
-from app.constants import PhoneNumberE164
 from app.dao.notifications_dao import dao_create_notification
 from app.db.models import Notification, Template
 from app.legacy.v2.notifications.route_schema import (
@@ -19,6 +18,7 @@ from app.legacy.v2.notifications.route_schema import (
     V2PostSmsResponseModel,
     V2SmsContentModel,
     V2Template,
+    ValidatedPhoneNumber,
 )
 from app.legacy.v2.notifications.utils import send_push_notification_helper, validate_template
 from app.routers import TimedAPIRoute
@@ -124,6 +124,6 @@ async def create_sms_notification(
         uri=HttpsUrl('https://example.com'),
         content=V2SmsContentModel(
             body='example',
-            from_number=PhoneNumberE164('+18005550101'),
+            from_number=ValidatedPhoneNumber('+18005550101'),
         ),
     )

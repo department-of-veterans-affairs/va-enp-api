@@ -14,8 +14,10 @@ from app.legacy.v2.notifications.route_schema import (
     V2PostSmsRequestModel,
 )
 
-VALID_PHONE_NUMBER = '+17045555555'
+VALID_PHONE_NUMBER = '2025550123'
+VALID_PHONE_NUMBER_E164 = '+12025550123'
 INVALID_PHONE_NUMBER = '+5555555555'
+VALID_ICN_VALUE = '1234567890V123456'
 
 ######################################################################
 # Test POST e-mail schemas
@@ -26,7 +28,7 @@ INVALID_PHONE_NUMBER = '+5555555555'
     'data',
     [
         {'email_address': 'test@va.gov'},
-        {'recipient_identifier': {'id_type': IdentifierType.ICN, 'id_value': 'test'}},
+        {'recipient_identifier': {'id_type': IdentifierType.ICN, 'id_value': VALID_ICN_VALUE}},
     ],
     ids=(
         'e-mail address',
@@ -66,13 +68,30 @@ def test_v2_post_email_request_model_invalid(data: dict[str, str | dict[str, str
 
 
 @pytest.mark.parametrize(
+    ('phone_number', 'description'),
+    [
+        ('1800INVALID', 'Local non-numeric number'),
+        ('+63919INVALID', 'International non-numeric number'),
+    ],
+)
+def test_v2_post_sms_request_model_invalid_phone_number(phone_number: str | int, description: str) -> None:
+    """Invalid non-numeric vanity phone numbers should raise ValidationError."""
+    data = dict()
+    data['phone_number'] = phone_number
+    data['template_id'] = str(uuid4())
+
+    with pytest.raises(ValidationError):
+        V2PostSmsRequestModel.model_validate(data)
+
+
+@pytest.mark.parametrize(
     'data',
     [
         {'phone_number': VALID_PHONE_NUMBER},
-        {'recipient_identifier': {'id_type': IdentifierType.ICN, 'id_value': 'test'}},
+        {'recipient_identifier': {'id_type': IdentifierType.ICN, 'id_value': VALID_ICN_VALUE}},
         {
             'phone_number': VALID_PHONE_NUMBER,
-            'recipient_identifier': {'id_type': IdentifierType.ICN, 'id_value': 'test'},
+            'recipient_identifier': {'id_type': IdentifierType.ICN, 'id_value': VALID_ICN_VALUE},
         },
     ],
     ids=(
@@ -85,7 +104,12 @@ def test_v2_post_sms_request_model_valid(data: dict[str, str | dict[str, str]]) 
     """Valid required data should not raise ValidationError."""
     data['sms_sender_id'] = str(uuid4())
     data['template_id'] = str(uuid4())
-    assert isinstance(V2PostSmsRequestModel.model_validate(data), V2PostSmsRequestModel)
+
+    request = V2PostSmsRequestModel.model_validate(data)
+    assert isinstance(request, V2PostSmsRequestModel)
+
+    if request.phone_number is not None:
+        assert request.phone_number == VALID_PHONE_NUMBER_E164
 
 
 @pytest.mark.parametrize(
