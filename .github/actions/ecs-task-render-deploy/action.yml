@@ -45,7 +45,7 @@ runs:
     - name: Upload Env File to S3
       shell: bash
       run: |
-        aws s3 cp cd/${ENV}.env s3://vanotify-environment-variables-${ENV}/va-enp-api/
+        aws s3 cp cd/${{ inputs.environment }}.env s3://vanotify-environment-variables-${{ inputs.environment }}/va-enp-api/
 
     - name: Pre-render Task Definition
       id: pre_render
