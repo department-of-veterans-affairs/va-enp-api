@@ -53,6 +53,6 @@ jobs:
           AWS_ARN_REGION: ${{ secrets.AWS_ARN_REGION }}
           AWS_ACCOUNT_NUMBER: ${{ secrets.AWS_ACCOUNT_NUMBER }}
           AWS_REGION: ${{ secrets.AWS_REGION }}
-          TASK_DEFINITION_SECRETS_JSON: ${{ secrets.DEV_TASK_DEFINITION_SECRETS_JSON }}
+          TASK_DEFINITION_SECRETS_JSON: ${{ inputs.environment == 'dev' && secrets.DEV_TASK_DEFINITION_SECRETS_JSON || secrets.PERF_TASK_DEFINITION_SECRETS_JSON }}
           DD_API_KEY: ${{ secrets.DD_API_KEY }}
           ENV: ${{ inputs.environment }}

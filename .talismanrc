@@ -3,6 +3,8 @@ fileignoreconfig:
   checksum: f04bd8b8a51131d412bea4b8098e714ca01f4c7475eeb0a40d196d922070ba43
 - filename: .env.local
   checksum: 60e7f10e36a8635b33bc26945e6336ae183fe603a15169e462027339360a00f4
+- filename: .github/workflows/deploy.yml
+  checksum: fc90179b23528cc9668f868361e0889635deb8ebd4b78ff738f4143a151b3e64
 - filename: app/auth.py
   checksum: 06eb4b4c65191921104dc39381a937843a6ce155eeac7dc72990b5d10b5eb275
 - filename: app/db/__init__.py
