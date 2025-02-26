@@ -11,19 +11,19 @@ inputs:
     description: "The container image to substitute in the task definition"
     required: true
   aws-access-key-id:
-    description: 'AWS Access Key ID'
+    description: "AWS Access Key ID"
     required: true
   aws-secret-access-key:
-    description: 'AWS Secret Access Key'
+    description: "AWS Secret Access Key"
     required: true
   aws-region:
     description: "The AWS region to render and deploy to."
     required: true
   role-to-assume:
-    description: 'AWS role to assume'
+    description: "AWS role to assume"
     required: true
   environment:
-    description: 'Environment to deploy to'
+    description: "Environment to deploy to"
     required: true
 
 runs:
@@ -31,7 +31,7 @@ runs:
   steps:
     - name: Checkout Repository
       uses: actions/checkout@v4
-          
+
     - name: Configure VAEC AWS Credentials
       uses: aws-actions/configure-aws-credentials@v4
       with:
@@ -45,7 +45,7 @@ runs:
     - name: Upload Env File to S3
       shell: bash
       run: |
-        aws s3 cp cd/${ENV}.env s3://vanotify-environment-variables-dev/va-enp-api/
+        aws s3 cp cd/${ENV}.env s3://vanotify-environment-variables-${ENV}/va-enp-api/
 
     - name: Pre-render Task Definition
       id: pre_render
