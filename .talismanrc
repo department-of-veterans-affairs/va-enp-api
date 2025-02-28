@@ -29,6 +29,8 @@ fileignoreconfig:
   checksum: b32265008763e742fdb79949bfeb5f9cc54998e84e570d695aa0bbfc9f93ce84
 - filename: postman/enp-api.postman_collection.json
   checksum: 06c086251fe022a3f42f4f88d316e2034044a53e6a6ce4f32bc4c56395f7485b
+- filename: pyproject.toml
+  checksum: c3f096a7cb18e881d609e2f0d786ed0e95466f7df20c1f2bce0ad81211e18f87
 - filename: scripts/run_tests.sh
   checksum: 80cd986074c12205493156f86b43e732777e2fae75683780006fb1baea90b82b
 - filename: tests/app/providers/__init__.py
