@@ -102,18 +102,9 @@ runs:
         echo "Pull, tag, and push ${ECR_REGISTRY}/${REPO_NAME}:${IMAGE_TAG} using containerd"
         sudo nerdctl pull ${ECR_REGISTRY}/${REPO_NAME}:${IMAGE_TAG}
         sudo nerdctl tag ${ECR_REGISTRY}/${REPO_NAME}:${IMAGE_TAG} ${ECR_REGISTRY}/${REPO_NAME}:${IMAGE_TAG}
-        sudo nerdctl push ${ECR_REGISTRY}/${REPO_NAME}:${IMAGE_TAG}
-        echo "Successfully created and pushed SOCI index for ${ECR_REGISTRY}/${REPO_NAME}:${IMAGE_TAG}"
-        
-        echo "Pull, tag, and push ${ECR_REGISTRY}/${REPO_NAME}:${{ github.sha }} using containerd"
-        sudo nerdctl pull ${ECR_REGISTRY}/${REPO_NAME}:${{ github.sha }}
-        sudo nerdctl tag ${ECR_REGISTRY}/${REPO_NAME}:${{ github.sha }} ${ECR_REGISTRY}/${REPO_NAME}:${{ github.sha }}
-        sudo nerdctl push ${ECR_REGISTRY}/${REPO_NAME}:${{ github.sha }}
-        echo "Successfully created and pushed SOCI index for ${ECR_REGISTRY}/${REPO_NAME}:${{ github.sha }}"
-
-        echo "Create SOCI index and push"
-        sudo soci create ${ECR_REGISTRY}/${REPO_NAME}:${IMAGE_TAG}
-        sudo soci push ${ECR_REGISTRY}/${REPO_NAME}:${IMAGE_TAG}
+        sudo nerdctl tag ${ECR_REGISTRY}/${REPO_NAME}:${IMAGE_TAG} ${ECR_REGISTRY}/${REPO_NAME}:${{ github.sha }}
+        sudo nerdctl push --snapshotter soci ${ECR_REGISTRY}/${REPO_NAME}:${IMAGE_TAG}
+        sudo nerdctl push --snapshotter soci ${ECR_REGISTRY}/${REPO_NAME}:${{ github.sha }}
 
     - name: Set image output
       id: set-output
