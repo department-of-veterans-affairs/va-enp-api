@@ -1,5 +1,5 @@
-name: 'Builds and Push Artifacts'
-description: 'Builds and pushes a Docker image'
+name: 'Builds and Push Artifacts with SOCI Support'
+description: 'Builds and pushes a Docker image with SOCI indexes for ECS Fargate'
 inputs:
   ref:
     description: 'Git reference (commit SHA, branch, or tag) to build'
@@ -46,18 +46,77 @@ runs:
       with:
         mask-password: 'true'
 
-    - name: Docker Build
+    - name: Docker Build and Push
       uses: docker/build-push-action@v6
       with:
         file: ci/Dockerfile
         context: .
         push: true
-        tags: ${{ steps.login-ecr-vaec.outputs.registry }}/va_enp_api:${{ inputs.ref }},${{ steps.login-ecr-vaec.outputs.registry }}/va_enp_api:${{ github.sha }} ## Tagging with branch/tag and SHA to maintain SHA record and human readability
+        tags: ${{ steps.login-ecr-vaec.outputs.registry }}/va_enp_api:${{ inputs.ref }},${{ steps.login-ecr-vaec.outputs.registry }}/va_enp_api:${{ github.sha }}
 
-    # This step sets the Docker image URI as an output from the composite action
+    - name: Install nerdctl
+      shell: bash
+      run: |
+        # Define nerdctl version (adjust as needed)
+        NERDCTL_VERSION="2.0.3"
+        echo "Installing nerdctl version: ${NERDCTL_VERSION}"
+        
+        NERDCTL_URL="https://github.com/containerd/nerdctl/releases/download/v${NERDCTL_VERSION}/nerdctl-${NERDCTL_VERSION}-linux-amd64.tar.gz"
+        echo "Downloading nerdctl from: ${NERDCTL_URL}"
+        curl -Lo nerdctl.tar.gz "${NERDCTL_URL}"
+        mkdir -p nerdctl-install/
+        tar -xzf nerdctl.tar.gz -C nerdctl-install/
+        sudo mv nerdctl-install/nerdctl /usr/local/bin/nerdctl
+        sudo chmod +x /usr/local/bin/nerdctl
+        rm -rf nerdctl.tar.gz nerdctl-install/
+
+    - name: Install AWS SOCI Snapshotter CLI
+      shell: bash
+      run: |
+        # Set SOCI version
+        SOCI_VERSION="0.9.0"
+        echo "Using SOCI Snapshotter CLI version: ${SOCI_VERSION}"
+        
+        # Download the specified SOCI Snapshotter CLI version
+        SOCI_URL="https://github.com/awslabs/soci-snapshotter/releases/download/v${SOCI_VERSION}/soci-snapshotter-${SOCI_VERSION}-linux-amd64.tar.gz"
+        echo "Downloading SOCI Snapshotter CLI from: ${SOCI_URL}"
+        curl -Lo soci.tar.gz "${SOCI_URL}"
+        mkdir -p soci-install/
+        tar -xzf soci.tar.gz -C soci-install/
+        sudo mv soci-install/soci /usr/local/bin/soci
+        sudo chmod +x /usr/local/bin/soci
+        rm -rf soci.tar.gz soci-install/
+
+    - name: Generate and Push SOCI Indexes
+      shell: bash
+      run: |
+        # Set variables
+        ECR_REGISTRY="${{ steps.login-ecr-vaec.outputs.registry }}"
+        REPO_NAME="va_enp_api"
+        IMAGE_TAG="${{ inputs.ref }}"
+        
+        # Login to ECR for nerdctl (using AWS CLI)
+        echo "Logging into ECR using nerdctl..."
+        aws ecr get-login-password --region ${{ inputs.aws-region }} | sudo nerdctl login --username AWS --password-stdin ${ECR_REGISTRY}
+        
+        echo "Pull, tag, and push ${ECR_REGISTRY}/${REPO_NAME}:${IMAGE_TAG} using containerd"
+        sudo nerdctl pull ${ECR_REGISTRY}/${REPO_NAME}:${IMAGE_TAG}
+        sudo nerdctl tag ${ECR_REGISTRY}/${REPO_NAME}:${IMAGE_TAG} ${ECR_REGISTRY}/${REPO_NAME}:${IMAGE_TAG}
+        sudo nerdctl push ${ECR_REGISTRY}/${REPO_NAME}:${IMAGE_TAG}
+        echo "Successfully created and pushed SOCI index for ${ECR_REGISTRY}/${REPO_NAME}:${IMAGE_TAG}"
+        
+        echo "Pull, tag, and push ${ECR_REGISTRY}/${REPO_NAME}:${{ github.sha }} using containerd"
+        sudo nerdctl pull ${ECR_REGISTRY}/${REPO_NAME}:${{ github.sha }}
+        sudo nerdctl tag ${ECR_REGISTRY}/${REPO_NAME}:${{ github.sha }} ${ECR_REGISTRY}/${REPO_NAME}:${{ github.sha }}
+        sudo nerdctl push ${ECR_REGISTRY}/${REPO_NAME}:${{ github.sha }}
+        echo "Successfully created and pushed SOCI index for ${ECR_REGISTRY}/${REPO_NAME}:${{ github.sha }}"
+
+        echo "Create SOCI index and push"
+        sudo soci create ${ECR_REGISTRY}/${REPO_NAME}:${IMAGE_TAG}
+        sudo soci push ${ECR_REGISTRY}/${REPO_NAME}:${IMAGE_TAG}
+
     - name: Set image output
       id: set-output
       shell: bash
       run: |
-        # Using the ref tag as our main object to pass around
         echo "image-uri=${{ steps.login-ecr-vaec.outputs.registry }}/va_enp_api:${{ inputs.ref }}" >> $GITHUB_OUTPUT
