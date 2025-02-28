@@ -12,9 +12,9 @@ package-mode = false
 poetry_version = "1.8.4"
 
 [tool.poetry.dependencies]
-python = "^3.12"
+python = "^3.13"
 aiobotocore = "*"
-botocore = "*"
+botocore = ">=1.36.0,<1.36.20"
 fastapi = {extras = ["standard"], version = "*"}
 pyjwt = "*"
 gunicorn = "*"
