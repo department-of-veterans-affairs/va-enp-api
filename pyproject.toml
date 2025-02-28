@@ -12,9 +12,12 @@ package-mode = false
 poetry_version = "1.8.4"
 
 [tool.poetry.dependencies]
-python = "^3.12"
+python = "^3.13"
 aiobotocore = "*"
-botocore = "*"
+# Botocore later than 1.36.20 causes KeyError: 'botocore_supported_protocols' in
+# tests/app/providers/test_provider_aws.py
+# TestProviderAWS::test_send_push_notification_botocore_exceptions_not_retriable
+botocore = ">=1.36.0,<1.36.20"
 fastapi = {extras = ["standard"], version = "*"}
 pyjwt = "*"
 gunicorn = "*"
@@ -101,7 +104,7 @@ exclude = [
 ]
 line-length = 120
 indent-width = 4
-target-version = "py312"
+target-version = "py313"
 
 [tool.ruff.format]
 docstring-code-format = true  # https://docs.astral.sh/ruff/settings/#format-docstring-code-format
