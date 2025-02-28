@@ -104,7 +104,7 @@ exclude = [
 ]
 line-length = 120
 indent-width = 4
-target-version = "py312"
+target-version = "py313"
 
 [tool.ruff.format]
 docstring-code-format = true  # https://docs.astral.sh/ruff/settings/#format-docstring-code-format
