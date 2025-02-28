@@ -88,8 +88,8 @@ def create_app() -> CustomFastAPI:
     app.include_router(v2_legacy_notification_router)
     app.include_router(v2_notification_router)
 
-    # Static site for MkDocs. If unavailable locally, run `mkdocs build` to create the site files
-    # Or run the application locally with Docker.
+    # Static site for MkDocs. If unavailable locally, run `mkdocs build` to create the site files,
+    # or run the application locally with Docker.
     if os.path.exists(MKDOCS_DIRECTORY):
         app.mount('/mkdocs', StaticFiles(directory=MKDOCS_DIRECTORY, html=True), name='mkdocs')
 
