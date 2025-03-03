@@ -33,20 +33,12 @@ async def init_db() -> None:
     # call to "run_sync" will not create anything.
     import app.db.models  # noqa
 
-    try:
-        # These methods are copy/paste due to globals.
-        await create_write_engine()
-        await create_read_engine()
-    except:
-        logger.exception('Uncaught exception during ENP database initialization')
-        raise
+    # These methods are copy/paste due to globals.
+    await create_write_engine()
+    await create_read_engine()
 
-    try:
-        # notification_api database connections
-        await init_napi_metadata()
-    except:
-        logger.exception('Uncaught exception during NAPI database metadata initialization')
-        raise
+    # notification_api database connections
+    await init_napi_metadata()
 
     logger.info('...database engines initialized.')
 
