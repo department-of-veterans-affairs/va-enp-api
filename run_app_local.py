@@ -1,4 +1,4 @@
-"""File for running the app locally with uvicorn. Simply run this file in debug mode to debug the app locally."""
+"""File for running the app locally with uvicorn. Run this file in debug mode to debug the app locally."""
 
 import uvicorn
 from dotenv import load_dotenv
