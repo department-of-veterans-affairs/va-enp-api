@@ -784,8 +784,9 @@ INSERT INTO template_folder (id, service_id, name, parent_id)
 VALUES ('00000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000001', 'Example Folder', NULL);
 
 -- Insert into templates
-INSERT INTO templates (id, name, template_type, created_at, updated_at, content, content_as_html, content_as_plain_text, archived, hidden, onsite_notification, subject, postage, reply_to_email, provider_id, communication_item_id, service_id, created_by_id, process_type, service_letter_contact_id) 
-VALUES ('00000000-0000-0000-0000-000000000001', 'Example Template', 'email', '2025-03-03 00:00:00', '2025-03-03 00:00:00', 'Example Content', 'Example Content as HTML', 'Example Content as Plain Text', FALSE, FALSE, FALSE, 'Example Subject', 'first', 'reply@example.com', '00000000-0000-0000-0000-000000000001', NULL, '00000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000001', 'normal', NULL);
+INSERT INTO templates (id, name, template_type, created_at, updated_at, content, content_as_html, content_as_plain_text, archived, hidden, onsite_notification, subject, postage, reply_to_email, provider_id, communication_item_id, service_id, created_by_id, process_type, service_letter_contact_id) VALUES
+    ('00000000-0000-0000-0000-000000000001', 'Example Email Template', 'email', '2025-03-03 00:00:00', '2025-03-03 00:00:00', 'Example Content', 'Example Content as HTML', 'Example Content as Plain Text', FALSE, FALSE, FALSE, 'Example Subject', 'first', 'reply@example.com', '00000000-0000-0000-0000-000000000001', NULL, '00000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000001', 'normal', NULL),
+    ('00000000-0000-0000-0000-000000000002', 'Example SMS Template', 'sms', '2025-03-03 00:00:00', '2025-03-03 00:00:00', 'Example Content', 'Example Content as HTML', 'Example Content as Plain Text', FALSE, FALSE, FALSE, 'Example Subject', 'first', 'reply@example.com', '00000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000001', 'normal', NULL);
 
 -- Insert into template_redacted
 INSERT INTO template_redacted (template_id, redact_personalisation, updated_at, updated_by_id) 

@@ -22,7 +22,7 @@ fileignoreconfig:
 - filename: ci/docker-compose-local.yml
   checksum: dea6b565427922ac95359db4c1365527cadf25ea6fc613550d795a447510d87d
 - filename: ci/init_napi_db.sql
-  checksum: 7b496f9e6662e4bb769344c53f7bd3970a9b4e6be4b83218a4d539377a44e165
+  checksum: fba3cd2c945ca13abea0e113a00abba687a8a7bdd3ad0e2481975b2d6aa9e0a1
 - filename: poetry.lock
   checksum: b32265008763e742fdb79949bfeb5f9cc54998e84e570d695aa0bbfc9f93ce84
 - filename: postman/enp-api.postman_collection.json
