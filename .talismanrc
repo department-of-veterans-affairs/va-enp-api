@@ -1,6 +1,8 @@
 fileignoreconfig:
 - filename: .env.example
   checksum: f04bd8b8a51131d412bea4b8098e714ca01f4c7475eeb0a40d196d922070ba43
+- filename: .env.local
+  checksum: d3c7432f462f22fd75aaad2619858447819fd484214dabd4f1e421690d6d9b2e
 - filename: .github/workflows/deploy.yml
   checksum: fc90179b23528cc9668f868361e0889635deb8ebd4b78ff738f4143a151b3e64
 - filename: app/auth.py
@@ -16,11 +18,11 @@ fileignoreconfig:
 - filename: cd/perf.env
   checksum: 5c50afeea60016a131f94dacd3086db9cbb4c6af573be19c7de91bbb51e04db7
 - filename: ci/.env.docker
-  checksum: ff5147be5734e677fcb8bfbeaaa59e54d5b395f531ac371fb183494eaf954582
-- filename: .env.local
-  checksum: d3c7432f462f22fd75aaad2619858447819fd484214dabd4f1e421690d6d9b2e
+  checksum: c7117703cec0f75d39bfa8c94985745ef82647b84b362b6796201039d6408023
 - filename: ci/docker-compose-local.yml
-  checksum: c73beda98c39232441d86f6d6f6f2858274f9703f8a462eac1effacfbb9aa39d
+  checksum: dea6b565427922ac95359db4c1365527cadf25ea6fc613550d795a447510d87d
+- filename: ci/init_napi_db.sql
+  checksum: 7b496f9e6662e4bb769344c53f7bd3970a9b4e6be4b83218a4d539377a44e165
 - filename: poetry.lock
   checksum: b32265008763e742fdb79949bfeb5f9cc54998e84e570d695aa0bbfc9f93ce84
 - filename: postman/enp-api.postman_collection.json
