@@ -22,7 +22,7 @@ _engine_enp_read: AsyncEngine
 _engine_enp_write: AsyncEngine
 _engine_napi_read: AsyncEngine
 _engine_napi_write: AsyncEngine
-metadata_legacy: MetaData
+metadata_legacy: MetaData = MetaData()
 
 
 async def init_db() -> None:
@@ -79,7 +79,6 @@ async def init_napi_metadata() -> None:
     """Initialize the API database engine."""
     global metadata_legacy
 
-    metadata_legacy = MetaData()
     async with _engine_napi_read.connect() as conn:
         # Reflect the api tables, using the api read engine, and ApiBase.
         await conn.run_sync(metadata_legacy.reflect)

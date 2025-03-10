@@ -1,11 +1,21 @@
 """Test module for app/legacy/v2/notifications/utils.py."""
 
+from typing import Callable
 from unittest.mock import AsyncMock, patch
+from uuid import uuid4
 
 import pytest
+from pydantic import UUID4
+from sqlalchemy.exc import NoResultFound
 
+from app.constants import NotificationType
 from app.db.models import Template
-from app.legacy.v2.notifications.utils import get_arn_from_icn, send_push_notification_helper, validate_template
+from app.legacy.v2.notifications.utils import (
+    get_arn_from_icn,
+    send_push_notification_helper,
+    validate_push_template,
+    validate_template,
+)
 from app.providers.provider_aws import ProviderAWS
 from app.providers.provider_base import ProviderNonRetryableError
 
@@ -16,10 +26,10 @@ async def test_get_arn_from_icn_not_implemented() -> None:
         await get_arn_from_icn('12345')
 
 
-async def test_validate_template_not_implemented() -> None:
-    """Test validate_template."""
+async def test_validate_push_template() -> None:
+    """Test validate_push_template."""
     with pytest.raises(NotImplementedError):
-        await validate_template('d5b6e67c-8e2a-11ee-8b8e-0242ac120002')
+        await validate_push_template(uuid4())
 
 
 class TestSendPushNotificationHelper:
@@ -35,9 +45,9 @@ class TestSendPushNotificationHelper:
         mock_template = AsyncMock(spec=Template)
         mock_template.build_message.return_value = 'test_message'
         mock_provider = AsyncMock(spec=ProviderAWS)
-        personalization: dict[str, str | int | float] = {'name': 'John'}
+        personalisation: dict[str, str | int | float] = {'name': 'John'}
 
-        await send_push_notification_helper(personalization, '12345', mock_template, mock_provider)
+        await send_push_notification_helper(personalisation, '12345', mock_template, mock_provider)
 
         mock_provider.send_notification.assert_called_once()
 
@@ -51,9 +61,9 @@ class TestSendPushNotificationHelper:
         mock_template.build_message.return_value = 'test_message'
         mock_provider = AsyncMock(spec=ProviderAWS)
         mock_provider.send_notification.side_effect = ProviderNonRetryableError
-        personalization: dict[str, str | int | float] = {'name': 'John'}
+        personalisation: dict[str, str | int | float] = {'name': 'John'}
 
-        await send_push_notification_helper(personalization, '12345', mock_template, mock_provider)
+        await send_push_notification_helper(personalisation, '12345', mock_template, mock_provider)
 
         mock_logger.assert_called_once()
 
@@ -64,3 +74,65 @@ class TestSendPushNotificationHelper:
 
         with pytest.raises(NotImplementedError):
             await send_push_notification_helper(None, '12345', template, mock_provider)
+
+
+class TestValidateTemplate:
+    """Test validate_template."""
+
+    async def test_validate_template(self, mock_template: Callable[..., AsyncMock]) -> None:
+        """Test validate_template for happy path."""
+        mock_template = mock_template()
+
+        with patch('app.legacy.v2.notifications.utils.LegacyTemplateDao.get_template', return_value=mock_template):
+            # validate_template either runs successfully or raises an exception
+            await validate_template(mock_template.id, NotificationType.SMS, None)
+
+    async def test_validate_template_with_personalisation(self, mock_template: Callable[..., AsyncMock]) -> None:
+        """Test validate_template for happy path."""
+        mock_template = mock_template(content='before ((content)) after')
+
+        with patch('app.legacy.v2.notifications.utils.LegacyTemplateDao.get_template', return_value=mock_template):
+            # validate_template either runs successfully or raises an exception
+            await validate_template(mock_template.id, NotificationType.SMS, {'content': 'test content'})
+
+    async def test_validate_template_raises_exception_when_template_not_found(self) -> None:
+        """Test validate_template raises an exception when the template is not found."""
+        with patch('app.legacy.v2.notifications.utils.LegacyTemplateDao.get_template', side_effect=NoResultFound):
+            with pytest.raises(ValueError, match='Template not found'):
+                await validate_template(UUID4('55dd7dff-76f2-425b-86c2-f5022426a31d'), NotificationType.SMS, None)
+
+    async def test_validate_template_raises_exception_when_template_not_expected_type(
+        self,
+        mock_template: Callable[..., AsyncMock],
+    ) -> None:
+        """Test validate_template raises an exception when the template is not found."""
+        mock_template = mock_template(template_type=NotificationType.EMAIL)
+
+        with patch('app.legacy.v2.notifications.utils.LegacyTemplateDao.get_template', return_value=mock_template):
+            with pytest.raises(
+                ValueError,
+                match=f'{NotificationType.EMAIL} template is not suitable for {NotificationType.SMS} notification',
+            ):
+                await validate_template(mock_template.id, NotificationType.SMS, None)
+
+    async def test_validate_template_raises_exception_when_template_not_active(
+        self,
+        mock_template: Callable[..., AsyncMock],
+    ) -> None:
+        """Test validate_template raises an exception when the template is not found."""
+        mock_template = mock_template(archived=True)
+
+        with patch('app.legacy.v2.notifications.utils.LegacyTemplateDao.get_template', return_value=mock_template):
+            with pytest.raises(ValueError, match='Template is not active'):
+                await validate_template(mock_template.id, NotificationType.SMS, None)
+
+    async def test_validate_template_raises_exception_when_missing_personalisation(
+        self,
+        mock_template: Callable[..., AsyncMock],
+    ) -> None:
+        """Test validate_template raises an exception when personalisation is missing."""
+        mock_template = mock_template(content='before ((content)) after')
+
+        with patch('app.legacy.v2.notifications.utils.LegacyTemplateDao.get_template', return_value=mock_template):
+            with pytest.raises(ValueError, match='Missing personalisation: content'):
+                await validate_template(mock_template.id, NotificationType.SMS, {})
