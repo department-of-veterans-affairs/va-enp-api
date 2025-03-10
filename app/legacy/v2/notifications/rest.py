@@ -122,7 +122,7 @@ async def create_sms_notification(
     try:
         await validate_template(request.template_id, NotificationType.SMS, request.personalisation)
     except ValueError as e:
-        # Error details based on consistency with the flask api
+        # Error details based on consistency with the flask api v2 response
         error_details = {
             'errors': [
                 {
@@ -132,7 +132,6 @@ async def create_sms_notification(
             ],
             'status_code': status.HTTP_400_BAD_REQUEST,
         }
-        # return JSONResponse(status_code=status.HTTP_400_BAD_REQUEST, content=error_details)
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=error_details)
 
     logger.debug('Creating SMS notification with request data {}.', request)
