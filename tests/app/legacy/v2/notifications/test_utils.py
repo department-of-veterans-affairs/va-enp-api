@@ -96,7 +96,7 @@ class TestValidateTemplate:
 
         with patch('app.legacy.v2.notifications.utils.LegacyTemplateDao.get_template', return_value=mock_template):
             # validate_template either runs successfully or raises an exception
-            await validate_template(mock_template.id, NotificationType.SMS, {'content': 'test content'})
+            await validate_template(mock_template.id, NotificationType.SMS, {'Content': 'test content'})
 
     async def test_validate_template_raises_exception_when_template_not_found(self) -> None:
         """Test validate_template raises an exception when the template is not found."""

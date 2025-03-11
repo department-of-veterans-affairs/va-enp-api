@@ -169,6 +169,10 @@ def _validate_template_personalisation(
     template_personalisation_fields = _collect_personalisation_from_template(template_content)
     incoming_personalisation_fields = set(personalisation.keys() if personalisation else [])
 
+    # the current implementation is case-insensitive, so all fields are converted to lowercase
+    template_personalisation_fields = set(field.lower() for field in template_personalisation_fields)
+    incoming_personalisation_fields = set(field.lower() for field in incoming_personalisation_fields)
+
     missing_fields = template_personalisation_fields - incoming_personalisation_fields
     if missing_fields:
         logger.warning(
