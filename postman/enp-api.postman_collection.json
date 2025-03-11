@@ -396,7 +396,7 @@
 					}
 				},
 				"url": {
-					"raw": "{{notification-api-url}}/enp/db/test?data=demo-data",
+					"raw": "{{notification-api-url}}/enp/db/test?data=connection-test",
 					"host": [
 						"{{notification-api-url}}"
 					],
@@ -408,7 +408,7 @@
 					"query": [
 						{
 							"key": "data",
-							"value": "demo-data"
+							"value": "connection-test"
 						}
 					]
 				}

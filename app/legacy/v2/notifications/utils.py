@@ -16,7 +16,7 @@ from app.providers.provider_schemas import PushModel
 
 
 async def send_push_notification_helper(
-    personalisation: dict[str, str | int | float] | None,
+    personalization: dict[str, str | int | float] | None,
     recipient_identifier: str,
     template: Template,
     provider: ProviderAWS,
@@ -24,13 +24,13 @@ async def send_push_notification_helper(
     """Send push notification in the background.
 
     Args:
-        personalisation (dict[str, str] | None): The personalisation data from the request
+        personalization (dict[str, str] | None): The personalization data from the request
         recipient_identifier (str): The recipient's identifier from the request
         template (Template): The template to use for the notification's message
         provider (ProviderAWS): The provider to use for sending the notification
 
     """
-    message = template.build_message(personalisation)
+    message = template.build_message(personalization)
     target_arn = await get_arn_from_icn(recipient_identifier)
     push_model = PushModel(message=message, target_arn=target_arn)
 

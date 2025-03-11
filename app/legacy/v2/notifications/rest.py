@@ -110,11 +110,10 @@ async def create_sms_notification(
 
     Returns:
         V2PostSmsResponseModel: The notification response data if notification is created successfully.
-        JSONResponse: The error response data if the request is invalid.
 
     Raises:
         HTTPException: If the template is not found, is not a SMS type, or is not active, or if the request is
-        missing personalisation data.
+            missing personalisation data.
 
     """
     logger.debug('Received SMS request with data: {}', request)
