@@ -87,10 +87,12 @@ async def validate_template(
     Args:
         template_id (UUID4): The template_id to validate
         expected_type (NotificationType): The expected type of the template
-        personalisation (dict[str, str | int | float | list[str | int | float] | PersonalisationFileObject] | None): The personalisation data to validate
+        personalisation (dict[str, str | int | float | list[str | int | float] | PersonalisationFileObject] | None):
+            The personalisation data to validate
 
     Raises:
-        ValueError: If the template is not found, or is invalid based on the expected type, personalisation, or is archived.
+        ValueError: If the template is not found, or is invalid based on the expected type,
+            personalisation is missing, or is archived.
 
     """
     try:
