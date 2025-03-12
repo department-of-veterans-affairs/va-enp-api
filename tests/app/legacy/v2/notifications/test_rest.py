@@ -259,7 +259,7 @@ class TestV2SMS:
 
         assert response.status_code == status.HTTP_201_CREATED
 
-    async def test_v2_sms_returns_400_with_invlid_template(
+    async def test_v2_sms_returns_400_with_invalid_template(
         self,
         mock_validate_template: AsyncMock,
         client: ENPTestClient,
@@ -278,7 +278,7 @@ class TestV2SMS:
 
         assert response.json() == error_details
 
-    async def test_v2_sms_returns_400_with_invlid_personalisation(
+    async def test_v2_sms_returns_400_with_invalid_personalisation(
         self,
         mock_validate_template: AsyncMock,
         client: ENPTestClient,
