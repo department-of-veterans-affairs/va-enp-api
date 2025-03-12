@@ -1,10 +1,12 @@
 """Base classes for exceptions."""
 
+from typing import Any
+
 
 class RetryableError(Exception):
     """Indicative of a retryable exception."""
 
-    def __init__(self, /, log_msg: str | None = None, *args: tuple, **kwargs: dict) -> None:
+    def __init__(self, /, log_msg: str | None = None, *args: tuple[Any], **kwargs: dict[Any, Any]) -> None:
         """Constructor.
 
         Arguments:
@@ -25,8 +27,8 @@ class NonRetryableError(Exception):
         log_msg: str | None = None,
         status: str | None = None,
         status_reason: str | None = None,
-        *args: tuple,
-        **kwargs: dict,
+        *args: tuple[Any],
+        **kwargs: dict[Any, Any],
     ) -> None:
         """Constructor.
 
