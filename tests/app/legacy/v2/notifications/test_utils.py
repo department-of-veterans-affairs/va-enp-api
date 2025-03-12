@@ -9,8 +9,8 @@ from pydantic import UUID4
 from sqlalchemy.exc import NoResultFound
 
 from app.constants import NotificationType
-from app.exceptions import NonRetryableError
 from app.db.models import Template
+from app.exceptions import NonRetryableError
 from app.legacy.v2.notifications.utils import (
     _validate_template_active,
     _validate_template_personalisation,
@@ -66,7 +66,7 @@ class TestSendPushNotificationHelper:
         mock_provider.send_notification.side_effect = NonRetryableError
         personalization: dict[str, str | int | float] = {'name': 'John'}
 
-        await send_push_notification_helper(personalisation, '12345', mock_template, mock_provider)
+        await send_push_notification_helper(personalization, '12345', mock_template, mock_provider)
 
         mock_logger.assert_called_once()
 
