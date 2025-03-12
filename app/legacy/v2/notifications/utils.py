@@ -7,8 +7,8 @@ from pydantic import UUID4
 from sqlalchemy.exc import NoResultFound
 
 from app.constants import NotificationType
-from app.exceptions import NonRetryableError, RetryableError
 from app.db.models import Template
+from app.exceptions import NonRetryableError, RetryableError
 from app.legacy.dao.templates_dao import LegacyTemplateDao
 from app.legacy.v2.notifications.route_schema import PersonalisationFileObject
 from app.providers.provider_aws import ProviderAWS
