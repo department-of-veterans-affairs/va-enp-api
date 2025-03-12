@@ -6,8 +6,10 @@ from uuid import uuid4
 
 from fastapi import APIRouter, BackgroundTasks, Body, Depends, HTTPException, Request, status
 from loguru import logger
+from pydantic import UUID4
 
 from app.auth import JWTBearer
+from app.constants import NotificationType
 from app.dao.notifications_dao import dao_create_notification
 from app.db.models import Notification, Template
 from app.legacy.v2.notifications.route_schema import (
@@ -20,7 +22,7 @@ from app.legacy.v2.notifications.route_schema import (
     V2Template,
     ValidatedPhoneNumber,
 )
-from app.legacy.v2.notifications.utils import send_push_notification_helper, validate_template
+from app.legacy.v2.notifications.utils import send_push_notification_helper, validate_push_template, validate_template
 from app.routers import TimedAPIRoute
 
 v2_legacy_notification_router = APIRouter(
@@ -60,13 +62,13 @@ async def create_push_notification(
 
     """
     icn = request_data.recipient_identifier.id_value
-    template_id = str(request_data.template_id)
+    template_id = UUID4(request_data.template_id)
     personalization = request_data.personalisation
 
     try:
-        template: Template = await validate_template(template_id)
+        template: Template = await validate_push_template(template_id)
     except Exception:
-        # TODO: catch a more specific exception here when validate_template is implemented
+        # TODO: catch a more specific exception here when validate_push_template is implemented
         logger.info('Template not found with ID {}', template_id)
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -107,10 +109,32 @@ async def create_sms_notification(
         request (Request): The FastAPI request object.
 
     Returns:
-        V2PostSmsResponseModel: The notification response data.
+        V2PostSmsResponseModel: The notification response data if notification is created successfully.
+
+    Raises:
+        HTTPException: If the template is not found, is not a SMS type, or is not active, or if the request is
+            missing personalisation data.
 
     """
+    logger.debug('Received SMS request with data: {}', request)
+
+    try:
+        await validate_template(request.template_id, NotificationType.SMS, request.personalisation)
+    except ValueError as e:
+        # Error details based on consistency with the flask api v2 response
+        error_details = {
+            'errors': [
+                {
+                    'error': 'BadRequestError',
+                    'message': str(e),
+                },
+            ],
+            'status_code': status.HTTP_400_BAD_REQUEST,
+        }
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=error_details)
+
     logger.debug('Creating SMS notification with request data {}.', request)
+
     return V2PostSmsResponseModel(
         id=uuid4(),
         billing_code='123456',
@@ -123,7 +147,7 @@ async def create_sms_notification(
         ),
         uri=HttpsUrl('https://example.com'),
         content=V2SmsContentModel(
-            body='example',
+            body='example' if not request.personalisation else f'example - {request.personalisation}',
             from_number=ValidatedPhoneNumber('+18005550101'),
         ),
     )

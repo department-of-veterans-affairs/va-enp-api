@@ -7,6 +7,110 @@
 	},
 	"item": [
 		{
+			"name": "/legacy/v2",
+			"item": [
+				{
+					"name": "sms",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									"const crypto = require('crypto-js');\r",
+									"\r",
+									"const ADMIN_SECRET_KEY = pm.environment.get('enp-admin-secret') || '';\r",
+									"const ALGORITHM = 'HS256';\r",
+									"const ACCESS_TOKEN_EXPIRE_SECONDS = 15;\r",
+									"\r",
+									"function base64url(source) {\r",
+									"    // Encode in classical base64\r",
+									"    let encodedSource = crypto.enc.Base64.stringify(source);\r",
+									"\r",
+									"    // Remove padding equal characters\r",
+									"    encodedSource = encodedSource.replace(/=+$/, '');\r",
+									"\r",
+									"    // Replace characters according to base64url specifications\r",
+									"    encodedSource = encodedSource.replace(/\\+/g, '-');\r",
+									"    encodedSource = encodedSource.replace(/\\//g, '_');\r",
+									"\r",
+									"    return encodedSource;\r",
+									"}\r",
+									"\r",
+									"function generateToken(sigKey = ADMIN_SECRET_KEY) {\r",
+									"    const header = {\r",
+									"        typ: 'JWT',\r",
+									"        alg: ALGORITHM,\r",
+									"    };\r",
+									"\r",
+									"    var payload = {\r",
+									"        iss: 'enp',\r",
+									"        iat: Math.floor(Date.now() / 1000),\r",
+									"        exp: Math.floor(Date.now() / 1000) + ACCESS_TOKEN_EXPIRE_SECONDS,\r",
+									"    };\r",
+									"\r",
+									"    const stringifiedHeader = crypto.enc.Utf8.parse(JSON.stringify(header));\r",
+									"    const encodedHeader = base64url(stringifiedHeader);\r",
+									"\r",
+									"    const stringifiedPayload = crypto.enc.Utf8.parse(JSON.stringify(payload));\r",
+									"    const encodedPayload = base64url(stringifiedPayload);\r",
+									"\r",
+									"    const token = encodedHeader + \".\" + encodedPayload;\r",
+									"\r",
+									"    const signature = crypto.HmacSHA256(token, sigKey);\r",
+									"    const encodedSignature = base64url(signature);\r",
+									"\r",
+									"    return token + \".\" + encodedSignature;\r",
+									"}\r",
+									"\r",
+									"const token = generateToken();\r",
+									"console.log(token);\r",
+									"pm.environment.set('jwt_signed', token);"
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{jwt_signed}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n    \"billing_code\": \"12345\",\r\n    \"callback_url\": \"https://example.com/\",\r\n    \"personalisation\": {\r\n        \"Test\": \"string\"\r\n    },\r\n    \"reference\": \"external-id\",\r\n    \"template_id\": \"{{sms-template-id}}\",\r\n    \"phone_number\": \"+18005550101\",\r\n    \"sms_sender_id\": \"4f44ffc8-1ff8-4832-b1af-0b615691b6ea\"\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{notification-api-url}}/legacy/v2/notifications/sms",
+							"host": [
+								"{{notification-api-url}}"
+							],
+							"path": [
+								"legacy",
+								"v2",
+								"notifications",
+								"sms"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
 			"name": "enp base route",
 			"request": {
 				"method": "GET",
