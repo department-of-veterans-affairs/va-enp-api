@@ -1,4 +1,4 @@
-"""Base class for Providers and provider exceptions."""
+"""Base class for Providers."""
 
 from abc import ABC
 
@@ -6,20 +6,9 @@ from loguru import logger
 from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_full_jitter
 
 from app.constants import MAX_RETRIES
+from app.exceptions import NonRetryableError, RetryableError
 from app.providers.provider_schemas import PushModel
 from app.providers.utils import log_last_attempt_on_failure, log_on_retry
-
-
-class ProviderRetryableError(Exception):
-    """Indicative of a retryable exception."""
-
-    ...
-
-
-class ProviderNonRetryableError(Exception):
-    """Indicative of a non-retryable exception."""
-
-    ...
 
 
 class ProviderBase(ABC):
@@ -43,7 +32,7 @@ class ProviderBase(ABC):
         before_sleep=log_on_retry,
         reraise=True,
         retry_error_callback=log_last_attempt_on_failure,
-        retry=retry_if_exception_type(ProviderRetryableError),
+        retry=retry_if_exception_type(RetryableError),
         stop=stop_after_attempt(MAX_RETRIES),
         wait=wait_full_jitter(multiplier=1, max=60),
     )
@@ -56,7 +45,7 @@ class ProviderBase(ABC):
             model (PushModel): the parameters to pass to SNS.Client.publish
 
         Raises:
-            ProviderNonRetryableError: Don't retry the request
+            NonRetryableError: Don't retry the request
 
         Returns:
             str: A reference identifier for the sent notification
@@ -64,7 +53,7 @@ class ProviderBase(ABC):
         """
         try:
             return await self._send_push(model)
-        except ProviderNonRetryableError:
+        except NonRetryableError:
             logger.exception(
                 'Sending a push notification failed for {} {}.',
                 'TargetArn' if (model.target_arn is not None) else 'TopicArn',

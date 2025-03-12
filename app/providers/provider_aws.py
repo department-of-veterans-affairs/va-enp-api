@@ -12,8 +12,9 @@ from loguru import logger
 from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_full_jitter
 
 from app.constants import MAX_RETRIES
+from app.exceptions import NonRetryableError, RetryableError
 from app.providers import sns_publish_retriable_exceptions_set
-from app.providers.provider_base import ProviderBase, ProviderNonRetryableError, ProviderRetryableError
+from app.providers.provider_base import ProviderBase
 from app.providers.provider_schemas import DeviceRegistrationModel, PushModel, PushRegistrationModel
 from app.providers.utils import log_last_attempt_on_failure, log_on_retry
 
@@ -109,7 +110,7 @@ class ProviderAWS(ProviderBase):
         before_sleep=log_on_retry,
         reraise=True,
         retry_error_callback=log_last_attempt_on_failure,
-        retry=retry_if_exception_type(ProviderRetryableError),
+        retry=retry_if_exception_type(RetryableError),
         stop=stop_after_attempt(MAX_RETRIES),
         wait=wait_full_jitter(multiplier=1, max=60),
     )
@@ -160,13 +161,13 @@ def _handle_sns_exceptions(e: Exception, fail_message: str) -> None:
         fail_message (str): The message to log when the exception is caught
 
     Raises:
-        ProviderRetryableError: Exception that can be retried
-        ProviderNonRetryableError: Don't retry the request
+        RetryableError: Exception that can be retried
+        NonRetryableError: Don't retry the request
 
     """
     if isinstance(e, botocore.exceptions.ClientError):
         if e.response.get('Error', {}).get('Code') in sns_publish_retriable_exceptions_set:
-            raise ProviderRetryableError from e
+            raise RetryableError from e
 
     logger.exception(fail_message)
-    raise ProviderNonRetryableError(fail_message) from e
+    raise NonRetryableError(fail_message) from e

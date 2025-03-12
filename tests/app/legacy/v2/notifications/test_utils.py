@@ -10,6 +10,7 @@ from sqlalchemy.exc import NoResultFound
 
 from app.constants import NotificationType
 from app.db.models import Template
+from app.exceptions import NonRetryableError
 from app.legacy.v2.notifications.utils import (
     _validate_template_active,
     _validate_template_personalisation,
@@ -20,7 +21,6 @@ from app.legacy.v2.notifications.utils import (
     validate_template,
 )
 from app.providers.provider_aws import ProviderAWS
-from app.providers.provider_base import ProviderNonRetryableError
 
 
 async def test_get_arn_from_icn_not_implemented() -> None:
@@ -63,7 +63,7 @@ class TestSendPushNotificationHelper:
         mock_template = AsyncMock(spec=Template)
         mock_template.build_message.return_value = 'test_message'
         mock_provider = AsyncMock(spec=ProviderAWS)
-        mock_provider.send_notification.side_effect = ProviderNonRetryableError
+        mock_provider.send_notification.side_effect = NonRetryableError
         personalisation: dict[str, str | int | float] = {'name': 'John'}
 
         await send_push_notification_helper(personalisation, '12345', mock_template, mock_provider)

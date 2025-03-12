@@ -3,7 +3,8 @@
 import pytest
 from tenacity import stop_after_attempt, wait_none
 
-from app.providers.provider_base import ProviderBase, ProviderNonRetryableError, ProviderRetryableError
+from app.exceptions import NonRetryableError, RetryableError
+from app.providers.provider_base import ProviderBase
 from app.providers.provider_schemas import PushModel
 
 
@@ -52,7 +53,7 @@ class TestSendNotification:
 
         class TestProviderDerived(ProviderBase):
             async def _send_push(self, model: PushModel) -> str:
-                raise ProviderRetryableError('Retryable error')
+                raise RetryableError('Retryable error')
 
         derived = TestProviderDerived()
         model = PushModel(message='test', target_arn='test-arn')
@@ -68,12 +69,12 @@ class TestSendNotification:
 
         class TestProviderDerived(ProviderBase):
             async def _send_push(self, model: PushModel) -> str:
-                raise ProviderNonRetryableError('Non-retryable error')
+                raise NonRetryableError('Non-retryable error')
 
         derived = TestProviderDerived()
         model = PushModel(message='test', target_arn='test-arn')
 
-        with pytest.raises(ProviderNonRetryableError):
+        with pytest.raises(NonRetryableError):
             await derived.send_notification(model)
 
     async def test_send_notification_retries(self) -> None:
@@ -85,7 +86,7 @@ class TestSendNotification:
                     self.attempt = 0
                 self.attempt += 1
                 if self.attempt < 3:
-                    raise ProviderRetryableError('Retryable error')
+                    raise RetryableError('Retryable error')
                 return 'success'
 
         derived = TestProviderDerived()

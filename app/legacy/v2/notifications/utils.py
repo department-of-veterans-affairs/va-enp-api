@@ -8,10 +8,10 @@ from sqlalchemy.exc import NoResultFound
 
 from app.constants import NotificationType
 from app.db.models import Template
+from app.exceptions import NonRetryableError, RetryableError
 from app.legacy.dao.templates_dao import LegacyTemplateDao
 from app.legacy.v2.notifications.route_schema import PersonalisationFileObject
 from app.providers.provider_aws import ProviderAWS
-from app.providers.provider_base import ProviderNonRetryableError, ProviderRetryableError
 from app.providers.provider_schemas import PushModel
 
 
@@ -37,8 +37,8 @@ async def send_push_notification_helper(
     try:
         await provider.send_notification(push_model)
     except (
-        ProviderRetryableError,
-        ProviderNonRetryableError,
+        RetryableError,
+        NonRetryableError,
     ) as error:
         # when these are raised we want to set the message | include status reason and log message
         logger.exception(
