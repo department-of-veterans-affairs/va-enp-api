@@ -64,9 +64,9 @@ class TestSendPushNotificationHelper:
         mock_template.build_message.return_value = 'test_message'
         mock_provider = AsyncMock(spec=ProviderAWS)
         mock_provider.send_notification.side_effect = NonRetryableError
-        personalization: dict[str, str | int | float] = {'name': 'John'}
+        personalisation: dict[str, str | int | float] = {'name': 'John'}
 
-        await send_push_notification_helper(personalization, '12345', mock_template, mock_provider)
+        await send_push_notification_helper(personalisation, '12345', mock_template, mock_provider)
 
         mock_logger.assert_called_once()
 

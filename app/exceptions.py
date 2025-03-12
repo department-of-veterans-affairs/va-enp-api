@@ -4,7 +4,7 @@
 class RetryableError(Exception):
     """Indicative of a retryable exception."""
 
-    def __init__(self, /, log_msg: str | None = None, *args: str, **kwargs: str) -> None:
+    def __init__(self, /, log_msg: str | None = None, *args: tuple, **kwargs: dict) -> None:
         """Constructor.
 
         Arguments:
@@ -25,8 +25,8 @@ class NonRetryableError(Exception):
         log_msg: str | None = None,
         status: str | None = None,
         status_reason: str | None = None,
-        *args: str,
-        **kwargs: str,
+        *args: tuple,
+        **kwargs: dict,
     ) -> None:
         """Constructor.
 
