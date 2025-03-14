@@ -17,7 +17,7 @@ aiobotocore = "*"
 # Botocore later than 1.36.20 causes KeyError: 'botocore_supported_protocols' in
 # tests/app/providers/test_provider_aws.py
 # TestProviderAWS::test_send_push_notification_botocore_exceptions_not_retriable
-botocore = ">=1.36.0,<1.36.20"
+botocore = "*"
 fastapi = {extras = ["standard"], version = "*"}
 pyjwt = "*"
 gunicorn = "*"
@@ -139,7 +139,7 @@ max-complexity = 5
 [tool.pytest.ini_options]
 asyncio_default_fixture_loop_scope = "function"
 asyncio_mode = "auto"
-addopts = "--cov=app --cov=tests --cov-report=term-missing -W error"
+addopts = ["--cov=app", "--cov=tests", "--cov-report=term-missing", "-W", "error"]
 
 [build-system]
 requires = ["poetry-core"]

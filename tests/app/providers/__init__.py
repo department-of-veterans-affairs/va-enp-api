@@ -77,4 +77,5 @@ botocore_exceptions_kwargs = {
     'InfiniteLoopConfigError': ('source_profile', 'visited_profiles'),
     'MissingServiceIdError': ('service_name',),
     'InvalidDefaultsMode': ('mode', 'valid_modes'),
+    'UnsupportedServiceProtocolsError': ('botocore_supported_protocols', 'service', 'service_supported_protocols'),
 }
