@@ -7,7 +7,6 @@ from pydantic import UUID4
 from sqlalchemy.exc import NoResultFound
 
 from app.constants import NotificationType
-from app.db.models import Template
 from app.exceptions import NonRetryableError, RetryableError
 from app.legacy.dao.templates_dao import LegacyTemplateDao
 from app.legacy.v2.notifications.route_schema import PersonalisationFileObject
@@ -18,7 +17,7 @@ from app.providers.provider_schemas import PushModel
 async def send_push_notification_helper(
     personalization: dict[str, str | int | float] | None,
     recipient_identifier: str,
-    template: Template,
+    message: str,
     provider: ProviderAWS,
 ) -> None:
     """Send push notification in the background.
@@ -26,11 +25,13 @@ async def send_push_notification_helper(
     Args:
         personalization (dict[str, str] | None): The personalization data from the request
         recipient_identifier (str): The recipient's identifier from the request
-        template (Template): The template to use for the notification's message
+        message (str): The placeholder message to use for the notification's message
         provider (ProviderAWS): The provider to use for sending the notification
 
     """
-    message = template.build_message(personalization)
+    if isinstance(personalization, dict):
+        for key, value in personalization.items():
+            message = message.replace(f'(({key}))', str(value))
     target_arn = await get_arn_from_icn(recipient_identifier)
     push_model = PushModel(message=message, target_arn=target_arn)
 
@@ -56,7 +57,7 @@ async def get_arn_from_icn(icn: str) -> str:
     raise NotImplementedError('get_arn_from_icn has not been implemented.')
 
 
-async def validate_push_template(template_id: UUID4) -> Template:
+async def validate_push_template(template_id: UUID4) -> str:
     """Future method to validate the template.
 
     Args:
