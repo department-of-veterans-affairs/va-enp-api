@@ -12,11 +12,8 @@ package-mode = false
 poetry_version = "1.8.4"
 
 [tool.poetry.dependencies]
-python = "^3.13"
+python = "^3.12"
 aiobotocore = "*"
-# Botocore later than 1.36.20 causes KeyError: 'botocore_supported_protocols' in
-# tests/app/providers/test_provider_aws.py
-# TestProviderAWS::test_send_push_notification_botocore_exceptions_not_retriable
 botocore = "*"
 fastapi = {extras = ["standard"], version = "*"}
 pyjwt = "*"
@@ -65,8 +62,7 @@ skips = ["B101"]  # https://bandit.readthedocs.io/en/latest/plugins/b101_assert_
 omit = [
     "app/logging/*",
     "app/main.py",
-    "tests/app/test_main.py",
-    "app/legacy/dao/*",
+    "tests/app/test_main.py"
 ]
 
 [tool.coverage.report]
@@ -105,7 +101,7 @@ exclude = [
 ]
 line-length = 120
 indent-width = 4
-target-version = "py313"
+target-version = "py312"
 
 [tool.ruff.format]
 docstring-code-format = true  # https://docs.astral.sh/ruff/settings/#format-docstring-code-format
@@ -139,7 +135,7 @@ max-complexity = 5
 [tool.pytest.ini_options]
 asyncio_default_fixture_loop_scope = "function"
 asyncio_mode = "auto"
-addopts = ["--cov=app", "--cov=tests", "--cov-report=term-missing", "-W", "error"]
+addopts = "--cov=app --cov=tests --cov-report=term-missing -W error"
 
 [build-system]
 requires = ["poetry-core"]
