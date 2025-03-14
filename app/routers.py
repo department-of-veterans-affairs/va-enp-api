@@ -9,7 +9,7 @@ from fastapi.responses import JSONResponse, Response
 from fastapi.routing import APIRoute
 from loguru import logger
 
-from app.constants import RESPONSE_400, RESPONSE_500
+from app.constants import RESPONSE_400
 
 
 class TimedAPIRoute(APIRoute):
@@ -67,10 +67,6 @@ class TimedAPIRoute(APIRoute):
             except HTTPException as e:
                 status_code = e.status_code
                 return self.http_exception_handler(request, e)
-            except Exception as e:
-                status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
-                logger.exception('{}: {}', RESPONSE_500, type(e).__name__)
-                raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=RESPONSE_500)
             finally:
                 logger.info(
                     '{} {} {} {}s',

@@ -1,6 +1,5 @@
 """All endpoints for the v2/notifications route."""
 
-import json
 from typing import Annotated
 from uuid import uuid4
 
@@ -10,8 +9,6 @@ from pydantic import UUID4
 
 from app.auth import JWTBearer
 from app.constants import NotificationType
-from app.dao.notifications_dao import dao_create_notification
-from app.db.models import Notification, Template
 from app.legacy.v2.notifications.route_schema import (
     HttpsUrl,
     V2PostPushRequestModel,
@@ -22,7 +19,7 @@ from app.legacy.v2.notifications.route_schema import (
     V2Template,
     ValidatedPhoneNumber,
 )
-from app.legacy.v2.notifications.utils import send_push_notification_helper, validate_push_template, validate_template
+from app.legacy.v2.notifications.utils import send_push_notification_helper, validate_template
 from app.routers import TimedAPIRoute
 
 v2_legacy_notification_router = APIRouter(
@@ -54,9 +51,6 @@ async def create_push_notification(
         request (Request): The FastAPI request object.
         background_tasks (BackgroundTasks): The FastAPI background tasks object.
 
-    Raises:
-        HTTPException: If the template with the given template_id is not found.
-
     Returns:
         V2PostPushResponseModel: The notification response data.
 
@@ -64,29 +58,17 @@ async def create_push_notification(
     icn = request_data.recipient_identifier.id_value
     template_id = UUID4(request_data.template_id)
     personalization = request_data.personalisation
-
-    try:
-        template: Template = await validate_push_template(template_id)
-    except Exception:
-        # TODO: catch a more specific exception here when validate_push_template is implemented
-        logger.info('Template not found with ID {}', template_id)
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f'Undeliverable - Validation failed. Template not found with template_id {template_id}',
-        )
+    msg_template = 'Temporary string - Will be ((record)) from a push template ((table))'
 
     logger.info('Creating notification with recipent_identifier {} and template_id {}.', icn, template_id)
 
-    notification = await dao_create_notification(Notification(personalization=json.dumps(personalization)))
-
     background_tasks.add_task(
-        send_push_notification_helper, personalization, icn, template, request.app.enp_state.providers['aws']
+        send_push_notification_helper, personalization, icn, msg_template, request.app.enp_state.providers['aws']
     )
 
     logger.info(
-        'Successful notification {} created with recipient_identifer {} and template_id {}.',
-        notification.id,
-        icn,
+        'Successful push notification created with recipient_identifer {} and template_id {}.',
+        f'{icn[:-6]}XXXXXX',  # Do not log ICNs (PII)
         template_id,
     )
     return V2PostPushResponseModel()

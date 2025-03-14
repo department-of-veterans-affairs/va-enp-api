@@ -9,8 +9,6 @@ fileignoreconfig:
   checksum: 06eb4b4c65191921104dc39381a937843a6ce155eeac7dc72990b5d10b5eb275
 - filename: app/db/__init__.py
   checksum: 66575249d84eff02f539737ad2fa9f5a59b1b8982b5a3b8ff114e309ef62303d
-- filename: app/db/models.py
-  checksum: 4ef96985d2353c00b229b30078f150ac80b15bd804b2d31c34784671793fec42
 - filename: app/providers/provider_aws.py
   checksum: f345ea8dea997d72c8d40a0cac2a2b1aacacef8959088ba5cc2ea9e5df57c9fd
 - filename: cd/dev.env
@@ -37,4 +35,6 @@ fileignoreconfig:
   checksum: dbce38f807d54fa2776a31a3897350591569b2cfc3d73fa03f0381527c737efb
 - filename: tests/conftest.py
   checksum: 35e538d03d3a2d0b2696b9a93994b77a1a041090d160ac9518a958e640a09488
+- filename: app/legacy/v2/notifications/utils.py
+  checksum: b8fe6a823967dec1b572b3823b226c2b73a33129f2b09176069b69782ab86d6e
 version: "1.0"
