@@ -20,7 +20,7 @@ fileignoreconfig:
 - filename: ci/docker-compose-local.yml
   checksum: c73beda98c39232441d86f6d6f6f2858274f9703f8a462eac1effacfbb9aa39d
 - filename: poetry.lock
-  checksum: 473936b1126a994e4635a5948e70ec3e1a84e129a3fc5a18d68f4683b1be5f27
+  checksum: 54fb755e2e9ae8c2c9f9a6e774b225c813a63e0ce4477622e7de7db05b08bebd
 - filename: postman/enp-api.postman_collection.json
   checksum: 09d876de545985b9cd21e1961387f1cce2189f56cc515565b2bb3924d38e0fe3
 - filename: pyproject.toml
