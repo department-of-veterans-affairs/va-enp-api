@@ -17,7 +17,7 @@ aiobotocore = "*"
 # Botocore later than 1.36.20 causes KeyError: 'botocore_supported_protocols' in
 # tests/app/providers/test_provider_aws.py
 # TestProviderAWS::test_send_push_notification_botocore_exceptions_not_retriable
-botocore = ">=1.36.0,<1.36.20"
+botocore = ">=1.37.13,<1.37.14"
 fastapi = {extras = ["standard"], version = "*"}
 pyjwt = "*"
 gunicorn = "*"
