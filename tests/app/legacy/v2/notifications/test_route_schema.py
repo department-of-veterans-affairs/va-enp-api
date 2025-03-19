@@ -117,15 +117,16 @@ def test_v2_post_sms_request_model_valid(data: dict[str, str | dict[str, str]]) 
     [
         {},
         {'phone_number': INVALID_PHONE_NUMBER},
+        {'recipient_identifier': {'id_type': 'icn', 'id_value': VALID_ICN_VALUE}},
     ],
     ids=(
         'neither phone number nor recipient ID',
         'invalid us phone number',
+        'invalid identifier type',
     ),
 )
 def test_v2_post_sms_request_model_invalid(data: dict[str, str | dict[str, str]]) -> None:
     """Invalid data should raise ValidationError."""
-    data['sms_sender_id'] = str(uuid4())
     data['template_id'] = str(uuid4())
     with pytest.raises(ValidationError):
         V2PostSmsRequestModel.model_validate(data)
