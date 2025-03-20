@@ -302,7 +302,7 @@ class V2PostSmsRequestModel(V2PostNotificationRequestModel):
 
         """
         if self.phone_number is None and self.recipient_identifier is None:
-            raise ValueError('You must specify at least one of "phone_number" or "recipient identifier".')
+            raise ValueError('You must specify at least one of phone_number or recipient identifier.')
         return self
 
 

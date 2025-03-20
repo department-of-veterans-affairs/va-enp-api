@@ -20,12 +20,12 @@ from app.legacy.v2.notifications.route_schema import (
     ValidatedPhoneNumber,
 )
 from app.legacy.v2.notifications.utils import send_push_notification_helper, validate_template
-from app.routers import TimedAPIRoute
+from app.routers import LegacyTimedAPIRoute
 
 v2_legacy_notification_router = APIRouter(
     dependencies=[Depends(JWTBearer())],
     prefix='/legacy/v2/notifications',
-    route_class=TimedAPIRoute,
+    route_class=LegacyTimedAPIRoute,
     tags=['v2 Legacy Notification Endpoints'],
 )
 
@@ -33,7 +33,7 @@ v2_legacy_notification_router = APIRouter(
 v2_notification_router = APIRouter(
     dependencies=[Depends(JWTBearer())],
     prefix='/v2/notifications',
-    route_class=TimedAPIRoute,
+    route_class=LegacyTimedAPIRoute,
     tags=['v2 Notification Endpoints'],
 )
 
