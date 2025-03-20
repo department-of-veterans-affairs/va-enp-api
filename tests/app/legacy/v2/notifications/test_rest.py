@@ -145,7 +145,7 @@ class TestV2SMS:
     error_details: ClassVar = {
         'errors': [
             {
-                'error': 'BadRequestError',
+                'error': 'ValidationError',
                 'message': '',
             },
         ],

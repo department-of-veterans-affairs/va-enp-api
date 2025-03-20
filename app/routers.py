@@ -36,6 +36,9 @@ class LegacyTimedAPIRoute(APIRoute):
         # Return the JSON response for v2 compatibility
         if isinstance(e.detail, dict) and e.detail.get('errors'):
             return JSONResponse(status_code=e.status_code, content=e.detail)
+        elif e.status_code in (401, 403):
+            errors = {'errors': [{'error': 'AuthError', 'msg': e.detail}], 'status_code': e.status_code}
+            return JSONResponse(status_code=e.status_code, content=errors)
         else:
             raise e
 
@@ -64,15 +67,18 @@ class LegacyTimedAPIRoute(APIRoute):
         errors = []
 
         for error in e.errors():
-            if error.get('type') == 'missing':
-                # need to construct message for missing/field required errors
-                field_loc = error.get('loc')
-                field_name = field_loc[-1] if field_loc else 'unknown_field'
-                message = f'The required field {field_name} is missing.'
-            else:
-                message = error.get('msg')
+            error_location = error.get('loc')
+            error_message = error.get('msg')
 
-            errors.append({'error': 'ValidationError', 'message': message})
+            if error.get('type') == 'uuid_parsing':
+                # special case to override verbose Pydantic UUID format message
+                error_message = 'Input should be a valid UUID'
+
+            if len(error_location) > 1:
+                # prepend last entry in error location if available, skip global and leading context
+                error_message = f'{error_location[-1]}: {error_message}'
+
+            errors.append({'error': 'ValidationError', 'message': error_message})
 
         return JSONResponse(status_code=status_code, content={'errors': errors, 'status_code': status_code})
 

@@ -107,7 +107,7 @@ async def create_sms_notification(
         error_details = {
             'errors': [
                 {
-                    'error': 'BadRequestError',
+                    'error': 'ValidationError',
                     'message': str(e),
                 },
             ],

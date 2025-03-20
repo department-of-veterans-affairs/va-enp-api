@@ -64,8 +64,8 @@ class JWTBearer(HTTPBearer):
         credentials: HTTPAuthorizationCredentials | None = await super(JWTBearer, self).__call__(request)
         if credentials is None:
             logger.warning('No credentials provided.')
-            raise HTTPException(status_code=403, detail='Not authenticated')
+            raise HTTPException(status_code=401, detail='Unauthorized, authentication token must be provided')
         if not verify_token(str(credentials.credentials)):
             logger.warning('Invalid or expired token.')
-            raise HTTPException(status_code=403, detail='Invalid or expired token.')
+            raise HTTPException(status_code=403, detail='Invalid token: signature, api token is not valid')
         return credentials
