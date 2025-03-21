@@ -60,7 +60,7 @@ class LegacyTimedAPIRoute(APIRoute):
         """
         status_code = status.HTTP_400_BAD_REQUEST
 
-        logger.warning(
+        logger.info(
             'Request: {} {} Failed validation: {}',
             request.method,
             request.url,
