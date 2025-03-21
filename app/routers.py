@@ -37,6 +37,10 @@ class LegacyTimedAPIRoute(APIRoute):
         if isinstance(e.detail, dict) and e.detail.get('errors'):
             return JSONResponse(status_code=e.status_code, content=e.detail)
         elif e.status_code in (401, 403):
+            if e.detail == 'Not authenticated':
+                # special case to override status code and message to match v2
+                e.status_code = 401
+                e.detail = 'Unauthorized, authentication token must be provided'
             errors = {'errors': [{'error': 'AuthError', 'msg': e.detail}], 'status_code': e.status_code}
             return JSONResponse(status_code=e.status_code, content=errors)
         else:
@@ -70,9 +74,9 @@ class LegacyTimedAPIRoute(APIRoute):
             error_location = error.get('loc')
             error_message = error.get('msg')
 
-            if error.get('type') == 'uuid_parsing':
-                # special case to override verbose Pydantic UUID format message
-                error_message = 'Input should be a valid UUID'
+            if error.get('type').startswith('uuid'):
+                # special case to override Pydantic UUID type/format message
+                error_message = 'Input should be a valid UUID version 4'
 
             if len(error_location) > 1:
                 # prepend last entry in error location if available, skip global and leading context
