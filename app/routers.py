@@ -40,9 +40,9 @@ class LegacyTimedAPIRoute(APIRoute):
                 # special case to override status code and message to match v2
                 e.status_code = 401
                 e.detail = 'Unauthorized, authentication token must be provided'
-                error_type = 'AuthError'
+            error_type = 'AuthError'
 
-        errors = {'errors': [{'error': error_type, 'msg': e.detail}], 'status_code': e.status_code}
+        errors = {'errors': [{'error': error_type, 'message': e.detail}], 'status_code': e.status_code}
         return JSONResponse(status_code=e.status_code, content=errors)
 
     @staticmethod

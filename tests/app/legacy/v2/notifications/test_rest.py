@@ -162,7 +162,18 @@ class TestNotificationRouter:
         with patch('app.legacy.v2.notifications.rest.validate_template', return_value=None):
             response = client.post(route, json=payload, headers={'Authorization': ''})
 
+        error_details = {
+            'errors': [
+                {
+                    'error': 'AuthError',
+                    'message': 'Unauthorized, authentication token must be provided',
+                },
+            ],
+            'status_code': 401,
+        }
+
         assert response.status_code == status.HTTP_401_UNAUTHORIZED
+        assert response.json() == error_details
 
 
 @patch('app.legacy.v2.notifications.rest.validate_template', return_value=None)
