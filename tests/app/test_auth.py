@@ -30,8 +30,8 @@ def test_credentials_returns_none(client: TestClient, mocker: AsyncMock) -> None
     """
     mocker.patch('app.auth.HTTPBearer.__call__', return_value=None)
     response = client.post('/v3/device-registrations')
-    assert response.status_code == 403
-    assert response.json() == {'detail': 'Not authenticated'}
+    assert response.status_code == 401
+    assert response.json() == {'detail': 'Unauthorized, authentication token must be provided'}
 
 
 def test_missing_authorization_scheme(client: TestClient) -> None:
@@ -61,7 +61,7 @@ def test_expired_iat_in_token(client: TestClient) -> None:
         '/v3/device-registrations', headers={'Authorization': f'Bearer {generate_token(payload=payload)}'}
     )
     assert response.status_code == 403
-    assert response.json() == {'detail': 'Invalid or expired token.'}
+    assert response.json() == {'detail': 'Invalid token: signature, api token is not valid'}
 
 
 def test_future_iat_in_token(client: TestClient) -> None:
@@ -80,4 +80,4 @@ def test_future_iat_in_token(client: TestClient) -> None:
         '/v3/device-registrations', headers={'Authorization': f'Bearer {generate_token(payload=payload)}'}
     )
     assert response.status_code == 403
-    assert response.json() == {'detail': 'Invalid or expired token.'}
+    assert response.json() == {'detail': 'Invalid token: signature, api token is not valid'}

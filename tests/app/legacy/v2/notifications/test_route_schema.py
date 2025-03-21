@@ -37,7 +37,6 @@ VALID_ICN_VALUE = '1234567890V123456'
 )
 def test_v2_post_email_request_model_valid(data: dict[str, str | dict[str, str]]) -> None:
     """Valid data with an e-mail address should not raise ValidationError."""
-    data['email_reply_to_id'] = str(uuid4())
     data['template_id'] = str(uuid4())
     assert isinstance(V2PostEmailRequestModel.model_validate(data), V2PostEmailRequestModel)
 
@@ -55,7 +54,6 @@ def test_v2_post_email_request_model_valid(data: dict[str, str | dict[str, str]]
 )
 def test_v2_post_email_request_model_invalid(data: dict[str, str | dict[str, str]]) -> None:
     """Invalid data should raise ValidationError."""
-    data['email_reply_to_id'] = str(uuid4())
     data['template_id'] = str(uuid4())
 
     with pytest.raises(ValidationError):

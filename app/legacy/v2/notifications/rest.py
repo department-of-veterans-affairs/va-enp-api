@@ -3,7 +3,7 @@
 from typing import Annotated
 from uuid import uuid4
 
-from fastapi import APIRouter, BackgroundTasks, Body, Depends, HTTPException, Request, status
+from fastapi import APIRouter, BackgroundTasks, Body, Depends, Request, status
 from loguru import logger
 from pydantic import UUID4
 
@@ -19,13 +19,17 @@ from app.legacy.v2.notifications.route_schema import (
     V2Template,
     ValidatedPhoneNumber,
 )
-from app.legacy.v2.notifications.utils import send_push_notification_helper, validate_template
-from app.routers import TimedAPIRoute
+from app.legacy.v2.notifications.utils import (
+    raise_request_validation_error,
+    send_push_notification_helper,
+    validate_template,
+)
+from app.routers import LegacyTimedAPIRoute
 
 v2_legacy_notification_router = APIRouter(
     dependencies=[Depends(JWTBearer())],
     prefix='/legacy/v2/notifications',
-    route_class=TimedAPIRoute,
+    route_class=LegacyTimedAPIRoute,
     tags=['v2 Legacy Notification Endpoints'],
 )
 
@@ -33,7 +37,7 @@ v2_legacy_notification_router = APIRouter(
 v2_notification_router = APIRouter(
     dependencies=[Depends(JWTBearer())],
     prefix='/v2/notifications',
-    route_class=TimedAPIRoute,
+    route_class=LegacyTimedAPIRoute,
     tags=['v2 Notification Endpoints'],
 )
 
@@ -92,28 +96,13 @@ async def create_sms_notification(
 
     Returns:
         V2PostSmsResponseModel: The notification response data if notification is created successfully.
-
-    Raises:
-        HTTPException: If the template is not found, is not a SMS type, or is not active, or if the request is
-            missing personalisation data.
-
     """
     logger.debug('Received SMS request with data: {}', request)
 
     try:
         await validate_template(request.template_id, NotificationType.SMS, request.personalisation)
     except ValueError as e:
-        # Error details based on consistency with the flask api v2 response
-        error_details = {
-            'errors': [
-                {
-                    'error': 'BadRequestError',
-                    'message': str(e),
-                },
-            ],
-            'status_code': status.HTTP_400_BAD_REQUEST,
-        }
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=error_details)
+        raise_request_validation_error(str(e))
 
     logger.debug('Creating SMS notification with request data {}.', request)
 

@@ -136,6 +136,42 @@ class TestNotificationRouter:
 
         assert response.status_code == status.HTTP_400_BAD_REQUEST
 
+    @pytest.mark.parametrize('route', routes)
+    async def test_auth_error_uses_v2_json_structure(
+        self,
+        client: ENPTestClient,
+        route: str,
+    ) -> None:
+        """Test route can return 201.
+
+        Args:
+            client (ENPTestClient): Custom FastAPI client fixture
+            route (str): Route to test
+
+        """
+        request = V2PostSmsRequestModel(
+            reference=str(uuid4()),
+            template_id=uuid4(),
+            phone_number=ValidatedPhoneNumber('+18005550101'),
+            sms_sender_id=uuid4(),
+        )
+        payload = jsonable_encoder(request)
+        with patch('app.legacy.v2.notifications.rest.validate_template', return_value=None):
+            response = client.post(route, json=payload, headers={'Authorization': ''})
+
+        error_details = {
+            'errors': [
+                {
+                    'error': 'AuthError',
+                    'message': 'Unauthorized, authentication token must be provided',
+                },
+            ],
+            'status_code': 401,
+        }
+
+        assert response.status_code == status.HTTP_401_UNAUTHORIZED
+        assert response.json() == error_details
+
 
 @patch('app.legacy.v2.notifications.rest.validate_template', return_value=None)
 class TestV2SMS:
@@ -145,7 +181,7 @@ class TestV2SMS:
     error_details: ClassVar = {
         'errors': [
             {
-                'error': 'BadRequestError',
+                'error': 'ValidationError',
                 'message': '',
             },
         ],
@@ -218,3 +254,20 @@ class TestV2SMS:
         response_errors = response.json()['errors']
         assert len(response_errors) == 1
         assert 'Missing personalisation:' in response_errors[0]['message']
+
+    async def test_v2_sms_returns_custom_uuid_message_for_invalid_uuid(
+        self,
+        mock_validate_template: AsyncMock,
+        client: ENPTestClient,
+        sms_request_data: dict[str, str],
+    ) -> None:
+        """Test route returns 400 and custom UUID formatting message."""
+        sms_request_data['template_id'] = 'bad_uuid'
+
+        response = client.post(self.sms_route, json=sms_request_data)
+
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+
+        response_errors = response.json()['errors']
+        assert len(response_errors) == 1
+        assert response_errors[0]['message'] == 'template_id: Input should be a valid UUID version 4'

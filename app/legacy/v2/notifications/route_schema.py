@@ -218,7 +218,6 @@ class V2PostNotificationRequestModel(StrictBaseModel):
     reference: str | None = None
     template_id: Annotated[UUID4, Field(strict=False)]
     scheduled_for: Annotated[AwareDatetime, Field(strict=False)] | None = None
-    email_reply_to_id: Annotated[UUID4, Field(strict=False)] | None = None
 
 
 class V2PostEmailRequestModel(V2PostNotificationRequestModel):
@@ -247,7 +246,6 @@ class V2PostEmailRequestModel(V2PostNotificationRequestModel):
 class V2PostSmsRequestModel(V2PostNotificationRequestModel):
     """Attributes specific to requests to send SMS notifications."""
 
-    # phone_number: PhoneNumberE164 | None = None
     phone_number: ValidatedPhoneNumber | None = None
     sms_sender_id: Annotated[UUID4, Field(strict=False)] | None = None
 
@@ -302,7 +300,7 @@ class V2PostSmsRequestModel(V2PostNotificationRequestModel):
 
         """
         if self.phone_number is None and self.recipient_identifier is None:
-            raise ValueError('You must specify at least one of "phone_number" or "recipient identifier".')
+            raise ValueError('You must specify at least one of phone_number or recipient identifier.')
         return self
 
 

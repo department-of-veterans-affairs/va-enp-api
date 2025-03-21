@@ -1,7 +1,9 @@
 """Utilities to aid the REST Notification routes."""
 
 import re
+from typing import Sequence
 
+from fastapi.exceptions import RequestValidationError
 from loguru import logger
 from pydantic import UUID4
 from sqlalchemy.exc import NoResultFound
@@ -12,6 +14,24 @@ from app.legacy.dao.templates_dao import LegacyTemplateDao
 from app.legacy.v2.notifications.route_schema import PersonalisationFileObject
 from app.providers.provider_aws import ProviderAWS
 from app.providers.provider_schemas import PushModel
+
+
+def raise_request_validation_error(
+    message: str,
+    loc: Sequence[str] = ('body',),
+) -> None:
+    """Raise a FastAPI-style RequestValidationError with a message and optional location.
+
+    Args:
+        message (str): The error message.
+        loc (Sequence[str]): A sequence of strings describing the field path.
+
+    Raises:
+        RequestValidationError: Handled by router to return properly structured JSON
+    """
+    error = {'loc': loc, 'msg': message, 'type': 'value_error'}
+
+    raise RequestValidationError(errors=[error])
 
 
 async def send_push_notification_helper(
@@ -82,7 +102,7 @@ async def validate_template(
 ) -> None:
     """Validates the template with the given ID.
 
-    Checks for the template in the database, that it's the right type, and is active. Raises an HTTPException if any
+    Checks for the template in the database, that it's the right type, and is active. Raises a ValueError if any
     of these conditions are not met.
 
     Args:
