@@ -264,7 +264,7 @@ class TestV2SMS:
         client: ENPTestClient,
         sms_request_data: dict[str, str],
     ) -> None:
-        """Test route returns 400 with invalid personalisation."""
+        """Test route returns 400 and custom UUID formatting message."""
         sms_request_data['template_id'] = 'bad_uuid'
 
         response = client.post(self.sms_route, json=sms_request_data)
