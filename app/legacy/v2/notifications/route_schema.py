@@ -218,13 +218,13 @@ class V2PostNotificationRequestModel(StrictBaseModel):
     reference: str | None = None
     template_id: Annotated[UUID4, Field(strict=False)]
     scheduled_for: Annotated[AwareDatetime, Field(strict=False)] | None = None
-    email_reply_to_id: Annotated[UUID4, Field(strict=False)] | None = None
 
 
 class V2PostEmailRequestModel(V2PostNotificationRequestModel):
     """Attributes specific to requests to send e-mail notifications."""
 
     email_address: EmailStr | None = None
+    email_reply_to_id: Annotated[UUID4, Field(strict=False)] | None = None
 
     @model_validator(mode='after')
     def email_or_recipient_id(self) -> Self:
