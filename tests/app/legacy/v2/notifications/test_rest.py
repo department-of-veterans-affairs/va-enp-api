@@ -137,7 +137,7 @@ class TestNotificationRouter:
         assert response.status_code == status.HTTP_400_BAD_REQUEST
 
     @pytest.mark.parametrize('route', routes)
-    async def test_401_path(
+    async def test_auth_error_uses_v2_json_structure(
         self,
         client: ENPTestClient,
         route: str,
