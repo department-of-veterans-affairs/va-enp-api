@@ -246,7 +246,6 @@ class V2PostEmailRequestModel(V2PostNotificationRequestModel):
 class V2PostSmsRequestModel(V2PostNotificationRequestModel):
     """Attributes specific to requests to send SMS notifications."""
 
-    # phone_number: PhoneNumberE164 | None = None
     phone_number: ValidatedPhoneNumber | None = None
     sms_sender_id: Annotated[UUID4, Field(strict=False)] | None = None
 

@@ -149,14 +149,11 @@ class TestNotificationRouter:
             route (str): Route to test
 
         """
-        template_id = uuid4()
-        sms_sender_id = uuid4()
-
         request = V2PostSmsRequestModel(
             reference=str(uuid4()),
-            template_id=template_id,
+            template_id=uuid4(),
             phone_number=ValidatedPhoneNumber('+18005550101'),
-            sms_sender_id=sms_sender_id,
+            sms_sender_id=uuid4(),
         )
         payload = jsonable_encoder(request)
         with patch('app.legacy.v2.notifications.rest.validate_template', return_value=None):
