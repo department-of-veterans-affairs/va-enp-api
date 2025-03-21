@@ -102,7 +102,7 @@ async def validate_template(
 ) -> None:
     """Validates the template with the given ID.
 
-    Checks for the template in the database, that it's the right type, and is active. Raises an HTTPException if any
+    Checks for the template in the database, that it's the right type, and is active. Raises a ValueError if any
     of these conditions are not met.
 
     Args:

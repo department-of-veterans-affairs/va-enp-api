@@ -33,18 +33,17 @@ class LegacyTimedAPIRoute(APIRoute):
             e,
         )
 
-        # Return the JSON response for v2 compatibility
-        if isinstance(e.detail, dict) and e.detail.get('errors'):
-            return JSONResponse(status_code=e.status_code, content=e.detail)
-        elif e.status_code in (401, 403):
+        error_type = 'HTTPException'
+
+        if e.status_code in (401, 403):
             if e.detail == 'Not authenticated':
                 # special case to override status code and message to match v2
                 e.status_code = 401
                 e.detail = 'Unauthorized, authentication token must be provided'
-            errors = {'errors': [{'error': 'AuthError', 'msg': e.detail}], 'status_code': e.status_code}
-            return JSONResponse(status_code=e.status_code, content=errors)
-        else:
-            raise e
+                error_type = 'AuthError'
+
+        errors = {'errors': [{'error': error_type, 'msg': e.detail}], 'status_code': e.status_code}
+        return JSONResponse(status_code=e.status_code, content=errors)
 
     @staticmethod
     def request_validation_error_handler(request: Request, e: RequestValidationError) -> JSONResponse:
@@ -123,30 +122,6 @@ class LegacyTimedAPIRoute(APIRoute):
 class TimedAPIRoute(APIRoute):
     """Exception and logging handling."""
 
-    @staticmethod
-    def http_exception_handler(request: Request, e: HTTPException) -> JSONResponse:
-        """Log and handle HTTPException errors.
-
-        Args:
-            request (Request): The original request data.
-            e (HTTPException): The exception data.
-
-        Returns:
-            JSONResponse: The JSON response when v2 validation errors are present.
-        """
-        logger.warning(
-            'Request: {} {} Failed with HTTPException: {}',
-            request.method,
-            request.url,
-            e,
-        )
-
-        # Return the JSON response for v2 compatibility
-        if isinstance(e.detail, dict) and e.detail.get('errors'):
-            return JSONResponse(status_code=e.status_code, content=e.detail)
-        else:
-            raise e
-
     def get_route_handler(self) -> Callable[[Request], Coroutine[Any, Any, Response]]:
         """Override default handler.
 
@@ -172,9 +147,6 @@ class TimedAPIRoute(APIRoute):
                     e,
                 )
                 raise HTTPException(400, f'{RESPONSE_400} - {e}')
-            except HTTPException as e:
-                status_code = e.status_code
-                return self.http_exception_handler(request, e)
             finally:
                 logger.info(
                     '{} {} {} {}s',
