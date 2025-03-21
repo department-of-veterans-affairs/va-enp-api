@@ -191,6 +191,7 @@ files = [
 [package.dependencies]
 idna = ">=2.8"
 sniffio = ">=1.1"
+typing_extensions = {version = ">=4.5", markers = "python_version < \"3.13\""}
 
 [package.extras]
 doc = ["Sphinx (>=7.4,<8.0)", "packaging", "sphinx-autodoc-typehints (>=1.2.0)", "sphinx_rtd_theme"]
@@ -1770,6 +1771,7 @@ files = [
 
 [package.dependencies]
 psycopg-binary = {version = "3.2.6", optional = true, markers = "implementation_name != \"pypy\" and extra == \"binary\""}
+typing-extensions = {version = ">=4.6", markers = "python_version < \"3.13\""}
 tzdata = {version = "*", markers = "sys_platform == \"win32\""}
 
 [package.extras]
@@ -3597,5 +3599,5 @@ propcache = ">=0.2.0"
 
 [metadata]
 lock-version = "2.0"
-python-versions = "^3.13"
-content-hash = "a1567c0939781c0f816a0c565fe30dd22f4e07085facfa4d84ecc178adbc34b7"
+python-versions = "^3.12"
+content-hash = "f7b5ffbf72d6f2e8850d754e035b922b328d6fd939d070e7349b6542d8997761"
