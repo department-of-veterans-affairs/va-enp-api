@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import os
 import sys
 from types import FrameType
 from typing import Dict, Optional
@@ -25,6 +26,11 @@ LOGLEVEL_MAPPING: Dict[int, str] = {
     10: LOGLEVEL_DEBUG,
     0: LOGLEVEL_NOTSET,
 }
+
+sys.tracebacklimit = 0  # Disable traceback in loguru
+
+# Serialize if the env variable ENP_ENV is development, perf, staging, or production
+SERIALIZE = os.getenv('ENP_ENV', 'development') in ('development', 'perf', 'staging', 'production')
 
 
 class InterceptHandler(logging.Handler):
@@ -52,8 +58,7 @@ class InterceptHandler(logging.Handler):
                 depth += 1
 
             # Log the message with Loguru
-            log = loguru_logger.bind(request_id='app')
-            log.opt(depth=depth, exception=record.exc_info).log(level, record.getMessage())
+            loguru_logger.opt(depth=depth, exception=record.exc_info).log(level, record.getMessage())
 
 
 class CustomizeLogger:
@@ -95,6 +100,7 @@ class CustomizeLogger:
             backtrace=False,
             level=LOGLEVEL_DEBUG,
             filter=lambda record: record['level'].name in stdout_allowed_levels,
+            serialize=SERIALIZE,
         )
 
         # Add sink to stderr
@@ -104,10 +110,11 @@ class CustomizeLogger:
             enqueue=True,
             backtrace=False,
             level=LOGLEVEL_ERROR,
+            serialize=SERIALIZE,
         )
 
         # Return the logger bound with additional context
-        return loguru_logger.bind(request_id=None, method=None)
+        return loguru_logger
 
     @classmethod
     def _configure_fastapi_logger(cls) -> None:

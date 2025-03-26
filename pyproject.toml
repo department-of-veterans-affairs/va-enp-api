@@ -27,6 +27,7 @@ psycopg = {extras = ["binary"], version = "*"}
 pydantic = "*"
 pydantic_extra_types = "*"
 sqlalchemy = {extras = ["asyncio"], version = "*"}
+starlette_context = "*"
 tenacity = "*"
 uvicorn-worker = "*"
 

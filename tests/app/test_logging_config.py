@@ -25,13 +25,10 @@ def test_make_logger() -> None:
         CustomizeLogger.make_logger()
 
         # Check logger.add was called with correct parameters
-        logger_mock.add.assert_any_call(sys.stdout, enqueue=True, backtrace=False, level=LOGLEVEL_DEBUG, filter=ANY)
         logger_mock.add.assert_any_call(
-            sys.stderr,
-            enqueue=True,
-            backtrace=False,
-            level='ERROR',
+            sys.stdout, enqueue=True, backtrace=False, level=LOGLEVEL_DEBUG, filter=ANY, serialize=True
         )
+        logger_mock.add.assert_any_call(sys.stderr, enqueue=True, backtrace=False, level='ERROR', serialize=True)
 
         # Verify that the InterceptHandler was added to the appropriate loggers
         assert all(isinstance(handler, InterceptHandler) for handler in fastapi_logger.handlers)

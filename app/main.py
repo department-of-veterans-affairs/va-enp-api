@@ -10,6 +10,8 @@ from fastapi import Depends, FastAPI, status
 from fastapi.staticfiles import StaticFiles
 from loguru import logger
 from pydantic import UUID4
+from starlette_context import context, plugins
+from starlette_context.middleware import ContextMiddleware
 
 from app.auth import JWTBearer
 from app.db.db_init import (
@@ -86,9 +88,14 @@ def create_app() -> CustomFastAPI:
 
 
 app: CustomFastAPI = create_app()
+app.add_middleware(
+    ContextMiddleware,
+    plugins=(plugins.RequestIdPlugin(force_new_uuid=False),),
+)
 
 
 @app.get('/enp')
+@app.post('/enp')
 def simple_route() -> dict[str, str]:
     """Return a hello world.
 
@@ -96,6 +103,7 @@ def simple_route() -> dict[str, str]:
         dict[str, str]: Hello World
 
     """
+    logger.bind(**context)
     logger.info('Hello World')
     return {'Hello': 'World'}
 

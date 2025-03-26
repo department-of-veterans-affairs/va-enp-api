@@ -9,6 +9,7 @@ import os
 import botocore
 from aiobotocore.session import get_session
 from loguru import logger
+from starlette_context import context
 from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_full_jitter
 
 from app.constants import MAX_RETRIES
@@ -92,6 +93,7 @@ class ProviderAWS(ProviderBase):
             str: The endpoint ARN needed to send a push notification to the registered device
 
         """
+        logger.bind(**context)
         platform_application_arn = self.get_platform_application_arn(
             device_registration_model.platform_application_name,
         )
