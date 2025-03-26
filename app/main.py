@@ -102,7 +102,7 @@ def simple_route() -> dict[str, str]:
         dict[str, str]: Hello World
 
     """
-    logger.bind(**context)
+    logger.info('Request ID: {}', context['X-Request-ID'])
     logger.info('Hello World')
     return {'Hello': 'World'}
 
