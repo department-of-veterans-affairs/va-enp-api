@@ -40,8 +40,8 @@
           "CMD-SHELL",
           "./scripts/wait_for_it.sh 127.0.0.1:6012 -t 0 || exit 1"
         ],
-        "interval": 30,
-        "retries": 5,
+        "interval": 5,
+        "retries": 3,
         "timeout": 10
       }
     },

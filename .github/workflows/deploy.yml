@@ -38,6 +38,10 @@ jobs:
           aws-region: ${{ secrets.AWS_REGION }}
           role-to-assume: ${{ secrets.VAEC_DEPLOY_ROLE }}
 
+      - name: Set uppercase environment name
+        id: env_case
+        run: echo "env_upper=$(echo ${{ inputs.environment }} | tr '[:lower:]' '[:upper:]')" >> $GITHUB_OUTPUT
+
       - name: Renders and deploys task definition for ${{ inputs.environment }}
         uses: ./.github/actions/ecs-task-render-deploy
         with:
@@ -53,6 +57,6 @@ jobs:
           AWS_ARN_REGION: ${{ secrets.AWS_ARN_REGION }}
           AWS_ACCOUNT_NUMBER: ${{ secrets.AWS_ACCOUNT_NUMBER }}
           AWS_REGION: ${{ secrets.AWS_REGION }}
-          TASK_DEFINITION_SECRETS_JSON: ${{ inputs.environment == 'dev' && secrets.DEV_TASK_DEFINITION_SECRETS_JSON || secrets.PERF_TASK_DEFINITION_SECRETS_JSON }}
+          TASK_DEFINITION_SECRETS_JSON: ${{ secrets[format('{0}_TASK_DEFINITION_SECRETS_JSON', steps.env_case.outputs.env_upper)] }}
           DD_API_KEY: ${{ secrets.DD_API_KEY }}
           ENV: ${{ inputs.environment }}
