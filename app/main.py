@@ -95,7 +95,6 @@ app.add_middleware(
 
 
 @app.get('/enp')
-@app.post('/enp')
 def simple_route() -> dict[str, str]:
     """Return a hello world.
 

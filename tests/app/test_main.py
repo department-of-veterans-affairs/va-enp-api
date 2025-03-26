@@ -11,7 +11,7 @@ from tests.conftest import ENPTestClient
 
 
 def test_simple_route(client: ENPTestClient) -> None:
-    """Test GET / to return Hello World.
+    """Test GET /enp to return Hello World.
 
     Args:
         client (ENPTestClient): Custom FastAPI client fixture
@@ -25,7 +25,7 @@ def test_simple_route(client: ENPTestClient) -> None:
 
 @patch('app.main.logger.info')
 def test_simple_route_logs_hello_world(mock_logger: Mock, client: ENPTestClient) -> None:
-    """Test that GET / logs 'Hello World' as an info log and the headers include a request id.
+    """Test that GET /enp logs 'Hello World' as an info log and the headers include a request id.
 
     Args:
         mock_logger (Mock): Mocked logger for capturing log calls.
@@ -39,11 +39,10 @@ def test_simple_route_logs_hello_world(mock_logger: Mock, client: ENPTestClient)
 
 
 @patch('app.main.logger.info')
-def test_specified_request_id_is_preserved(mock_logger: Mock, client: ENPTestClient) -> None:
-    """Test that GET / logs 'Hello World' as an info log and the headers include a request id.
+def test_specified_request_id_is_preserved(client: ENPTestClient) -> None:
+    """Test that GET /enp  headers include a request id.
 
     Args:
-        mock_logger (Mock): Mocked logger for capturing log calls.
         client (ENPTestClient): Custom FastAPI client fixture
 
     """
