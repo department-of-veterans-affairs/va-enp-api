@@ -113,7 +113,7 @@ class CustomizeLogger:
             serialize=SERIALIZE,
         )
 
-        # Return the logger bound with additional context
+        # Return the logger
         return loguru_logger
 
     @classmethod
