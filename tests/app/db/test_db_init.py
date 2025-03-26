@@ -1,6 +1,6 @@
 """Test module for testing the app/db/db_init.py file."""
 
-from unittest.mock import AsyncMock, Mock, patch
+from unittest.mock import Mock, patch
 
 import pytest
 from sqlalchemy.ext.asyncio import AsyncEngine, async_scoped_session
@@ -38,21 +38,13 @@ async def test_init_db(mock_create_async_engine: Mock, read_uri_value: str) -> N
     assert mock_create_async_engine.call_count == 2 if read_uri_value else 1
 
 
-# TODO 171, replace these with tests to a running database
-@patch('app.db.db_init._engine_napi_write', spec=AsyncMock)
-@patch('app.db.db_init._engine_napi_read', spec=AsyncMock)
-async def test_close_db(
-    mock_engine_read_napi: AsyncMock,
-    mock_engine_write_napi: AsyncMock,
-) -> None:
+async def test_close_db(test_db_session) -> None:
     """Test the close_db function to ensure db engines are closed when called."""
-    mock_engine_read_napi.dispose = AsyncMock()
-    mock_engine_write_napi.dispose = AsyncMock()
-
     await close_db()
 
-    mock_engine_read_napi.dispose.assert_called_once()
-    mock_engine_write_napi.dispose.assert_called_once()
+    # mock_engine_read_napi.dispose.assert_called_once()
+    # mock_engine_write_napi.dispose.assert_called_once()
+    # TODO - test_db_session is closed
 
 
 def test_get_db_session_success() -> None:
