@@ -39,7 +39,7 @@ def test_simple_route_logs_hello_world(mock_logger: Mock, client: ENPTestClient)
 
 
 def test_specified_request_id_is_preserved(client: ENPTestClient) -> None:
-    """Test that GET /enp  headers include a request id.
+    """Test that GET /enp headers propagate x-request-id from request to response.
 
     Args:
         client (ENPTestClient): Custom FastAPI client fixture
