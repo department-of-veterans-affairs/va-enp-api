@@ -16,17 +16,17 @@ from sqlalchemy.ext.asyncio import (
 
 from app.db import NAPI_DB_READ_URI, NAPI_DB_WRITE_URI
 
-_engine_napi_read: AsyncEngine
-_engine_napi_write: AsyncEngine
+_engine_napi_read: AsyncEngine = None
+_engine_napi_write: AsyncEngine = None
 metadata_legacy: MetaData = MetaData()
 
 
-async def init_db() -> None:
+async def init_db(pool_pre_ping=False) -> None:
     """Initialize the database engine."""
     logger.info('Initializing the database engines...')
 
     # These methods are copy/paste due to globals.
-    create_engines()
+    create_engines(pool_pre_ping)
 
     # notification_api database connections
     await init_napi_metadata()
@@ -34,13 +34,13 @@ async def init_db() -> None:
     logger.info('...database engines initialized.')
 
 
-def create_engines() -> None:
+def create_engines(pool_pre_ping) -> None:
     """Create the async read and write engines."""
     global _engine_napi_read, _engine_napi_write
     # Create the read database engine.
-    _engine_napi_read = create_async_engine(NAPI_DB_READ_URI, echo=False)
+    _engine_napi_read = create_async_engine(NAPI_DB_READ_URI, echo=False, pool_pre_ping=pool_pre_ping)
     # Create the write database engine.
-    _engine_napi_write = create_async_engine(NAPI_DB_WRITE_URI, echo=False)
+    _engine_napi_write = create_async_engine(NAPI_DB_WRITE_URI, echo=False, pool_pre_ping=pool_pre_ping)
 
 
 async def init_napi_metadata() -> None:
