@@ -93,18 +93,17 @@ class ProviderAWS(ProviderBase):
             str: The endpoint ARN needed to send a push notification to the registered device
 
         """
-        logger.bind(**context)
         platform_application_arn = self.get_platform_application_arn(
             device_registration_model.platform_application_name,
         )
-        logger.debug('Registering device with platform application ARN {}', platform_application_arn)
+        logger.bind(**context).debug('Registering device with platform application ARN {}', platform_application_arn)
 
         push_registration_model = PushRegistrationModel(
             platform_application_arn=platform_application_arn,
             token=device_registration_model.token,
         )
         response = await self.register_push_endpoint(push_registration_model)
-        logger.debug('Registered device with endpoint ARN {}', response)
+        logger.bind(**context).debug('Registered device with endpoint ARN {}', response)
 
         return response
 
