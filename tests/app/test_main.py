@@ -38,7 +38,6 @@ def test_simple_route_logs_hello_world(mock_logger: Mock, client: ENPTestClient)
     mock_logger.assert_called_with('Hello World')
 
 
-@patch('app.main.logger.info')
 def test_specified_request_id_is_preserved(client: ENPTestClient) -> None:
     """Test that GET /enp  headers include a request id.
 
@@ -48,7 +47,6 @@ def test_specified_request_id_is_preserved(client: ENPTestClient) -> None:
     """
     request_id = uuid4().hex
     response = client.get('/enp', headers={'X-Request-ID': request_id})
-
     # Ensure context data is available in the response
     assert 'X-Request-ID' in response.headers
     assert response.headers['X-Request-ID'] == request_id
