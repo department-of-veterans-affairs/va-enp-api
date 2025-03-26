@@ -25,7 +25,7 @@ def test_simple_route(client: ENPTestClient) -> None:
 
 @patch('app.main.logger.info')
 def test_simple_route_logs_hello_world(mock_logger: Mock, client: ENPTestClient) -> None:
-    """Test that GET /enp logs 'Hello World' as an info log and the headers include a request id.
+    """Test that GET /enp logs 'Hello World' as an info log.
 
     Args:
         mock_logger (Mock): Mocked logger for capturing log calls.
