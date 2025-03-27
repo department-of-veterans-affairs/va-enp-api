@@ -29,8 +29,6 @@ LOGLEVEL_MAPPING: Dict[int, str] = {
     0: LOGLEVEL_NOTSET,
 }
 
-sys.tracebacklimit = 0  # Disable traceback in loguru
-
 # Serialize if the env variable ENP_ENV is development, perf, staging, or production
 SERIALIZE = os.getenv('ENP_ENV', 'development') in ('development', 'perf', 'staging', 'production')
 
