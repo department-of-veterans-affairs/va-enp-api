@@ -4,7 +4,6 @@ from typing import Annotated
 from uuid import uuid4
 
 from fastapi import APIRouter, BackgroundTasks, Body, Depends, Request, status
-from loguru import logger
 from pydantic import UUID4
 
 from app.auth import JWTBearer
@@ -24,6 +23,7 @@ from app.legacy.v2.notifications.utils import (
     send_push_notification_helper,
     validate_template,
 )
+from app.logging.logging_config import logger
 from app.routers import LegacyTimedAPIRoute
 
 v2_legacy_notification_router = APIRouter(

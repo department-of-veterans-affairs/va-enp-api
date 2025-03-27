@@ -7,9 +7,9 @@ from fastapi import HTTPException, Request, status
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse, Response
 from fastapi.routing import APIRoute
-from loguru import logger
 
 from app.constants import RESPONSE_400
+from app.logging.logging_config import logger
 
 
 class LegacyTimedAPIRoute(APIRoute):
