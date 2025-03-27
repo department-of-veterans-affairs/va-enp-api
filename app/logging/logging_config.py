@@ -9,7 +9,6 @@ from contextlib import suppress
 from types import FrameType
 from typing import Dict, Optional
 
-import loguru
 from loguru import logger as loguru_logger
 from starlette_context import context
 from starlette_context.errors import ContextDoesNotExistError
@@ -97,7 +96,7 @@ class CustomizeLogger:
     @classmethod
     def customize_logging(
         cls,
-    ) -> loguru.Logger:
+    ) -> None:
         """Create sinks for sys.stdout and sys.stderr with Loguru."""
         # Remove any existing handlers
         logging.getLogger().handlers = []
