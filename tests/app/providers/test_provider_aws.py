@@ -8,7 +8,6 @@ from unittest.mock import AsyncMock, patch
 
 import botocore.exceptions
 import pytest
-from starlette_context import request_cycle_context
 from tenacity import stop_after_attempt, wait_none
 
 from app.constants import MobileAppType
@@ -215,11 +214,10 @@ class TestProviderAWS:
         }
         mock_get_session.return_value.create_client.return_value.__aenter__.return_value = mock_client
 
-        with request_cycle_context({'X-Request-ID': '123'}):
-            actual = await self.provider.register_device(
-                DeviceRegistrationModel(
-                    platform_application_name=MobileAppType.VA_FLAGSHIP_APP,
-                    token='bar',
-                )
+        actual = await self.provider.register_device(
+            DeviceRegistrationModel(
+                platform_application_name=MobileAppType.VA_FLAGSHIP_APP,
+                token='bar',
             )
+        )
         assert actual == 'arn:aws:sns:us-east-1:000000000000:app/APNS/12345'
