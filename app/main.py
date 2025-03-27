@@ -8,9 +8,8 @@ from typing import Any, AsyncContextManager, Callable, Mapping, Never
 
 from fastapi import Depends, FastAPI, status
 from fastapi.staticfiles import StaticFiles
-from loguru import logger
 from pydantic import UUID4
-from starlette_context import context, plugins
+from starlette_context import plugins
 from starlette_context.middleware import ContextMiddleware
 
 from app.auth import JWTBearer
@@ -19,7 +18,7 @@ from app.db.db_init import (
     init_db,
 )
 from app.legacy.v2.notifications.rest import v2_legacy_notification_router, v2_notification_router
-from app.logging.logging_config import CustomizeLogger
+from app.logging.logging_config import CustomizeLogger, logger
 from app.state import ENPState
 from app.v3 import api_router as v3_router
 
@@ -102,7 +101,7 @@ def simple_route() -> dict[str, str]:
         dict[str, str]: Hello World
 
     """
-    logger.bind(**context).info('Hello World')
+    logger.info('Hello World')
     return {'Hello': 'World'}
 
 

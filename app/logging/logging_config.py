@@ -5,11 +5,14 @@ from __future__ import annotations
 import logging
 import os
 import sys
+from contextlib import suppress
 from types import FrameType
 from typing import Dict, Optional
 
 import loguru
 from loguru import logger as loguru_logger
+from starlette_context import context
+from starlette_context.errors import ContextDoesNotExistError
 
 LOGLEVEL_CRITICAL = 'CRITICAL'
 LOGLEVEL_ERROR = 'ERROR'
@@ -31,6 +34,22 @@ sys.tracebacklimit = 0  # Disable traceback in loguru
 
 # Serialize if the env variable ENP_ENV is development, perf, staging, or production
 SERIALIZE = os.getenv('ENP_ENV', 'development') in ('development', 'perf', 'staging', 'production')
+
+
+logger = loguru_logger.patch(lambda r: r['extra'].update(**get_context()))
+
+
+def get_context() -> dict[str, str]:
+    """Return the context for the logger.
+
+    Returns:
+        dict[str, str]: The context for the logger
+
+    """
+    ctx = {}
+    with suppress(ContextDoesNotExistError):
+        ctx = context.data
+    return ctx
 
 
 class InterceptHandler(logging.Handler):
@@ -79,12 +98,7 @@ class CustomizeLogger:
     def customize_logging(
         cls,
     ) -> loguru.Logger:
-        """Create sinks for sys.stdout and sys.stderr with Loguru.
-
-        Returns:
-            The Loguru logger instance, bound with additional context such as request_id and method.
-
-        """
+        """Create sinks for sys.stdout and sys.stderr with Loguru."""
         # Remove any existing handlers
         logging.getLogger().handlers = []
 
@@ -112,9 +126,6 @@ class CustomizeLogger:
             level=LOGLEVEL_ERROR,
             serialize=SERIALIZE,
         )
-
-        # Return the logger
-        return loguru_logger
 
     @classmethod
     def _configure_fastapi_logger(cls) -> None:

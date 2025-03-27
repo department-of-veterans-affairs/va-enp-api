@@ -23,7 +23,7 @@ def test_simple_route(client: ENPTestClient) -> None:
     assert 'X-Request-ID' in resp.headers
 
 
-@patch('app.main.logger.bind')
+@patch('app.main.logger')
 def test_simple_route_logs_hello_world(mock_logger: Mock, client: ENPTestClient) -> None:
     """Test that GET /enp logs 'Hello World' as an info log.
 
@@ -33,7 +33,7 @@ def test_simple_route_logs_hello_world(mock_logger: Mock, client: ENPTestClient)
 
     """
     client.get('/enp')
-    mock_logger.return_value.info.assert_called_with('Hello World')
+    mock_logger.info.assert_called_with('Hello World')
 
 
 def test_specified_request_id_is_preserved(client: ENPTestClient) -> None:

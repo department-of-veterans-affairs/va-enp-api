@@ -8,12 +8,11 @@ import os
 
 import botocore
 from aiobotocore.session import get_session
-from loguru import logger
-from starlette_context import context
 from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_full_jitter
 
 from app.constants import MAX_RETRIES
 from app.exceptions import NonRetryableError, RetryableError
+from app.logging.logging_config import logger
 from app.providers import sns_publish_retriable_exceptions_set
 from app.providers.provider_base import ProviderBase
 from app.providers.provider_schemas import DeviceRegistrationModel, PushModel, PushRegistrationModel
@@ -96,14 +95,14 @@ class ProviderAWS(ProviderBase):
         platform_application_arn = self.get_platform_application_arn(
             device_registration_model.platform_application_name,
         )
-        logger.bind(**context).debug('Registering device with platform application ARN {}', platform_application_arn)
+        logger.debug('Registering device with platform application ARN {}', platform_application_arn)
 
         push_registration_model = PushRegistrationModel(
             platform_application_arn=platform_application_arn,
             token=device_registration_model.token,
         )
         response = await self.register_push_endpoint(push_registration_model)
-        logger.bind(**context).debug('Registered device with endpoint ARN {}', response)
+        logger.debug('Registered device with endpoint ARN {}', response)
 
         return response
 
