@@ -1,9 +1,9 @@
 """All endpoints for the v3/device-registrations route."""
 
 from fastapi import APIRouter, BackgroundTasks, Request, status
-from loguru import logger
 
 from app.clients.va_profile import register_device_with_vaprofile
+from app.logging.logging_config import logger
 from app.providers.provider_schemas import DeviceRegistrationModel
 from app.routers import TimedAPIRoute
 from app.v3.device_registrations.route_schema import DeviceRegistrationRequest, DeviceRegistrationResponse

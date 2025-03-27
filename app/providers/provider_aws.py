@@ -8,11 +8,11 @@ import os
 
 import botocore
 from aiobotocore.session import get_session
-from loguru import logger
 from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_full_jitter
 
 from app.constants import MAX_RETRIES
 from app.exceptions import NonRetryableError, RetryableError
+from app.logging.logging_config import logger
 from app.providers import sns_publish_retriable_exceptions_set
 from app.providers.provider_base import ProviderBase
 from app.providers.provider_schemas import DeviceRegistrationModel, PushModel, PushRegistrationModel

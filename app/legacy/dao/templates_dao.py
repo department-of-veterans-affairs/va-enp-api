@@ -6,6 +6,7 @@ from pydantic import UUID4
 from sqlalchemy import Row, select
 
 from app.db.db_init import get_read_session_with_context, metadata_legacy
+from app.logging.logging_config import logger
 
 
 class LegacyTemplateDao:
@@ -25,7 +26,9 @@ class LegacyTemplateDao:
         Returns:
             Row: template table row
         """
+        logger.debug('Getting template {} from legacy database', id)
         async with get_read_session_with_context() as session:
             legacy_templates = metadata_legacy.tables['templates']
             stmt = select(legacy_templates).where(legacy_templates.c.id == id)
+            logger.debug('Executing query: {}', stmt)
             return (await session.execute(stmt)).one()

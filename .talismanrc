@@ -9,6 +9,8 @@ fileignoreconfig:
   checksum: 06eb4b4c65191921104dc39381a937843a6ce155eeac7dc72990b5d10b5eb275
 - filename: app/db/__init__.py
   checksum: 66575249d84eff02f539737ad2fa9f5a59b1b8982b5a3b8ff114e309ef62303d
+- filename: app/legacy/v2/notifications/utils.py
+  checksum: b8fe6a823967dec1b572b3823b226c2b73a33129f2b09176069b69782ab86d6e
 - filename: app/providers/provider_aws.py
   checksum: f345ea8dea997d72c8d40a0cac2a2b1aacacef8959088ba5cc2ea9e5df57c9fd
 - filename: cd/dev.env
@@ -20,7 +22,7 @@ fileignoreconfig:
 - filename: ci/docker-compose-local.yml
   checksum: c73beda98c39232441d86f6d6f6f2858274f9703f8a462eac1effacfbb9aa39d
 - filename: poetry.lock
-  checksum: 473936b1126a994e4635a5948e70ec3e1a84e129a3fc5a18d68f4683b1be5f27
+  checksum: c07bf1cf00df4c6ca00e3c17fd8b974dec61a6fb559912911bf5347be1260f0a
 - filename: postman/enp-api.postman_collection.json
   checksum: 09d876de545985b9cd21e1961387f1cce2189f56cc515565b2bb3924d38e0fe3
 - filename: pyproject.toml
@@ -35,6 +37,4 @@ fileignoreconfig:
   checksum: dbce38f807d54fa2776a31a3897350591569b2cfc3d73fa03f0381527c737efb
 - filename: tests/conftest.py
   checksum: 35e538d03d3a2d0b2696b9a93994b77a1a041090d160ac9518a958e640a09488
-- filename: app/legacy/v2/notifications/utils.py
-  checksum: b8fe6a823967dec1b572b3823b226c2b73a33129f2b09176069b69782ab86d6e
 version: "1.0"

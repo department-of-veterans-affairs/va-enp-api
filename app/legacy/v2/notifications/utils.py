@@ -4,7 +4,6 @@ import re
 from typing import Sequence
 
 from fastapi.exceptions import RequestValidationError
-from loguru import logger
 from pydantic import UUID4
 from sqlalchemy.exc import NoResultFound
 
@@ -12,6 +11,7 @@ from app.constants import NotificationType
 from app.exceptions import NonRetryableError, RetryableError
 from app.legacy.dao.templates_dao import LegacyTemplateDao
 from app.legacy.v2.notifications.route_schema import PersonalisationFileObject
+from app.logging.logging_config import logger
 from app.providers.provider_aws import ProviderAWS
 from app.providers.provider_schemas import PushModel
 

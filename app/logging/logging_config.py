@@ -3,12 +3,15 @@
 from __future__ import annotations
 
 import logging
+import os
 import sys
+from contextlib import suppress
 from types import FrameType
 from typing import Dict, Optional
 
-import loguru
 from loguru import logger as loguru_logger
+from starlette_context import context
+from starlette_context.errors import ContextDoesNotExistError
 
 LOGLEVEL_CRITICAL = 'CRITICAL'
 LOGLEVEL_ERROR = 'ERROR'
@@ -25,6 +28,25 @@ LOGLEVEL_MAPPING: Dict[int, str] = {
     10: LOGLEVEL_DEBUG,
     0: LOGLEVEL_NOTSET,
 }
+
+# Serialize if the env variable ENP_ENV is development, perf, staging, or production
+SERIALIZE = os.getenv('ENP_ENV', 'development') in ('development', 'perf', 'staging', 'production')
+
+
+logger = loguru_logger.patch(lambda r: r['extra'].update(**get_context()))
+
+
+def get_context() -> dict[str, str]:
+    """Return the context for the logger.
+
+    Returns:
+        dict[str, str]: The context for the logger
+
+    """
+    ctx = {}
+    with suppress(ContextDoesNotExistError):
+        ctx = context.data
+    return ctx
 
 
 class InterceptHandler(logging.Handler):
@@ -52,8 +74,7 @@ class InterceptHandler(logging.Handler):
                 depth += 1
 
             # Log the message with Loguru
-            log = loguru_logger.bind(request_id='app')
-            log.opt(depth=depth, exception=record.exc_info).log(level, record.getMessage())
+            loguru_logger.opt(depth=depth, exception=record.exc_info).log(level, record.getMessage())
 
 
 class CustomizeLogger:
@@ -73,13 +94,8 @@ class CustomizeLogger:
     @classmethod
     def customize_logging(
         cls,
-    ) -> loguru.Logger:
-        """Create sinks for sys.stdout and sys.stderr with Loguru.
-
-        Returns:
-            The Loguru logger instance, bound with additional context such as request_id and method.
-
-        """
+    ) -> None:
+        """Create sinks for sys.stdout and sys.stderr with Loguru."""
         # Remove any existing handlers
         logging.getLogger().handlers = []
 
@@ -95,6 +111,7 @@ class CustomizeLogger:
             backtrace=False,
             level=LOGLEVEL_DEBUG,
             filter=lambda record: record['level'].name in stdout_allowed_levels,
+            serialize=SERIALIZE,
         )
 
         # Add sink to stderr
@@ -104,10 +121,8 @@ class CustomizeLogger:
             enqueue=True,
             backtrace=False,
             level=LOGLEVEL_ERROR,
+            serialize=SERIALIZE,
         )
-
-        # Return the logger bound with additional context
-        return loguru_logger.bind(request_id=None, method=None)
 
     @classmethod
     def _configure_fastapi_logger(cls) -> None:

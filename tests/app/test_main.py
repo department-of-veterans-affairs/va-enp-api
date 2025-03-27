@@ -2,6 +2,7 @@
 
 from asyncio import CancelledError
 from unittest.mock import AsyncMock, Mock, patch
+from uuid import uuid4
 
 from starlette import status
 
@@ -10,7 +11,7 @@ from tests.conftest import ENPTestClient
 
 
 def test_simple_route(client: ENPTestClient) -> None:
-    """Test GET / to return Hello World.
+    """Test GET /enp to return Hello World.
 
     Args:
         client (ENPTestClient): Custom FastAPI client fixture
@@ -19,11 +20,12 @@ def test_simple_route(client: ENPTestClient) -> None:
     resp = client.get('/enp')
     assert resp.status_code == status.HTTP_200_OK
     assert resp.json() == {'Hello': 'World'}
+    assert 'X-Request-ID' in resp.headers
 
 
-@patch('app.main.logger.info')
+@patch('app.main.logger')
 def test_simple_route_logs_hello_world(mock_logger: Mock, client: ENPTestClient) -> None:
-    """Test that GET / logs 'Hello World' as an info log.
+    """Test that GET /enp logs 'Hello World' as an info log.
 
     Args:
         mock_logger (Mock): Mocked logger for capturing log calls.
@@ -31,9 +33,21 @@ def test_simple_route_logs_hello_world(mock_logger: Mock, client: ENPTestClient)
 
     """
     client.get('/enp')
+    mock_logger.info.assert_called_with('Hello World')
 
-    # Check if the logger.info was called with "Hello World"
-    mock_logger.assert_called_with('Hello World')
+
+def test_specified_request_id_is_preserved(client: ENPTestClient) -> None:
+    """Test that GET /enp headers propagate x-request-id from request to response.
+
+    Args:
+        client (ENPTestClient): Custom FastAPI client fixture
+
+    """
+    request_id = uuid4().hex
+    response = client.get('/enp', headers={'X-Request-ID': request_id})
+    # Ensure context data is available in the response
+    assert 'X-Request-ID' in response.headers
+    assert response.headers['X-Request-ID'] == request_id
 
 
 async def test_lifespan_normal() -> None:

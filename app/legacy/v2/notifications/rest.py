@@ -4,8 +4,8 @@ from typing import Annotated
 from uuid import uuid4
 
 from fastapi import APIRouter, BackgroundTasks, Body, Depends, Request, status
-from loguru import logger
 from pydantic import UUID4
+from starlette_context import context
 
 from app.auth import JWTBearer
 from app.constants import NotificationType
@@ -24,6 +24,7 @@ from app.legacy.v2.notifications.utils import (
     send_push_notification_helper,
     validate_template,
 )
+from app.logging.logging_config import logger
 from app.routers import LegacyTimedAPIRoute
 
 v2_legacy_notification_router = APIRouter(
@@ -97,6 +98,7 @@ async def create_sms_notification(
     Returns:
         V2PostSmsResponseModel: The notification response data if notification is created successfully.
     """
+    context['template_id'] = request.template_id
     logger.debug('Received SMS request with data: {}', request)
 
     try:
