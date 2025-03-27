@@ -1,42 +1,52 @@
 """Fixtures and setup to test the app."""
 
-import asyncio
 from datetime import datetime, timezone
 from typing import Callable
 from unittest.mock import AsyncMock
 from uuid import uuid4
 
 import pytest
+import pytest_asyncio
 from pydantic import UUID4
 
 from app.constants import NotificationType
 from app.db.db_init import close_db, get_db_session, init_db
 
 
-@pytest.fixture(scope='session', autouse=True)
-def test_init_db():
+@pytest_asyncio.fixture(loop_scope='session', scope='session', autouse=True)
+async def test_init_db():
     """At the start of testing, create async engines for read-only and read-write database access.
-    Dispose of the engines when testing concludes.
+    Dispose of the engines when testing concludes.  These actions resemble the "lifespan" steps
+    in main.py.
 
     The database server should be running and accepting connections.
     """
-    asyncio.run(init_db(pool_pre_ping=True))
+    await init_db(True)
     yield
-    asyncio.run(close_db())
+    await close_db()
 
 
 @pytest.fixture
 def test_db_session():
-    """Yield a transactional, read-write database session."""
+    """Yield a transactional, read-write database session.
+
+    Tests that use this fixture should not need to worry about rolling back database changes.
+    """
     # _engine_napi_write will always be None if imported at the top.
     from app.db.db_init import _engine_napi_write
 
     assert _engine_napi_write is not None, 'This should have been initialized by the test_init_db fixture.'
+    connection = _engine_napi_write.connect()
+    transaction = connection.begin()
 
-    session = get_db_session(_engine_napi_write, 'write')
-    # TODO - begin
-    return session
-    # TODO - rollback
+    session = get_db_session(bind=connection)
+
+    try:
+        yield session
+    finally:
+        session.close()
+        transaction.rollback()
+        connection.close()
 
 
 @pytest.fixture
