@@ -26,8 +26,8 @@ async def test_init_db():
     await close_db()
 
 
-@pytest.fixture
-def test_db_session():
+@pytest_asyncio.fixture
+async def test_db_session():
     """Yield a transactional, read-write database session.
 
     Tests that use this fixture should not need to worry about rolling back database changes.
@@ -36,17 +36,12 @@ def test_db_session():
     from app.db.db_init import _engine_napi_write
 
     assert _engine_napi_write is not None, 'This should have been initialized by the test_init_db fixture.'
-    connection = _engine_napi_write.connect()
-    transaction = connection.begin()
-
-    session = get_db_session(bind=connection)
-
-    try:
-        yield session
-    finally:
-        session.close()
-        transaction.rollback()
-        connection.close()
+    async with _engine_napi_write.connect() as connection:
+        # Begin a transaction.
+        async with connection.begin():
+            session_maker = get_db_session(_engine_napi_write, 'write')
+            async with session_maker() as session:
+                yield session
 
 
 @pytest.fixture

@@ -55,6 +55,15 @@ async def test_get_db_session_read(engine):
 
 
 @pytest.mark.asyncio
+async def test_test_db_session(test_db_session):
+    """Ensure the session fixture works as intended."""
+    result = await test_db_session.execute(TABLES_QUERY)
+    tables = result.scalars().all()
+    assert 'notifications' in tables
+    assert 'templates' in tables
+
+
+@pytest.mark.asyncio
 async def test_get_db_session_write():
     """The write database engine should be able to execute write queries.  There is no
     test for the read engine because the local setup only includes one database user, which
