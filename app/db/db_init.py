@@ -16,13 +16,17 @@ from sqlalchemy.ext.asyncio import (
 
 from app.db import NAPI_DB_READ_URI, NAPI_DB_WRITE_URI
 
-_engine_napi_read: AsyncEngine = None
-_engine_napi_write: AsyncEngine = None
+_engine_napi_read: AsyncEngine | None = None
+_engine_napi_write: AsyncEngine | None = None
 metadata_legacy: MetaData = MetaData()
 
 
-async def init_db(pool_pre_ping=False) -> None:
-    """Initialize the database engine."""
+async def init_db(pool_pre_ping: bool = False) -> None:
+    """Initialize the database engine.
+
+    Args:
+        pool_pre_ping (bool): should test for a live db connection before query
+    """
     logger.info('Initializing the database engines...')
 
     # These methods are copy/paste due to globals.
@@ -34,8 +38,12 @@ async def init_db(pool_pre_ping=False) -> None:
     logger.info('...database engines initialized.')
 
 
-def create_engines(pool_pre_ping) -> None:
-    """Create the async read and write engines."""
+def create_engines(pool_pre_ping: bool) -> None:
+    """Create the async read and write engines.
+
+    Args:
+        pool_pre_ping (bool): should test for a live db connection before query
+    """
     global _engine_napi_read, _engine_napi_write
     # Create the read database engine.
     _engine_napi_read = create_async_engine(NAPI_DB_READ_URI, echo=False, pool_pre_ping=pool_pre_ping)
@@ -47,7 +55,9 @@ async def init_napi_metadata() -> None:
     """Initialize the API database engine."""
     global metadata_legacy
 
-    async with _engine_napi_read.connect() as conn:
+    # Type checking ignored because the global is initially None, but it should never have that value
+    # at this point in the code.  mypy complains that None has no "connect" attribute.
+    async with _engine_napi_read.connect() as conn:  # type: ignore
         # Reflect the api tables, using the api read engine, and ApiBase.
         await conn.run_sync(metadata_legacy.reflect)
 

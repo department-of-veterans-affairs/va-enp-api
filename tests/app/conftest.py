@@ -1,5 +1,6 @@
 """Fixtures and setup to test the app."""
 
+from collections.abc import AsyncGenerator
 from datetime import datetime, timezone
 from typing import Callable
 from unittest.mock import AsyncMock
@@ -8,26 +9,28 @@ from uuid import uuid4
 import pytest
 import pytest_asyncio
 from pydantic import UUID4
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.constants import NotificationType
 from app.db.db_init import close_db, get_db_session, init_db
 
 
 @pytest_asyncio.fixture(loop_scope='session', scope='session', autouse=True)
-async def test_init_db():
+async def test_init_db() -> AsyncGenerator[None, None]:
     """At the start of testing, create async engines for read-only and read-write database access.
     Dispose of the engines when testing concludes.  These actions resemble the "lifespan" steps
     in main.py.
 
     The database server should be running and accepting connections.
     """
+
     await init_db(True)
     yield
     await close_db()
 
 
 @pytest_asyncio.fixture
-async def test_db_session():
+async def test_db_session() -> AsyncGenerator[AsyncSession, None]:
     """Yield a transactional, read-write database session.
 
     Tests that use this fixture should not need to worry about rolling back database changes.
