@@ -127,6 +127,7 @@ async def test_session_with_context(
     """Verify getting a session using the "with_context" session getters.  Note that either
     session can read and write because they use the same database user with run locally.
     """
+
     async with session_context() as session:
         # This query should not raise an exception.
         await session.execute(stmt)
