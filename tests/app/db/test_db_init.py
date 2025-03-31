@@ -5,7 +5,7 @@ from typing import AsyncContextManager
 
 import pytest
 from sqlalchemy import text
-from sqlalchemy.ext.asyncio import AsyncEngine, async_scoped_session, AsyncSession
+from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_scoped_session
 from sqlalchemy.sql.elements import TextClause
 
 from app.db.db_init import (
