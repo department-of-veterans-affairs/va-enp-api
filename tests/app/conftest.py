@@ -18,12 +18,12 @@ from app.db.db_init import close_db, get_db_session, init_db
 @pytest_asyncio.fixture(loop_scope='session', scope='session', autouse=True)
 async def test_init_db() -> AsyncGenerator[None, None]:
     """At the start of testing, create async engines for read-only and read-write database access.
+
     Dispose of the engines when testing concludes.  These actions resemble the "lifespan" steps
     in main.py.
 
     The database server should be running and accepting connections.
     """
-
     await init_db(True)
     yield
     await close_db()

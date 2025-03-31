@@ -1,7 +1,7 @@
 """Test module for testing the app/db/db_init.py file."""
 
 from collections.abc import AsyncIterator, Callable
-from typing import AsyncContextManager, AsyncGenerator
+from typing import AsyncContextManager
 
 import pytest
 from sqlalchemy import text
@@ -36,13 +36,14 @@ def test_init_db() -> None:
     assert isinstance(_engine_napi_write, AsyncEngine)
 
 
-@pytest.mark.parametrize('engine_type', ('read', 'write'))
+@pytest.mark.parametrize('engine_type', ['read', 'write'])
 def test_get_db_session_none(engine_type: str) -> None:
+    """Ensure globals are populated before calling get_db_session."""
     with pytest.raises(ValueError, match=f'The db {engine_type} engine has not been initialized. None type received.'):
         get_db_session(None, engine_type)
 
 
-@pytest.mark.parametrize('engine', ('_engine_napi_read', '_engine_napi_write'))
+@pytest.mark.parametrize('engine', ['_engine_napi_read', '_engine_napi_write'])
 @pytest.mark.asyncio
 async def test_get_db_session_read(engine: str) -> None:
     """The read and write database engines both should be able to execute read queries."""
@@ -68,9 +69,10 @@ async def test_test_db_session(test_db_session: AsyncSession) -> None:
 
 @pytest.mark.asyncio
 async def test_get_db_session_write() -> None:
-    """The write database engine should be able to execute write queries.  There is no
-    test for the read engine because the local setup only includes one database user, which
-    is the same user as for the write engine.  The connection URI is the same.
+    """The write database engine should be able to execute write queries.
+
+    There is no test for the read engine because the local setup only includes one database user,
+    which is the same user as for the write engine.  The connection URI is the same.
     """
     from app.db.db_init import _engine_napi_write
 
@@ -81,21 +83,23 @@ async def test_get_db_session_write() -> None:
         await session.execute(TRUNCATE_QUERY)
 
 
-@pytest.mark.parametrize('stmt', (TABLES_QUERY, TRUNCATE_QUERY))
+@pytest.mark.parametrize('stmt', [TABLES_QUERY, TRUNCATE_QUERY])
 @pytest.mark.parametrize(
     'session_generator',
-    (
+    [
         get_read_session_with_depends,
         get_write_session_with_depends,
-    ),
+    ],
 )
 @pytest.mark.asyncio
 async def test_session_with_depends(
     session_generator: Callable[[], AsyncIterator[async_scoped_session[AsyncSession]]],
-    stmt: TextClause
+    stmt: TextClause,
 ) -> None:
-    """Verify getting a session using the "with_depends" session getters.  Note that either
-    session can read and write because they use the same database user with run locally.
+    """Verify getting a session using the "with_depends" session getters.
+
+    Note that either session can read and write because they use the same database user
+    with run locally.
     """
     session_gen = session_generator()
 
@@ -111,23 +115,24 @@ async def test_session_with_depends(
         await session_gen.aclose()  # type: ignore
 
 
-@pytest.mark.parametrize('stmt', (TABLES_QUERY, TRUNCATE_QUERY))
+@pytest.mark.parametrize('stmt', [TABLES_QUERY, TRUNCATE_QUERY])
 @pytest.mark.parametrize(
     'session_context',
-    (
+    [
         get_read_session_with_context,
         get_write_session_with_context,
-    ),
+    ],
 )
 @pytest.mark.asyncio
 async def test_session_with_context(
     session_context: Callable[[], AsyncContextManager[async_scoped_session[AsyncSession]]],
-    stmt: TextClause
+    stmt: TextClause,
 ) -> None:
-    """Verify getting a session using the "with_context" session getters.  Note that either
-    session can read and write because they use the same database user with run locally.
-    """
+    """Verify getting a session using the "with_context" session getters.
 
+    Note that either session can read and write because they use the same database user with
+    run locally.
+    """
     async with session_context() as session:
         # This query should not raise an exception.
         await session.execute(stmt)
