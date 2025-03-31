@@ -39,12 +39,14 @@ async def test_db_session() -> AsyncGenerator[AsyncSession, None]:
     from app.db.db_init import _engine_napi_write
 
     assert _engine_napi_write is not None, 'This should have been initialized by the test_init_db fixture.'
+
     async with _engine_napi_write.connect() as connection:
         # Begin a transaction.
         async with connection.begin():
             session_maker = get_db_session(_engine_napi_write, 'write')
             async with session_maker() as session:
                 yield session
+        # A rollback should occur automatically because the "begin" block doesn't manually commit.
 
 
 @pytest.fixture
