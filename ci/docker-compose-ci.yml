@@ -9,6 +9,7 @@ services:
     environment:
       - POSTGRES_DB=notification_api
       - POSTGRES_PASSWORD=LocalPassword
+    ## Anything in the docker-entrypoint-initdb.d folder will be run when the container starts
     volumes:
       - type: bind
         source: ../napi-schema.sql
