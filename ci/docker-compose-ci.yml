@@ -15,5 +15,3 @@ services:
         source: ../napi-schema.sql
         target: /docker-entrypoint-initdb.d/napi-schema.sql
         read_only: true
-
-## TODO: Run ENP tests with pytest in a container
