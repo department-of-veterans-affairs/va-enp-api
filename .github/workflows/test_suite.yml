@@ -67,6 +67,10 @@ jobs:
         run: |
           docker compose -f ci/docker-compose-ci.yml up -d
 
+      - name: Wait for DB to be ready
+        run: |
+          sleep 10
+
       - name: Dump schema again to test it matches the original
         run: |
           docker exec ci-db-1 pg_dump -U postgres -s -d notification_api > enp-napi-schema-dump.sql
