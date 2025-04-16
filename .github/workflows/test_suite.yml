@@ -49,8 +49,34 @@ jobs:
           export PATH="$PWD/.venv/bin:$PATH"
           ./scripts/run_checks.sh
 
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.VAEC_AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.VAEC_AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-gov-west-1
+          role-to-assume: ${{ secrets.VAEC_DEPLOY_ROLE }}
+          role-duration-seconds: 1800
+
+      - name: Pull down API Schema
+        run: |
+          aws s3 cp s3://vanotify-environment-variables-dev/notification-api/schemas/napi-schema.sql napi-schema.sql
+
+      - name: Start DB container
+        run: |
+          docker compose -f ci/docker-compose-ci.yml up -d
+
+      - name: Dump schema again to test it matches the original
+        run: |
+          docker exec ci-db-1 pg_dump -U postgres -s -d notification_api > enp-napi-schema-dump.sql
+          aws s3 cp enp-napi-schema-dump.sql s3://vanotify-environment-variables-dev/notification-api/schemas/enp-napi-schema-dump.sql
+
       - name: Run Tests
         run: |
           # Set path to poetry venv
           export PATH="$PWD/.venv/bin:$PATH"
           ./scripts/run_tests.sh
+
+      - name: Stop DB container
+        run: |
+          docker compose -f ci/docker-compose-ci.yml down

@@ -1,0 +1,15 @@
+services:
+  db:
+    image: postgres:15
+    restart: unless-stopped
+    ports:
+      - 5432:5432
+    logging:
+      driver: "none"
+    environment:
+      - POSTGRES_DB=notification_api
+      - POSTGRES_PASSWORD=LocalPassword
+    volumes:
+      - ./napi-schema.sql:/docker-entrypoint-initdb.d/napi-schema.sql
+
+## TODO: Run ENP tests with pytest in a container
