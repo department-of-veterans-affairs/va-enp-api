@@ -10,6 +10,9 @@ services:
       - POSTGRES_DB=notification_api
       - POSTGRES_PASSWORD=LocalPassword
     volumes:
-      - ./napi-schema.sql:/docker-entrypoint-initdb.d/napi-schema.sql
+      - type: bind
+        source: ../napi-schema.sql
+        target: /docker-entrypoint-initdb.d/napi-schema.sql
+        read_only: true
 
 ## TODO: Run ENP tests with pytest in a container
