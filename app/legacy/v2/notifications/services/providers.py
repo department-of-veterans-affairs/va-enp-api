@@ -1,78 +1,37 @@
 """Service providers for dependency injection."""
 
-from typing import Optional, Union
+from typing import Optional
 
-from fastapi import BackgroundTasks, Depends
+from fastapi import Depends
 
 from app.legacy.v2.notifications.route_schema import RecipientIdentifierModel
 from app.legacy.v2.notifications.services.implementations import (
-    BackgroundTaskRecipientLookupService,
-    BackgroundTaskSmsDeliveryService,
-    DefaultPhoneNumberSmsProcessor,
-    DefaultRecipientIdentifierSmsProcessor,
+    DirectPhoneNumberSmsProcessor,
+    DirectRecipientIdentifierSmsProcessor,
 )
 from app.legacy.v2.notifications.services.interfaces import (
+    NotificationProcessor,
     PhoneNumberSmsProcessor,
     RecipientIdentifierSmsProcessor,
-    RecipientLookupService,
-    SmsDeliveryService,
 )
 
 
-def get_sms_delivery_service(
-    background_tasks: BackgroundTasks,
-) -> SmsDeliveryService:
-    """Get an SMS delivery service instance.
-
-    Args:
-        background_tasks: The FastAPI background tasks object.
-
-    Returns:
-        An SMS delivery service implementation.
-    """
-    return BackgroundTaskSmsDeliveryService(background_tasks)
-
-
-def get_recipient_lookup_service(
-    background_tasks: BackgroundTasks,
-) -> RecipientLookupService:
-    """Get a recipient lookup service instance.
-
-    Args:
-        background_tasks: The FastAPI background tasks object.
-
-    Returns:
-        A recipient lookup service implementation.
-    """
-    return BackgroundTaskRecipientLookupService(background_tasks)
-
-
-def get_phone_number_sms_processor(
-    delivery_service: SmsDeliveryService = Depends(get_sms_delivery_service),
-) -> PhoneNumberSmsProcessor:
+def get_phone_number_sms_processor() -> PhoneNumberSmsProcessor:
     """Get a phone number SMS processor instance.
-
-    Args:
-        delivery_service: The service to use for SMS delivery.
 
     Returns:
         A phone number SMS processor implementation.
     """
-    return DefaultPhoneNumberSmsProcessor(delivery_service=delivery_service)
+    return DirectPhoneNumberSmsProcessor()
 
 
-def get_recipient_identifier_sms_processor(
-    lookup_service: RecipientLookupService = Depends(get_recipient_lookup_service),
-) -> RecipientIdentifierSmsProcessor:
+def get_recipient_identifier_sms_processor() -> RecipientIdentifierSmsProcessor:
     """Get a recipient identifier SMS processor instance.
-
-    Args:
-        lookup_service: The service to use for recipient lookup.
 
     Returns:
         A recipient identifier SMS processor implementation.
     """
-    return DefaultRecipientIdentifierSmsProcessor(lookup_service=lookup_service)
+    return DirectRecipientIdentifierSmsProcessor()
 
 
 def get_sms_processor(
@@ -80,7 +39,7 @@ def get_sms_processor(
     recipient_identifier: Optional[RecipientIdentifierModel] = None,
     phone_number_processor: PhoneNumberSmsProcessor = Depends(get_phone_number_sms_processor),
     recipient_identifier_processor: RecipientIdentifierSmsProcessor = Depends(get_recipient_identifier_sms_processor),
-) -> Union[PhoneNumberSmsProcessor, RecipientIdentifierSmsProcessor]:
+) -> NotificationProcessor:
     """Get an SMS processor instance based on the provided parameters.
 
     This will select the appropriate processor type based on whether a phone number,

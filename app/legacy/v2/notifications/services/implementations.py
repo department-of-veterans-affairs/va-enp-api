@@ -2,82 +2,60 @@
 
 from typing import Any, Dict, Optional
 
-from fastapi import BackgroundTasks
 from pydantic import UUID4
 
 from app.legacy.v2.notifications.route_schema import RecipientIdentifierModel
 from app.legacy.v2.notifications.services.interfaces import (
     PhoneNumberSmsProcessor,
     RecipientIdentifierSmsProcessor,
-    RecipientLookupService,
-    SmsDeliveryService,
 )
 from app.logging.logging_config import logger
 
 
-class BackgroundTaskSmsDeliveryService(SmsDeliveryService):
-    """SMS delivery service that uses FastAPI background tasks."""
+class DirectPhoneNumberSmsProcessor(PhoneNumberSmsProcessor):
+    """Implementation of the PhoneNumber SMS processor that delivers SMS directly."""
 
-    def __init__(self, background_tasks: BackgroundTasks) -> None:
-        """Initialize the SMS delivery service.
-
-        Args:
-            background_tasks: The FastAPI background tasks object.
-        """
-        self.background_tasks = background_tasks
-
-    async def queue_for_delivery(
+    async def process(
         self,
         notification_id: UUID4,
         template_id: UUID4,
+        phone_number: Optional[str] = None,
+        recipient_identifier: Optional[RecipientIdentifierModel] = None,
         personalisation: Optional[Dict[str, Any]] = None,
         **kwargs: Any,  # noqa: ANN401
     ) -> None:
-        """Queue a notification for delivery.
+        """Process a notification to be sent to a phone number.
 
         Args:
             notification_id: The ID of the notification.
             template_id: The ID of the template to use.
+            phone_number: The validated phone number to send the notification to.
+            recipient_identifier: Optional recipient identifier (not used by this processor).
             personalisation: Template personalization data.
-            **kwargs: Additional service-specific arguments.
+            **kwargs: Additional processor-specific arguments.
 
         Raises:
-            ValueError: If phone_number is not provided in kwargs.
+            ValueError: If phone_number is None.
         """
-        if 'phone_number' not in kwargs:
-            raise ValueError('phone_number is required for SMS delivery')
+        if phone_number is None:
+            raise ValueError('phone_number is required for this processor')
 
-        await self.queue_sms_for_delivery(
-            notification_id=notification_id,
-            phone_number=kwargs['phone_number'],
-            template_id=template_id,
-            personalisation=personalisation,
-        )
+        # Create notification record with phone number
+        logger.info(
+            'Creating SMS notification record with phone number {} and ID {}',
+            f'xxx-xxx-{phone_number[-4:]}',
+            notification_id,
+        )  # Partial masking for logging
 
-    async def queue_sms_for_delivery(
-        self,
-        notification_id: UUID4,
-        phone_number: str,
-        template_id: UUID4,
-        personalisation: Optional[Dict[str, Any]] = None,
-    ) -> None:
-        """Queue an SMS notification for delivery.
-
-        Args:
-            notification_id: The ID of the notification.
-            phone_number: The validated phone number.
-            template_id: The ID of the template to use.
-            personalisation: Template personalization data.
-        """
-        # TODO: Implement actual delivery queue logic
-        self.background_tasks.add_task(
-            self._deliver_sms,
+        # Process SMS delivery directly instead of using a delivery service
+        await self._deliver_sms(
             notification_id=notification_id,
             phone_number=phone_number,
             template_id=template_id,
             personalisation=personalisation,
         )
-        logger.debug('SMS with ID {} queued for delivery to {}', notification_id, f'xxx-xxx-{phone_number[-4:]}')
+
+        logger.info('Processed SMS notification {} for delivery', notification_id)
 
     async def _deliver_sms(
         self,
@@ -100,62 +78,58 @@ class BackgroundTaskSmsDeliveryService(SmsDeliveryService):
         logger.debug('Processing SMS with ID {} for delivery to {}', notification_id, f'xxx-xxx-{phone_number[-4:]}')
 
 
-class BackgroundTaskRecipientLookupService(RecipientLookupService):
-    """Recipient lookup service that uses FastAPI background tasks."""
+class DirectRecipientIdentifierSmsProcessor(RecipientIdentifierSmsProcessor):
+    """Implementation of the RecipientIdentifier SMS processor that processes lookups and delivery directly."""
 
-    def __init__(self, background_tasks: BackgroundTasks) -> None:
-        """Initialize the recipient lookup service.
-
-        Args:
-            background_tasks: The FastAPI background tasks object.
-        """
-        self.background_tasks = background_tasks
-
-    async def queue_recipient_lookup(
+    async def process(
         self,
         notification_id: UUID4,
-        recipient_identifier: RecipientIdentifierModel,
         template_id: UUID4,
+        phone_number: Optional[str] = None,
+        recipient_identifier: Optional[RecipientIdentifierModel] = None,
         personalisation: Optional[Dict[str, Any]] = None,
+        **kwargs: Any,  # noqa: ANN401
     ) -> None:
-        """Queue a task to look up recipient information.
+        """Process a notification to be sent to a recipient identifier.
 
         Args:
             notification_id: The ID of the notification.
-            recipient_identifier: The recipient identifier model.
             template_id: The ID of the template to use.
+            phone_number: Optional phone number (not used by this processor).
+            recipient_identifier: The recipient identifier model.
             personalisation: Template personalization data.
-        """
-        # Create a copy of personalisation to avoid potential issues with mutable data
-        if personalisation is not None:
-            personalisation_copy = personalisation.copy()
-        else:
-            personalisation_copy = None
+            **kwargs: Additional processor-specific arguments.
 
-        # Queue lookup task
+        Raises:
+            ValueError: If recipient_identifier is None.
+        """
+        if recipient_identifier is None:
+            raise ValueError('recipient_identifier is required for this processor')
+
+        # Create notification record without recipient
+        logger.info('Creating notification record with ID {} for recipient lookup', notification_id)
+
+        # Log recipient identifier details
         id_type = recipient_identifier.id_type
         id_value = recipient_identifier.id_value
-        logger.debug('Recipient identifier type: {}, value: {}', id_type, id_value)
+        logger.debug('Looking up recipient with identifier type: {}, value: {}', id_type, id_value)
 
-        self.background_tasks.add_task(
-            self._lookup_recipient_info,
+        # Perform lookup directly
+        await self._lookup_recipient_and_send(
             notification_id=notification_id,
             recipient_identifier=recipient_identifier,
             template_id=template_id,
-            personalisation=personalisation_copy,
+            personalisation=personalisation,
         )
-        logger.debug('Recipient lookup queued for notification ID {}', notification_id)
 
-    async def _lookup_recipient_info(
+    async def _lookup_recipient_and_send(
         self,
         notification_id: UUID4,
         recipient_identifier: RecipientIdentifierModel,
         template_id: UUID4,
         personalisation: Optional[Dict[str, Any]] = None,
     ) -> None:
-        """Look up recipient information.
-
-        This is a placeholder method for the actual recipient lookup logic.
+        """Look up recipient information and send the notification.
 
         Args:
             notification_id: The ID of the notification.
@@ -166,88 +140,11 @@ class BackgroundTaskRecipientLookupService(RecipientLookupService):
         # TODO: Implement actual recipient lookup logic
         logger.debug('Processing recipient lookup for notification ID {}', notification_id)
 
+        # After lookup, we would retrieve a phone number and send the SMS
+        # This is a placeholder for the actual implementation
+        logger.info('Recipient lookup completed for notification ID {}', notification_id)
 
-class DefaultPhoneNumberSmsProcessor(PhoneNumberSmsProcessor):
-    """Default implementation of the PhoneNumber SMS processor interface."""
-
-    def __init__(self, delivery_service: SmsDeliveryService) -> None:
-        """Initialize the SMS processor.
-
-        Args:
-            delivery_service: The service to use for SMS delivery.
-        """
-        self.delivery_service = delivery_service
-
-    async def process(
-        self,
-        notification_id: UUID4,
-        template_id: UUID4,
-        phone_number: str,
-        personalisation: Optional[Dict[str, Any]] = None,
-        **kwargs: Any,  # noqa: ANN401
-    ) -> None:
-        """Process a notification to be sent to a phone number.
-
-        Args:
-            notification_id: The ID of the notification.
-            template_id: The ID of the template to use.
-            phone_number: The validated phone number to send the notification to.
-            personalisation: Template personalization data.
-            **kwargs: Additional processor-specific arguments.
-        """
-        # Create notification record with phone number
-        logger.info(
-            'Creating SMS notification record with phone number {} and ID {}',
-            f'xxx-xxx-{phone_number[-4:]}',
-            notification_id,
-        )  # Partial masking for logging
-
-        # Send to delivery queue
-        await self.delivery_service.queue_sms_for_delivery(
-            notification_id=notification_id,
-            phone_number=phone_number,
-            template_id=template_id,
-            personalisation=personalisation,
-        )
-
-        logger.info('Queued SMS notification {} for delivery', notification_id)
-
-
-class DefaultRecipientIdentifierSmsProcessor(RecipientIdentifierSmsProcessor):
-    """Default implementation of the RecipientIdentifier SMS processor interface."""
-
-    def __init__(self, lookup_service: RecipientLookupService) -> None:
-        """Initialize the SMS processor.
-
-        Args:
-            lookup_service: The service to use for recipient lookup.
-        """
-        self.lookup_service = lookup_service
-
-    async def process(
-        self,
-        notification_id: UUID4,
-        template_id: UUID4,
-        recipient_identifier: RecipientIdentifierModel,
-        personalisation: Optional[Dict[str, Any]] = None,
-        **kwargs: Any,  # noqa: ANN401
-    ) -> None:
-        """Process a notification to be sent to a recipient identifier.
-
-        Args:
-            notification_id: The ID of the notification.
-            template_id: The ID of the template to use.
-            recipient_identifier: The recipient identifier model.
-            personalisation: Template personalization data.
-            **kwargs: Additional processor-specific arguments.
-        """
-        # Create notification record without recipient
-        logger.info('Creating notification record with ID {} for recipient lookup', notification_id)
-
-        # Queue lookup task
-        await self.lookup_service.queue_recipient_lookup(
-            notification_id=notification_id,
-            recipient_identifier=recipient_identifier,
-            template_id=template_id,
-            personalisation=personalisation,
-        )
+        # In a real implementation, we would use the looked-up phone number
+        # For now, we just log that we would send an SMS
+        logger.debug('Sending SMS to recipient after lookup, notification ID: {}', notification_id)
+        # TODO: Implement actual SMS delivery logic here

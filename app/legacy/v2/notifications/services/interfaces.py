@@ -16,6 +16,8 @@ class NotificationProcessor(ABC):
         self,
         notification_id: UUID4,
         template_id: UUID4,
+        phone_number: Optional[str] = None,
+        recipient_identifier: Optional[RecipientIdentifierModel] = None,
         personalisation: Optional[Dict[str, Any]] = None,
         **kwargs: Any,  # noqa: ANN401
     ) -> None:
@@ -24,6 +26,8 @@ class NotificationProcessor(ABC):
         Args:
             notification_id: The ID of the notification.
             template_id: The ID of the template to use.
+            phone_number: Optional phone number for direct SMS notifications.
+            recipient_identifier: Optional recipient identifier for notifications requiring lookup.
             personalisation: Template personalization data.
             **kwargs: Additional processor-specific arguments.
         """
@@ -38,7 +42,8 @@ class PhoneNumberSmsProcessor(NotificationProcessor):
         self,
         notification_id: UUID4,
         template_id: UUID4,
-        phone_number: str,
+        phone_number: Optional[str] = None,
+        recipient_identifier: Optional[RecipientIdentifierModel] = None,
         personalisation: Optional[Dict[str, Any]] = None,
         **kwargs: Any,  # noqa: ANN401
     ) -> None:
@@ -48,6 +53,7 @@ class PhoneNumberSmsProcessor(NotificationProcessor):
             notification_id: The ID of the notification.
             template_id: The ID of the template to use.
             phone_number: The validated phone number to send the notification to.
+            recipient_identifier: Optional recipient identifier (not used by this processor).
             personalisation: Template personalization data.
             **kwargs: Additional processor-specific arguments.
         """
@@ -62,7 +68,8 @@ class RecipientIdentifierSmsProcessor(NotificationProcessor):
         self,
         notification_id: UUID4,
         template_id: UUID4,
-        recipient_identifier: RecipientIdentifierModel,
+        phone_number: Optional[str] = None,
+        recipient_identifier: Optional[RecipientIdentifierModel] = None,
         personalisation: Optional[Dict[str, Any]] = None,
         **kwargs: Any,  # noqa: ANN401
     ) -> None:
@@ -71,74 +78,9 @@ class RecipientIdentifierSmsProcessor(NotificationProcessor):
         Args:
             notification_id: The ID of the notification.
             template_id: The ID of the template to use.
+            phone_number: Optional phone number (not used by this processor).
             recipient_identifier: The recipient identifier model.
             personalisation: Template personalization data.
             **kwargs: Additional processor-specific arguments.
-        """
-        pass
-
-
-class DeliveryService(ABC):
-    """Abstract interface for delivery services."""
-
-    @abstractmethod
-    async def queue_for_delivery(
-        self,
-        notification_id: UUID4,
-        template_id: UUID4,
-        personalisation: Optional[Dict[str, Any]] = None,
-        **kwargs: Any,  # noqa: ANN401
-    ) -> None:
-        """Queue a notification for delivery.
-
-        Args:
-            notification_id: The ID of the notification.
-            template_id: The ID of the template to use.
-            personalisation: Template personalization data.
-            **kwargs: Additional service-specific arguments.
-        """
-        pass
-
-
-class SmsDeliveryService(DeliveryService):
-    """Interface for SMS delivery services."""
-
-    @abstractmethod
-    async def queue_sms_for_delivery(
-        self,
-        notification_id: UUID4,
-        phone_number: str,
-        template_id: UUID4,
-        personalisation: Optional[Dict[str, Any]] = None,
-    ) -> None:
-        """Queue an SMS notification for delivery.
-
-        Args:
-            notification_id: The ID of the notification.
-            phone_number: The validated phone number.
-            template_id: The ID of the template to use.
-            personalisation: Template personalization data.
-        """
-        pass
-
-
-class RecipientLookupService(ABC):
-    """Abstract interface for recipient lookup services."""
-
-    @abstractmethod
-    async def queue_recipient_lookup(
-        self,
-        notification_id: UUID4,
-        recipient_identifier: RecipientIdentifierModel,
-        template_id: UUID4,
-        personalisation: Optional[Dict[str, Any]] = None,
-    ) -> None:
-        """Queue a task to look up recipient information.
-
-        Args:
-            notification_id: The ID of the notification.
-            recipient_identifier: The recipient identifier model.
-            template_id: The ID of the template to use.
-            personalisation: Template personalization data.
         """
         pass

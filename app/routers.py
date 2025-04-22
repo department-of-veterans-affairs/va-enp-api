@@ -72,13 +72,18 @@ class LegacyTimedAPIRoute(APIRoute):
         for error in e.errors():
             error_location = error.get('loc', ())
             error_message = error.get('msg')
+            is_uuid_error = error.get('type', '').startswith('uuid')
 
-            if error.get('type', '').startswith('uuid'):
-                # special case to override Pydantic UUID type/format message
-                error_message = 'Input should be a valid UUID version 4'
-
-            if len(error_location) > 1:
-                # prepend last entry in error location if available, skip global and leading context
+            if is_uuid_error:
+                # Special case to override Pydantic UUID type/format message
+                # For UUID errors, include the field name but with our custom message
+                if len(error_location) > 1:
+                    # Include the field name in the error message for backward compatibility with tests
+                    error_message = f'{error_location[-1]}: Input should be a valid UUID version 4'
+                else:
+                    error_message = 'Input should be a valid UUID version 4'
+            elif len(error_location) > 1:
+                # Prepend last entry in error location if available, skip global and leading context
                 error_message = f'{error_location[-1]}: {error_message}'
 
             errors.append({'error': 'ValidationError', 'message': error_message})
@@ -104,6 +109,17 @@ class LegacyTimedAPIRoute(APIRoute):
             except RequestValidationError as e:
                 status_code = status.HTTP_400_BAD_REQUEST
                 return self.request_validation_error_handler(request, e)
+            except ValueError as e:
+                # Handle ValueError, which might be raised for invalid UUIDs or other validation issues
+                status_code = status.HTTP_400_BAD_REQUEST
+                logger.info(
+                    'Request: {} {} Failed with ValueError: {}',
+                    request.method,
+                    request.url,
+                    e,
+                )
+                errors = [{'error': 'ValidationError', 'message': str(e)}]
+                return JSONResponse(status_code=status_code, content={'errors': errors, 'status_code': status_code})
             except HTTPException as e:
                 status_code = e.status_code
                 return self.http_exception_handler(request, e)

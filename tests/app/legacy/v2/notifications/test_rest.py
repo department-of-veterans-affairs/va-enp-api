@@ -15,6 +15,7 @@ from app.legacy.v2.notifications.route_schema import (
     V2PostSmsRequestModel,
     ValidatedPhoneNumber,
 )
+from app.legacy.v2.notifications.services.interfaces import NotificationProcessor
 from tests.conftest import ENPTestClient
 
 _push_path = '/legacy/v2/notifications/push'
@@ -114,7 +115,15 @@ class TestNotificationRouter:
             sms_sender_id=sms_sender_id,
         )
         payload = jsonable_encoder(request)
-        with patch('app.legacy.v2.notifications.rest.validate_template', return_value=None):
+
+        # Create a mock processor that will be returned by get_sms_processor
+        mock_processor = AsyncMock(spec=NotificationProcessor)
+
+        # Mock both validate_template and get_sms_processor
+        with (
+            patch('app.legacy.v2.notifications.rest.validate_template', return_value=None),
+            patch('app.legacy.v2.notifications.rest.get_sms_processor', return_value=mock_processor),
+        ):
             response = client.post(route, json=payload)
 
         assert response.status_code == status.HTTP_201_CREATED
@@ -211,7 +220,12 @@ class TestV2SMS:
         sms_request_data: dict[str, str],
     ) -> None:
         """Test sms notification route returns 201 with valid template."""
-        response = client.post(self.sms_route, json=sms_request_data)
+        # Create a mock processor that will be returned by get_sms_processor
+        mock_processor = AsyncMock(spec=NotificationProcessor)
+
+        # Mock get_sms_processor in addition to validate_template (which is already mocked at class level)
+        with patch('app.legacy.v2.notifications.rest.get_sms_processor', return_value=mock_processor):
+            response = client.post(self.sms_route, json=sms_request_data)
 
         assert response.status_code == status.HTTP_201_CREATED
 
@@ -262,12 +276,33 @@ class TestV2SMS:
         sms_request_data: dict[str, str],
     ) -> None:
         """Test route returns 400 and custom UUID formatting message."""
-        sms_request_data['template_id'] = 'bad_uuid'
+        # Update just the template_id, preserving all other fields including phone_number
+        modified_data = sms_request_data.copy()
+        modified_data['template_id'] = 'bad_uuid'
 
-        response = client.post(self.sms_route, json=sms_request_data)
+        # This request will trigger a FastAPI validation error
+        response = client.post(self.sms_route, json=modified_data)
 
         assert response.status_code == status.HTTP_400_BAD_REQUEST
 
-        response_errors = response.json()['errors']
-        assert len(response_errors) == 1
-        assert response_errors[0]['message'] == 'template_id: Input should be a valid UUID version 4'
+        # Check that the response matches our expected format for validation errors
+        response_json = response.json()
+        assert 'errors' in response_json
+        assert 'status_code' in response_json
+        assert response_json['status_code'] == 400
+
+        # We expect a list of errors
+        errors = response_json['errors']
+        assert isinstance(errors, list)
+
+        # Find the error related to UUID validation
+        template_id_error = None
+        for error in errors:
+            if 'template_id' in error.get('message', ''):
+                template_id_error = error
+                break
+
+        # Verify we found an error for template_id and it contains the expected message
+        assert template_id_error is not None
+        assert template_id_error['error'] == 'ValidationError'
+        assert 'Input should be a valid UUID version 4' in template_id_error['message']

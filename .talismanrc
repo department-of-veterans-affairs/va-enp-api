@@ -10,7 +10,7 @@ fileignoreconfig:
 - filename: app/db/__init__.py
   checksum: 66575249d84eff02f539737ad2fa9f5a59b1b8982b5a3b8ff114e309ef62303d
 - filename: app/legacy/v2/notifications/utils.py
-  checksum: b8fe6a823967dec1b572b3823b226c2b73a33129f2b09176069b69782ab86d6e
+  checksum: b4a4fcae974dbe34ee43c4e467f488e1652bde9a327e3f92014f53c36222dfa1
 - filename: app/providers/provider_aws.py
   checksum: f345ea8dea997d72c8d40a0cac2a2b1aacacef8959088ba5cc2ea9e5df57c9fd
 - filename: cd/dev.env

@@ -20,12 +20,10 @@ from app.legacy.v2.notifications.route_schema import (
     ValidatedPhoneNumber,
 )
 from app.legacy.v2.notifications.services.interfaces import (
-    PhoneNumberSmsProcessor,
-    RecipientIdentifierSmsProcessor,
+    NotificationProcessor,
 )
 from app.legacy.v2.notifications.services.providers import (
-    get_phone_number_sms_processor,
-    get_recipient_identifier_sms_processor,
+    get_sms_processor,
 )
 from app.legacy.v2.notifications.utils import (
     raise_request_validation_error,
@@ -75,6 +73,7 @@ async def create_push_notification(
 
     logger.info('Creating notification with recipent_identifier {} and template_id {}.', icn, template_id)
 
+    # BackgroundTasks.add_task doesn't return a coroutine
     background_tasks.add_task(
         send_push_notification_helper, personalization, icn, msg_template, request.app.enp_state.providers['aws']
     )
@@ -96,15 +95,13 @@ async def create_sms_notification(
             openapi_examples=V2PostSmsRequestModel.json_schema_extra['examples'],
         ),
     ],
-    phone_processor: Annotated[PhoneNumberSmsProcessor, Depends(get_phone_number_sms_processor)],
-    recipient_processor: Annotated[RecipientIdentifierSmsProcessor, Depends(get_recipient_identifier_sms_processor)],
+    processor: Annotated[NotificationProcessor, Depends(get_sms_processor)],
 ) -> V2PostSmsResponseModel:
     """Create an SMS notification.
 
     Args:
         request (V2PostSmsRequestModel): The data necessary for the notification.
-        phone_processor (PhoneNumberSmsProcessor): The processor for SMS to phone numbers.
-        recipient_processor (RecipientIdentifierSmsProcessor): The processor for SMS to recipient IDs.
+        processor (NotificationProcessor): The appropriate processor for the request, selected by the factory method.
 
     Returns:
         V2PostSmsResponseModel: The notification response data if notification is created successfully.
@@ -124,26 +121,15 @@ async def create_sms_notification(
     logger.info('Creating notification with ID {} and template_id {}.', notification_id, request.template_id)
 
     try:
-        # Select and use the appropriate processor based on the request
-        if request.phone_number is not None:
-            # If we have a phone number, use the phone number processor
-            await phone_processor.process(
-                notification_id=notification_id,
-                template_id=request.template_id,
-                phone_number=request.phone_number,
-                personalisation=request.personalisation,
-            )
-        elif request.recipient_identifier is not None:
-            # If we have a recipient identifier, use the recipient identifier processor
-            await recipient_processor.process(
-                notification_id=notification_id,
-                template_id=request.template_id,
-                recipient_identifier=request.recipient_identifier,
-                personalisation=request.personalisation,
-            )
-        else:
-            # This should never happen due to the model validation, but included for completeness
-            raise_request_validation_error('Either phone_number or recipient_identifier must be provided')
+        # Process the notification using the selected processor
+        # No need to check processor type since they share a common interface
+        await processor.process(
+            notification_id=notification_id,
+            template_id=request.template_id,
+            phone_number=request.phone_number,
+            recipient_identifier=request.recipient_identifier,
+            personalisation=request.personalisation,
+        )
     except ValueError as e:
         # Catch any ValueErrors thrown by the processors and convert to validation errors
         logger.error('Processor error: {}', str(e))
