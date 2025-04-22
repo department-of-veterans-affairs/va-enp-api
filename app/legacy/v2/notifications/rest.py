@@ -19,6 +19,8 @@ from app.legacy.v2.notifications.route_schema import (
     V2Template,
     ValidatedPhoneNumber,
 )
+from app.legacy.v2.notifications.services.interfaces import SmsProcessor
+from app.legacy.v2.notifications.services.providers import get_sms_processor
 from app.legacy.v2.notifications.utils import (
     raise_request_validation_error,
     send_push_notification_helper,
@@ -88,37 +90,57 @@ async def create_sms_notification(
             openapi_examples=V2PostSmsRequestModel.json_schema_extra['examples'],
         ),
     ],
+    sms_processor: Annotated[SmsProcessor, Depends(get_sms_processor)],
 ) -> V2PostSmsResponseModel:
     """Create an SMS notification.
 
     Args:
-        request_data (V2PostSmsRequestModel): The data necessary for the notification.
-        request (Request): The FastAPI request object.
+        request (V2PostSmsRequestModel): The data necessary for the notification.
+        sms_processor (SmsProcessor): The SMS processor service.
 
     Returns:
         V2PostSmsResponseModel: The notification response data if notification is created successfully.
     """
-    context['template_id'] = request.template_id
+    # Extract form data and set context
+    context['template_id'] = str(request.template_id)
     logger.debug('Received SMS request with data: {}', request)
 
+    # Validate SMS sender and template
     try:
         await validate_template(request.template_id, NotificationType.SMS, request.personalisation)
     except ValueError as e:
         raise_request_validation_error(str(e))
 
-    logger.debug('Creating SMS notification with request data {}.', request)
+    # Generate notification ID
+    notification_id = uuid4()
+    logger.info('Creating notification with ID {} and template_id {}.', notification_id, request.template_id)
 
+    # Process the notification using the appropriate method based on the request data
+    process_kwargs = {}
+    if request.phone_number is not None:
+        process_kwargs['phone_number'] = request.phone_number
+    if request.recipient_identifier is not None:
+        process_kwargs['recipient_identifier'] = request.recipient_identifier  # type: ignore[assignment]
+
+    await sms_processor.process(
+        notification_id=notification_id,
+        template_id=request.template_id,
+        personalisation=request.personalisation,
+        **process_kwargs,
+    )
+
+    # Return response with notification details
     return V2PostSmsResponseModel(
-        id=uuid4(),
-        billing_code='123456',
-        callback_url=HttpsUrl('https://example.com'),
-        reference='123456',
+        id=notification_id,
+        billing_code=request.billing_code,
+        callback_url=request.callback_url,
+        reference=request.reference,
         template=V2Template(
-            id=uuid4(),
-            uri=HttpsUrl('https://example.com'),
+            id=request.template_id,
+            uri=HttpsUrl(f'https://example.com/templates/{request.template_id}'),
             version=1,
         ),
-        uri=HttpsUrl('https://example.com'),
+        uri=HttpsUrl(f'https://example.com/notifications/{notification_id}'),
         content=V2SmsContentModel(
             body='example' if not request.personalisation else f'example - {request.personalisation}',
             from_number=ValidatedPhoneNumber('+18005550101'),

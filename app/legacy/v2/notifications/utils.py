@@ -10,7 +10,6 @@ from sqlalchemy.exc import NoResultFound
 from app.constants import NotificationType
 from app.exceptions import NonRetryableError, RetryableError
 from app.legacy.dao.templates_dao import LegacyTemplateDao
-from app.legacy.v2.notifications.route_schema import PersonalisationFileObject
 from app.logging.logging_config import logger
 from app.providers.provider_aws import ProviderAWS
 from app.providers.provider_schemas import PushModel
@@ -98,7 +97,7 @@ async def validate_push_template(template_id: UUID4) -> str:
 async def validate_template(
     template_id: UUID4,
     expected_type: NotificationType,
-    personalisation: dict[str, str | int | float | list[str | int | float] | PersonalisationFileObject] | None,
+    personalisation: dict[str, str | int | float | list[str | int | float]] | None,
 ) -> None:
     """Validates the template with the given ID.
 
@@ -108,7 +107,7 @@ async def validate_template(
     Args:
         template_id (UUID4): The template_id to validate
         expected_type (NotificationType): The expected type of the template
-        personalisation (dict[str, str | int | float | list[str | int | float] | PersonalisationFileObject] | None):
+        personalisation (dict[str, str | int | float | list[str | int | float]] | None):
             The personalisation data to validate
 
     Raises:
@@ -173,25 +172,29 @@ def _validate_template_active(archived: bool, template_id: UUID4) -> None:
 
 def _validate_template_personalisation(
     template_content: str,
-    personalisation: dict[str, str | int | float | list[str | int | float] | PersonalisationFileObject] | None,
+    personalisation: dict[str, str | int | float | list[str | int | float]] | None,
     template_id: UUID4,
 ) -> None:
-    """Validates the personalisation data against the template.
+    """Validate that the given personalisation has all the fields required by the template.
 
     Args:
-        template_content (str): The template to validate against
-        personalisation (dict[str, str | int | float | list[str | int | float] | PersonalisationFileObject] | None): The personalisation data to validate
-        template_id (UUID4): The ID of the template
+        template_content (str): The template content to check.
+        personalisation (dict[str, str | int | float | list[str | int | float]] | None): The personalisation data to validate
+        template_id (UUID4): ID of the template.
 
     Raises:
-        ValueError: If there are missing personalisation fields required by the template.
-
+        ValueError: Missing personalisation values.
     """
-    template_personalisation_fields = _collect_personalisation_from_template(template_content)
-    incoming_personalisation_fields = set(personalisation.keys() if personalisation else [])
+    if not personalisation:
+        personalisation = {}
 
-    # the current implementation is case-insensitive, so all fields are converted to lowercase
-    template_personalisation_fields = set(field.lower() for field in template_personalisation_fields)
+    # Find all placeholders in template
+    placeholders_pattern = r'\(\(([^)]+)\)\)'
+    placeholder_matches = re.findall(placeholders_pattern, template_content)
+    template_personalisation_fields = set(match.lower() for match in placeholder_matches)
+
+    # Find all incoming personalisation keys
+    incoming_personalisation_fields = set(personalisation.keys())
     incoming_personalisation_fields = set(field.lower() for field in incoming_personalisation_fields)
 
     missing_fields = template_personalisation_fields - incoming_personalisation_fields

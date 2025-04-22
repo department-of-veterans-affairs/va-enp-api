@@ -195,24 +195,12 @@ class V2GetSmsNotificationResponseModel(V2GetNotificationResponseModel):
 ##################################################
 
 
-class PersonalisationFileObject(StrictBaseModel):
-    """Personalisation file attachment object."""
-
-    file: str
-    filename: str = Field(..., min_length=3, max_length=255)
-    # Note: Annotated strEnum SHOULD work but doesn't here
-    # a) This object is used for email attachments.
-    # b) This should be revisitied when email is worked.
-    # sending_method: Annotated[AttachmentType, Field(strict=False)] | None = None
-    sending_method: Literal['attach', 'link'] | None = None
-
-
 class V2PostNotificationRequestModel(StrictBaseModel):
     """Common attributes for the POST /v2/notifications/<:notification_type> routes request."""
 
     billing_code: str | None = Field(max_length=256, default=None)
     callback_url: HttpsUrl | None = None
-    personalisation: dict[str, str | int | float | list[str | int | float] | PersonalisationFileObject] | None = None
+    personalisation: dict[str, str | int | float | list[str | int | float]] | None = None
 
     recipient_identifier: RecipientIdentifierModel | None = None
     reference: str | None = None
