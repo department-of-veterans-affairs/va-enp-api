@@ -12,7 +12,8 @@ from app.legacy.v2.notifications.route_schema import RecipientIdentifierModel
 from app.legacy.v2.notifications.services.implementations import (
     BackgroundTaskRecipientLookupService,
     BackgroundTaskSmsDeliveryService,
-    DefaultSmsProcessor,
+    DefaultPhoneNumberSmsProcessor,
+    DefaultRecipientIdentifierSmsProcessor,
 )
 from app.legacy.v2.notifications.services.interfaces import (
     RecipientLookupService,
@@ -73,6 +74,32 @@ class TestBackgroundTaskSmsDeliveryService:
         assert kwargs['personalisation'] == personalisation
 
     @pytest.mark.asyncio
+    async def test_queue_sms_for_delivery_without_personalisation(
+        self, service: BackgroundTaskSmsDeliveryService, background_tasks: MagicMock
+    ) -> None:
+        """Test queue_sms_for_delivery without personalisation parameter."""
+        # Arrange
+        notification_id = uuid4()
+        phone_number = '+18005551234'
+        template_id = uuid4()
+
+        # Act
+        await service.queue_sms_for_delivery(
+            notification_id=notification_id,
+            phone_number=phone_number,
+            template_id=template_id,
+        )
+
+        # Assert
+        background_tasks.add_task.assert_called_once()
+        args, kwargs = background_tasks.add_task.call_args
+        assert args[0] == service._deliver_sms
+        assert kwargs['notification_id'] == notification_id
+        assert kwargs['phone_number'] == phone_number
+        assert kwargs['template_id'] == template_id
+        assert kwargs['personalisation'] is None
+
+    @pytest.mark.asyncio
     async def test_queue_for_delivery(
         self, service: BackgroundTaskSmsDeliveryService, monkeypatch: MonkeyPatch
     ) -> None:
@@ -93,6 +120,38 @@ class TestBackgroundTaskSmsDeliveryService:
             template_id=template_id,
             personalisation=personalisation,
             phone_number=phone_number,
+        )
+
+        # Assert
+        mock_queue.assert_called_once_with(
+            notification_id=notification_id,
+            phone_number=phone_number,
+            template_id=template_id,
+            personalisation=personalisation,
+        )
+
+    @pytest.mark.asyncio
+    async def test_queue_for_delivery_with_extra_kwargs(
+        self, service: BackgroundTaskSmsDeliveryService, monkeypatch: MonkeyPatch
+    ) -> None:
+        """Test queue_for_delivery with extra keyword arguments."""
+        # Arrange
+        notification_id = uuid4()
+        phone_number = '+18005551234'
+        template_id = uuid4()
+        personalisation = {'name': 'Test User'}
+
+        # Create a mock for the queue_sms_for_delivery method
+        mock_queue = AsyncMock()
+        monkeypatch.setattr(service, 'queue_sms_for_delivery', mock_queue)
+
+        # Act
+        await service.queue_for_delivery(
+            notification_id=notification_id,
+            template_id=template_id,
+            personalisation=personalisation,
+            phone_number=phone_number,
+            extra_kwarg='should be ignored',
         )
 
         # Assert
@@ -134,6 +193,21 @@ class TestBackgroundTaskSmsDeliveryService:
             phone_number=phone_number,
             template_id=template_id,
             personalisation=personalisation,
+        )
+
+    @pytest.mark.asyncio
+    async def test_deliver_sms_without_personalisation(self, service: BackgroundTaskSmsDeliveryService) -> None:
+        """Test _deliver_sms without personalisation parameter."""
+        # Arrange
+        notification_id = uuid4()
+        phone_number = '+18005551234'
+        template_id = uuid4()
+
+        # Act & Assert - Just make sure it doesn't raise an exception
+        await service._deliver_sms(
+            notification_id=notification_id,
+            phone_number=phone_number,
+            template_id=template_id,
         )
 
 
@@ -201,6 +275,34 @@ class TestBackgroundTaskRecipientLookupService:
         assert kwargs['personalisation'] == personalisation
 
     @pytest.mark.asyncio
+    async def test_queue_recipient_lookup_without_personalisation(
+        self,
+        service: BackgroundTaskRecipientLookupService,
+        background_tasks: MagicMock,
+        recipient_identifier: RecipientIdentifierModel,
+    ) -> None:
+        """Test queue_recipient_lookup without personalisation parameter."""
+        # Arrange
+        notification_id = uuid4()
+        template_id = uuid4()
+
+        # Act
+        await service.queue_recipient_lookup(
+            notification_id=notification_id,
+            recipient_identifier=recipient_identifier,
+            template_id=template_id,
+        )
+
+        # Assert
+        background_tasks.add_task.assert_called_once()
+        args, kwargs = background_tasks.add_task.call_args
+        assert args[0] == service._lookup_recipient_info
+        assert kwargs['notification_id'] == notification_id
+        assert kwargs['recipient_identifier'] == recipient_identifier
+        assert kwargs['template_id'] == template_id
+        assert kwargs['personalisation'] is None
+
+    @pytest.mark.asyncio
     async def test_lookup_recipient_info(
         self, service: BackgroundTaskRecipientLookupService, recipient_identifier: RecipientIdentifierModel
     ) -> None:
@@ -218,9 +320,25 @@ class TestBackgroundTaskRecipientLookupService:
             personalisation=personalisation,
         )
 
+    @pytest.mark.asyncio
+    async def test_lookup_recipient_info_without_personalisation(
+        self, service: BackgroundTaskRecipientLookupService, recipient_identifier: RecipientIdentifierModel
+    ) -> None:
+        """Test _lookup_recipient_info without personalisation parameter."""
+        # Arrange
+        notification_id = uuid4()
+        template_id = uuid4()
 
-class TestDefaultSmsProcessor:
-    """Tests for the DefaultSmsProcessor class."""
+        # Act & Assert - Just make sure it doesn't raise an exception
+        await service._lookup_recipient_info(
+            notification_id=notification_id,
+            recipient_identifier=recipient_identifier,
+            template_id=template_id,
+        )
+
+
+class TestDefaultPhoneNumberSmsProcessor:
+    """Tests for the DefaultPhoneNumberSmsProcessor class."""
 
     @pytest.fixture
     def delivery_service(self) -> MagicMock:
@@ -234,41 +352,20 @@ class TestDefaultSmsProcessor:
         return mock
 
     @pytest.fixture
-    def lookup_service(self) -> MagicMock:
-        """Create a mock RecipientLookupService.
-
-        Returns:
-            MagicMock: A mock lookup service.
-        """
-        mock = MagicMock(spec=RecipientLookupService)
-        mock.queue_recipient_lookup = AsyncMock()
-        return mock
-
-    @pytest.fixture
-    def processor(self, delivery_service: MagicMock, lookup_service: MagicMock) -> DefaultSmsProcessor:
-        """Create a DefaultSmsProcessor instance.
+    def processor(self, delivery_service: MagicMock) -> DefaultPhoneNumberSmsProcessor:
+        """Create a DefaultPhoneNumberSmsProcessor instance.
 
         Args:
             delivery_service: A mock delivery service.
-            lookup_service: A mock lookup service.
 
         Returns:
-            DefaultSmsProcessor: A processor instance.
+            DefaultPhoneNumberSmsProcessor: A processor instance.
         """
-        return DefaultSmsProcessor(delivery_service=delivery_service, lookup_service=lookup_service)
-
-    @pytest.fixture
-    def recipient_identifier(self) -> RecipientIdentifierModel:
-        """Create a RecipientIdentifierModel for testing.
-
-        Returns:
-            RecipientIdentifierModel: A test recipient identifier.
-        """
-        return RecipientIdentifierModel(id_type=IdentifierType.ICN, id_value='1234567890V123456')
+        return DefaultPhoneNumberSmsProcessor(delivery_service=delivery_service)
 
     @pytest.mark.asyncio
-    async def test_process_with_phone_number(self, processor: DefaultSmsProcessor, delivery_service: MagicMock) -> None:
-        """Test that process_with_phone_number calls the delivery service correctly."""
+    async def test_process(self, processor: DefaultPhoneNumberSmsProcessor, delivery_service: MagicMock) -> None:
+        """Test that process calls the delivery service correctly."""
         # Arrange
         notification_id = uuid4()
         phone_number = '+18005551234'
@@ -276,10 +373,10 @@ class TestDefaultSmsProcessor:
         personalisation = {'name': 'Test User'}
 
         # Act
-        await processor.process_with_phone_number(
+        await processor.process(
             notification_id=notification_id,
-            phone_number=phone_number,
             template_id=template_id,
+            phone_number=phone_number,
             personalisation=personalisation,
         )
 
@@ -292,20 +389,110 @@ class TestDefaultSmsProcessor:
         )
 
     @pytest.mark.asyncio
-    async def test_process_with_recipient_identifier(
-        self, processor: DefaultSmsProcessor, lookup_service: MagicMock, recipient_identifier: RecipientIdentifierModel
+    async def test_process_without_personalisation(
+        self, processor: DefaultPhoneNumberSmsProcessor, delivery_service: MagicMock
     ) -> None:
-        """Test that process_with_recipient_identifier calls the lookup service correctly."""
+        """Test process without personalisation parameter."""
+        # Arrange
+        notification_id = uuid4()
+        phone_number = '+18005551234'
+        template_id = uuid4()
+
+        # Act
+        await processor.process(
+            notification_id=notification_id,
+            template_id=template_id,
+            phone_number=phone_number,
+        )
+
+        # Assert
+        delivery_service.queue_sms_for_delivery.assert_called_once_with(
+            notification_id=notification_id,
+            phone_number=phone_number,
+            template_id=template_id,
+            personalisation=None,
+        )
+
+    @pytest.mark.asyncio
+    async def test_process_with_extra_kwargs(
+        self, processor: DefaultPhoneNumberSmsProcessor, delivery_service: MagicMock
+    ) -> None:
+        """Test process with extra keyword arguments."""
+        # Arrange
+        notification_id = uuid4()
+        phone_number = '+18005551234'
+        template_id = uuid4()
+
+        # Act
+        await processor.process(
+            notification_id=notification_id,
+            template_id=template_id,
+            phone_number=phone_number,
+            extra_param='should be ignored',
+        )
+
+        # Assert
+        delivery_service.queue_sms_for_delivery.assert_called_once_with(
+            notification_id=notification_id,
+            phone_number=phone_number,
+            template_id=template_id,
+            personalisation=None,
+        )
+
+
+class TestDefaultRecipientIdentifierSmsProcessor:
+    """Tests for the DefaultRecipientIdentifierSmsProcessor class."""
+
+    @pytest.fixture
+    def lookup_service(self) -> MagicMock:
+        """Create a mock RecipientLookupService.
+
+        Returns:
+            MagicMock: A mock lookup service.
+        """
+        mock = MagicMock(spec=RecipientLookupService)
+        mock.queue_recipient_lookup = AsyncMock()
+        return mock
+
+    @pytest.fixture
+    def processor(self, lookup_service: MagicMock) -> DefaultRecipientIdentifierSmsProcessor:
+        """Create a DefaultRecipientIdentifierSmsProcessor instance.
+
+        Args:
+            lookup_service: A mock lookup service.
+
+        Returns:
+            DefaultRecipientIdentifierSmsProcessor: A processor instance.
+        """
+        return DefaultRecipientIdentifierSmsProcessor(lookup_service=lookup_service)
+
+    @pytest.fixture
+    def recipient_identifier(self) -> RecipientIdentifierModel:
+        """Create a RecipientIdentifierModel for testing.
+
+        Returns:
+            RecipientIdentifierModel: A test recipient identifier.
+        """
+        return RecipientIdentifierModel(id_type=IdentifierType.ICN, id_value='1234567890V123456')
+
+    @pytest.mark.asyncio
+    async def test_process(
+        self,
+        processor: DefaultRecipientIdentifierSmsProcessor,
+        lookup_service: MagicMock,
+        recipient_identifier: RecipientIdentifierModel,
+    ) -> None:
+        """Test that process calls the lookup service correctly."""
         # Arrange
         notification_id = uuid4()
         template_id = uuid4()
         personalisation = {'name': 'Test User'}
 
         # Act
-        await processor.process_with_recipient_identifier(
+        await processor.process(
             notification_id=notification_id,
-            recipient_identifier=recipient_identifier,
             template_id=template_id,
+            recipient_identifier=recipient_identifier,
             personalisation=personalisation,
         )
 
@@ -318,76 +505,56 @@ class TestDefaultSmsProcessor:
         )
 
     @pytest.mark.asyncio
-    async def test_process_with_phone_number_via_process(
-        self, processor: DefaultSmsProcessor, monkeypatch: MonkeyPatch
+    async def test_process_without_personalisation(
+        self,
+        processor: DefaultRecipientIdentifierSmsProcessor,
+        lookup_service: MagicMock,
+        recipient_identifier: RecipientIdentifierModel,
     ) -> None:
-        """Test that process delegates to process_with_phone_number when phone_number is provided."""
+        """Test process without personalisation parameter."""
         # Arrange
         notification_id = uuid4()
-        phone_number = '+18005551234'
         template_id = uuid4()
-        personalisation = {'name': 'Test User'}
-
-        # Create a mock for process_with_phone_number
-        mock_process = AsyncMock()
-        monkeypatch.setattr(processor, 'process_with_phone_number', mock_process)
 
         # Act
         await processor.process(
             notification_id=notification_id,
             template_id=template_id,
-            personalisation=personalisation,
-            phone_number=phone_number,
+            recipient_identifier=recipient_identifier,
         )
 
         # Assert
-        mock_process.assert_called_once_with(
+        lookup_service.queue_recipient_lookup.assert_called_once_with(
             notification_id=notification_id,
-            phone_number=phone_number,
+            recipient_identifier=recipient_identifier,
             template_id=template_id,
-            personalisation=personalisation,
+            personalisation=None,
         )
 
     @pytest.mark.asyncio
-    async def test_process_with_recipient_identifier_via_process(
-        self, processor: DefaultSmsProcessor, recipient_identifier: RecipientIdentifierModel, monkeypatch: MonkeyPatch
+    async def test_process_with_extra_kwargs(
+        self,
+        processor: DefaultRecipientIdentifierSmsProcessor,
+        lookup_service: MagicMock,
+        recipient_identifier: RecipientIdentifierModel,
     ) -> None:
-        """Test that process delegates to process_with_recipient_identifier when recipient_identifier is provided."""
+        """Test process with extra keyword arguments."""
         # Arrange
         notification_id = uuid4()
         template_id = uuid4()
-        personalisation = {'name': 'Test User'}
-
-        # Create a mock for process_with_recipient_identifier
-        mock_process = AsyncMock()
-        monkeypatch.setattr(processor, 'process_with_recipient_identifier', mock_process)
 
         # Act
         await processor.process(
             notification_id=notification_id,
             template_id=template_id,
-            personalisation=personalisation,
             recipient_identifier=recipient_identifier,
+            extra_param='should be ignored',
         )
 
         # Assert
-        mock_process.assert_called_once_with(
+        lookup_service.queue_recipient_lookup.assert_called_once_with(
             notification_id=notification_id,
             recipient_identifier=recipient_identifier,
             template_id=template_id,
-            personalisation=personalisation,
+            personalisation=None,
         )
-
-    @pytest.mark.asyncio
-    async def test_process_raises_error_without_identifiers(self, processor: DefaultSmsProcessor) -> None:
-        """Test that process raises a ValueError when neither phone_number nor recipient_identifier is provided."""
-        # Arrange
-        notification_id = uuid4()
-        template_id = uuid4()
-
-        # Act & Assert
-        with pytest.raises(ValueError, match='Either phone_number or recipient_identifier must be provided'):
-            await processor.process(
-                notification_id=notification_id,
-                template_id=template_id,
-            )

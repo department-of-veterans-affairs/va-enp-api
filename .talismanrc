@@ -32,7 +32,7 @@ fileignoreconfig:
 - filename: tests/app/legacy/v2/notifications/test_rest_sms_refactored.py
   checksum: 397c3c4be059459b12d9091c1c6f90ef8e2c929d5d593aadc19a284a7c382f41
 - filename: tests/app/legacy/v2/notifications/test_services.py
-  checksum: 14cd4f734c539b43ffa2861eda14016d7fa997956676848c483af42b5cd0fa12
+  checksum: da918c723f5a951615d566596ee6a03fcbda54de9d62af71234e7f58f4fadb56
 - filename: tests/app/providers/__init__.py
   checksum: 0e3ae2fd3a50245a8c143d31c4316b164b51161d2db6e660aa956b78eda1b4d8
 - filename: tests/app/providers/test_provider_aws.py

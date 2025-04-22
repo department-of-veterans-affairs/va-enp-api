@@ -7,9 +7,10 @@ from pydantic import UUID4
 
 from app.legacy.v2.notifications.route_schema import RecipientIdentifierModel
 from app.legacy.v2.notifications.services.interfaces import (
+    PhoneNumberSmsProcessor,
+    RecipientIdentifierSmsProcessor,
     RecipientLookupService,
     SmsDeliveryService,
-    SmsProcessor,
 )
 from app.logging.logging_config import logger
 
@@ -125,19 +126,25 @@ class BackgroundTaskRecipientLookupService(RecipientLookupService):
             template_id: The ID of the template to use.
             personalisation: Template personalization data.
         """
+        # Create a copy of personalisation to avoid potential issues with mutable data
+        if personalisation is not None:
+            personalisation_copy = personalisation.copy()
+        else:
+            personalisation_copy = None
+
+        # Queue lookup task
         id_type = recipient_identifier.id_type
         id_value = recipient_identifier.id_value
+        logger.debug('Recipient identifier type: {}, value: {}', id_type, id_value)
 
         self.background_tasks.add_task(
             self._lookup_recipient_info,
             notification_id=notification_id,
             recipient_identifier=recipient_identifier,
             template_id=template_id,
-            personalisation=personalisation,
+            personalisation=personalisation_copy,
         )
-
-        logger.info('Queued notification {} for recipient info lookup', notification_id)
-        logger.debug('Recipient identifier type: {}, value: {}', id_type, id_value)
+        logger.debug('Recipient lookup queued for notification ID {}', notification_id)
 
     async def _lookup_recipient_info(
         self,
@@ -160,68 +167,33 @@ class BackgroundTaskRecipientLookupService(RecipientLookupService):
         logger.debug('Processing recipient lookup for notification ID {}', notification_id)
 
 
-class DefaultSmsProcessor(SmsProcessor):
-    """Default implementation of the SMS processor interface."""
+class DefaultPhoneNumberSmsProcessor(PhoneNumberSmsProcessor):
+    """Default implementation of the PhoneNumber SMS processor interface."""
 
-    def __init__(self, delivery_service: SmsDeliveryService, lookup_service: RecipientLookupService) -> None:
+    def __init__(self, delivery_service: SmsDeliveryService) -> None:
         """Initialize the SMS processor.
 
         Args:
             delivery_service: The service to use for SMS delivery.
-            lookup_service: The service to use for recipient lookup.
         """
         self.delivery_service = delivery_service
-        self.lookup_service = lookup_service
 
     async def process(
         self,
         notification_id: UUID4,
         template_id: UUID4,
+        phone_number: str,
         personalisation: Optional[Dict[str, Any]] = None,
         **kwargs: Any,  # noqa: ANN401
     ) -> None:
-        """Process a notification.
+        """Process a notification to be sent to a phone number.
 
         Args:
             notification_id: The ID of the notification.
             template_id: The ID of the template to use.
+            phone_number: The validated phone number to send the notification to.
             personalisation: Template personalization data.
             **kwargs: Additional processor-specific arguments.
-
-        Raises:
-            ValueError: If neither phone_number nor recipient_identifier is provided in kwargs.
-        """
-        if 'phone_number' in kwargs:
-            await self.process_with_phone_number(
-                notification_id=notification_id,
-                phone_number=kwargs['phone_number'],
-                template_id=template_id,
-                personalisation=personalisation,
-            )
-        elif 'recipient_identifier' in kwargs:
-            await self.process_with_recipient_identifier(
-                notification_id=notification_id,
-                recipient_identifier=kwargs['recipient_identifier'],
-                template_id=template_id,
-                personalisation=personalisation,
-            )
-        else:
-            raise ValueError('Either phone_number or recipient_identifier must be provided')
-
-    async def process_with_phone_number(
-        self,
-        notification_id: UUID4,
-        phone_number: str,
-        template_id: UUID4,
-        personalisation: Optional[Dict[str, Any]] = None,
-    ) -> None:
-        """Process SMS notification with a direct phone number.
-
-        Args:
-            notification_id: The ID of the notification.
-            phone_number: The validated phone number.
-            template_id: The ID of the template to use.
-            personalisation: Template personalization data.
         """
         # Create notification record with phone number
         logger.info(
@@ -240,20 +212,34 @@ class DefaultSmsProcessor(SmsProcessor):
 
         logger.info('Queued SMS notification {} for delivery', notification_id)
 
-    async def process_with_recipient_identifier(
+
+class DefaultRecipientIdentifierSmsProcessor(RecipientIdentifierSmsProcessor):
+    """Default implementation of the RecipientIdentifier SMS processor interface."""
+
+    def __init__(self, lookup_service: RecipientLookupService) -> None:
+        """Initialize the SMS processor.
+
+        Args:
+            lookup_service: The service to use for recipient lookup.
+        """
+        self.lookup_service = lookup_service
+
+    async def process(
         self,
         notification_id: UUID4,
-        recipient_identifier: RecipientIdentifierModel,
         template_id: UUID4,
+        recipient_identifier: RecipientIdentifierModel,
         personalisation: Optional[Dict[str, Any]] = None,
+        **kwargs: Any,  # noqa: ANN401
     ) -> None:
-        """Process SMS notification with a recipient identifier.
+        """Process a notification to be sent to a recipient identifier.
 
         Args:
             notification_id: The ID of the notification.
-            recipient_identifier: The recipient identifier model.
             template_id: The ID of the template to use.
+            recipient_identifier: The recipient identifier model.
             personalisation: Template personalization data.
+            **kwargs: Additional processor-specific arguments.
         """
         # Create notification record without recipient
         logger.info('Creating notification record with ID {} for recipient lookup', notification_id)

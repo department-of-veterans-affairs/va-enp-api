@@ -19,8 +19,14 @@ from app.legacy.v2.notifications.route_schema import (
     V2Template,
     ValidatedPhoneNumber,
 )
-from app.legacy.v2.notifications.services.interfaces import SmsProcessor
-from app.legacy.v2.notifications.services.providers import get_sms_processor
+from app.legacy.v2.notifications.services.interfaces import (
+    PhoneNumberSmsProcessor,
+    RecipientIdentifierSmsProcessor,
+)
+from app.legacy.v2.notifications.services.providers import (
+    get_phone_number_sms_processor,
+    get_recipient_identifier_sms_processor,
+)
 from app.legacy.v2.notifications.utils import (
     raise_request_validation_error,
     send_push_notification_helper,
@@ -90,13 +96,15 @@ async def create_sms_notification(
             openapi_examples=V2PostSmsRequestModel.json_schema_extra['examples'],
         ),
     ],
-    sms_processor: Annotated[SmsProcessor, Depends(get_sms_processor)],
+    phone_processor: Annotated[PhoneNumberSmsProcessor, Depends(get_phone_number_sms_processor)],
+    recipient_processor: Annotated[RecipientIdentifierSmsProcessor, Depends(get_recipient_identifier_sms_processor)],
 ) -> V2PostSmsResponseModel:
     """Create an SMS notification.
 
     Args:
         request (V2PostSmsRequestModel): The data necessary for the notification.
-        sms_processor (SmsProcessor): The SMS processor service.
+        phone_processor (PhoneNumberSmsProcessor): The processor for SMS to phone numbers.
+        recipient_processor (RecipientIdentifierSmsProcessor): The processor for SMS to recipient IDs.
 
     Returns:
         V2PostSmsResponseModel: The notification response data if notification is created successfully.
@@ -115,19 +123,35 @@ async def create_sms_notification(
     notification_id = uuid4()
     logger.info('Creating notification with ID {} and template_id {}.', notification_id, request.template_id)
 
-    # Process the notification using the appropriate method based on the request data
-    process_kwargs = {}
-    if request.phone_number is not None:
-        process_kwargs['phone_number'] = request.phone_number
-    if request.recipient_identifier is not None:
-        process_kwargs['recipient_identifier'] = request.recipient_identifier  # type: ignore[assignment]
-
-    await sms_processor.process(
-        notification_id=notification_id,
-        template_id=request.template_id,
-        personalisation=request.personalisation,
-        **process_kwargs,
-    )
+    try:
+        # Select and use the appropriate processor based on the request
+        if request.phone_number is not None:
+            # If we have a phone number, use the phone number processor
+            await phone_processor.process(
+                notification_id=notification_id,
+                template_id=request.template_id,
+                phone_number=request.phone_number,
+                personalisation=request.personalisation,
+            )
+        elif request.recipient_identifier is not None:
+            # If we have a recipient identifier, use the recipient identifier processor
+            await recipient_processor.process(
+                notification_id=notification_id,
+                template_id=request.template_id,
+                recipient_identifier=request.recipient_identifier,
+                personalisation=request.personalisation,
+            )
+        else:
+            # This should never happen due to the model validation, but included for completeness
+            raise_request_validation_error('Either phone_number or recipient_identifier must be provided')
+    except ValueError as e:
+        # Catch any ValueErrors thrown by the processors and convert to validation errors
+        logger.error('Processor error: {}', str(e))
+        raise_request_validation_error(str(e))
+    except Exception as e:
+        # Catch any other exceptions and convert to a more generic error
+        logger.error('Unexpected error processing SMS notification: {}', str(e))
+        raise_request_validation_error(f'An error occurred while processing the notification: {e!s}')
 
     # Return response with notification details
     return V2PostSmsResponseModel(

@@ -30,42 +30,50 @@ class NotificationProcessor(ABC):
         pass
 
 
-class SmsProcessor(NotificationProcessor):
-    """Interface for SMS notification processors."""
+class PhoneNumberSmsProcessor(NotificationProcessor):
+    """Processor for SMS notifications sent directly to phone numbers."""
 
     @abstractmethod
-    async def process_with_phone_number(
+    async def process(
         self,
         notification_id: UUID4,
-        phone_number: str,
         template_id: UUID4,
+        phone_number: str,
         personalisation: Optional[Dict[str, Any]] = None,
+        **kwargs: Any,  # noqa: ANN401
     ) -> None:
-        """Process SMS notification with a direct phone number.
+        """Process a notification to be sent to a phone number.
 
         Args:
             notification_id: The ID of the notification.
-            phone_number: The validated phone number.
             template_id: The ID of the template to use.
+            phone_number: The validated phone number to send the notification to.
             personalisation: Template personalization data.
+            **kwargs: Additional processor-specific arguments.
         """
         pass
 
+
+class RecipientIdentifierSmsProcessor(NotificationProcessor):
+    """Processor for SMS notifications sent to recipients identified by an ID."""
+
     @abstractmethod
-    async def process_with_recipient_identifier(
+    async def process(
         self,
         notification_id: UUID4,
-        recipient_identifier: RecipientIdentifierModel,
         template_id: UUID4,
+        recipient_identifier: RecipientIdentifierModel,
         personalisation: Optional[Dict[str, Any]] = None,
+        **kwargs: Any,  # noqa: ANN401
     ) -> None:
-        """Process SMS notification with a recipient identifier.
+        """Process a notification to be sent to a recipient identifier.
 
         Args:
             notification_id: The ID of the notification.
-            recipient_identifier: The recipient identifier model.
             template_id: The ID of the template to use.
+            recipient_identifier: The recipient identifier model.
             personalisation: Template personalization data.
+            **kwargs: Additional processor-specific arguments.
         """
         pass
 
