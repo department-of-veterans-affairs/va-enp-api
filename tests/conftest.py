@@ -1,5 +1,6 @@
 """Fixtures and setup to test the app."""
 
+import asyncio
 import os
 import time
 from datetime import datetime, timezone
@@ -21,6 +22,15 @@ from app.state import ENPState
 ADMIN_SECRET_KEY = os.getenv('ENP_ADMIN_SECRET_KEY', 'not-very-secret')
 ALGORITHM = os.getenv('ENP_ALGORITHM', 'HS256')
 ACCESS_TOKEN_EXPIRE_SECONDS = int(os.getenv('ENP_ACCESS_TOKEN_EXPIRE_SECONDS', 60))
+
+
+@pytest.fixture(autouse=True)
+async def init_database():
+    # Need to reflect after the pytest async loop is running
+    from app.db.db_init import _initialzied, init_db
+
+    if not _initialzied:
+        await init_db()
 
 
 class ENPTestClient(TestClient):
@@ -135,3 +145,79 @@ def mock_template() -> Callable[..., AsyncMock]:
         return mock_template
 
     return _create_mock_template
+
+
+def pytest_sessionfinish(session, exitstatus):
+    asyncio.run(_clean_table_data())
+
+
+async def _clean_table_data():
+    from sqlalchemy import select, text
+
+    from app.db.db_init import get_write_session_with_context, init_db, metadata_legacy
+
+    # Reflect the metadata, prep write session
+    await init_db()
+
+    print()
+
+    color = '\033[91m'
+    reset = '\033[0m'
+    TRUNCATE_ARTIFACTS = os.getenv('TRUNCATE_ARTIFACTS', 'False') == 'True'
+
+    skip_tables = (
+        'alembic_version',
+        'auth_type',
+        'branding_type',
+        'dm_datetime',
+        'key_types',
+        'notification_status_types',
+        'template_process_type',
+        'provider_details',
+        'provider_details_history',
+    )
+
+    acceptable_counts = {
+        'communication_items': 4,
+        'job_status': 9,
+        'key_types': 3,
+        # 'provider_details': 9,  # TODO: 1631
+        # 'provider_details_history': 9,  # TODO: 1631
+        'provider_rates': 5,
+        # 'rates': 2,
+        'service_callback_channel': 2,
+        'service_callback_type': 3,
+        'service_permission_types': 12,
+    }
+    tables_with_artifacts = []
+    artifact_counts = []
+
+    # Use metadata to query the table and add the table name to the list if there are any records
+    async with get_write_session_with_context() as session:
+        for _, v in metadata_legacy.tables.items():
+            if v.name not in skip_tables:
+                row_count = len((await session.execute(select(metadata_legacy.tables[v.name]))).all())
+
+                if v.name in acceptable_counts and row_count <= acceptable_counts[v.name]:
+                    continue
+                elif row_count > 0:
+                    artifact_counts.append((row_count))
+                    tables_with_artifacts.append(v.name)
+                    session.exitstatus = 1
+
+        if tables_with_artifacts and TRUNCATE_ARTIFACTS:
+            print('\n')
+            for i, table in enumerate(tables_with_artifacts):
+                # Skip tables that may have necessary information
+                if table not in acceptable_counts:
+                    session.execute(text(f"""TRUNCATE TABLE {table} CASCADE"""))
+                    print(f'Truncating {color}{table}{reset} with cascade...{artifact_counts[i]} records removed')
+                else:
+                    print(f'Table {table} contains too many records but {color}cannot be truncated{reset}.')
+            session.commit()
+            print(f'\n\nThese tables contained artifacts: {tables_with_artifacts}\n\n{color}UNIT TESTS FAILED{reset}')
+        elif tables_with_artifacts:
+            print(f'\n\nThese tables contain artifacts: {color}{tables_with_artifacts}\n\nUNIT TESTS FAILED{reset}')
+        else:
+            color = '\033[32m'  # Green - pulled out for clarity
+            print(f'\n\n{color}DATABASE IS CLEAN{reset}')

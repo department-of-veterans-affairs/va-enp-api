@@ -1,9 +1,11 @@
 from datetime import datetime, timezone
+from types import CoroutineType
+from typing import Any
 from uuid import uuid4
 
 import pytest
 from pydantic import UUID4
-from sqlalchemy import delete
+from sqlalchemy import Row, delete
 
 from app.db.db_init import get_write_session_with_context, metadata_legacy
 from app.legacy.dao.services_dao import LegacyServiceDao
@@ -11,7 +13,15 @@ from app.legacy.dao.users_dao import LegacyUserDao
 
 
 @pytest.fixture
-async def sample_user():
+async def sample_user() -> CoroutineType[Any, Any, Row[Any]]:
+    """Creates a User in the database and cleans up when the fixture is torn down
+
+    Returns:
+        Row[Any]: A User row
+
+    Yields:
+        CoroutineType[Any, Any, Row[Any]]: The function to create a User
+    """
     user_ids = []
 
     async def _wrapper(

@@ -17,7 +17,7 @@ class LegacyUserDao:
     """
 
     @staticmethod
-    async def get_user(id: UUID4) -> Row[Any]:
+    async def get_user(id: UUID4) -> Row[Any] | None:
         """Get a User from the legacy database.
 
         Args:
@@ -44,12 +44,22 @@ class LegacyUserDao:
     ) -> Row[Any]:
         """Create a User for the legacy database.
 
+        Args:
+            id (UUID4): id of this User
+            name (str): User name
+            email_address (str): User email address
+            created_at (datetime): Time of creation
+            failed_login_count (int): Deprecated - unused in notification-api
+            state (str): State of the User
+            platform_admin (bool): Is the User a platform admin
+            blocked (bool): Is the User blocked
+
         Returns:
-            Row: created users table row
+            Row[Any]: Object representing a User
         """
         async with get_write_session_with_context() as session:
             legacy_users = metadata_legacy.tables['users']
-            stmt = insert(legacy_users).values(
+            insert_stmt = insert(legacy_users).values(
                 id=id,
                 name=name,
                 email_address=email_address,
@@ -60,10 +70,10 @@ class LegacyUserDao:
                 blocked=blocked,
             )
             try:
-                await session.execute(stmt)
+                await session.execute(insert_stmt)
                 await session.commit()
             except Exception:
                 # log
                 raise
-            stmt = select(legacy_users).where(legacy_users.c.id == id)
-            return (await session.execute(stmt)).first()
+            select_stmt = select(legacy_users).where(legacy_users.c.id == id)
+            return (await session.execute(select_stmt)).one()

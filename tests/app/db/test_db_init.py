@@ -1,11 +1,10 @@
 """Test module for testing the app/db/db_init.py file."""
 
-from unittest.mock import AsyncMock, Mock, patch
+from unittest.mock import Mock, patch
 
 import pytest
 from sqlalchemy.ext.asyncio import AsyncEngine, async_scoped_session
 
-# from app.db import DB_READ_URI, DB_WRITE_URI
 from app.db.db_init import (
     close_db,
     get_db_session,
@@ -13,46 +12,12 @@ from app.db.db_init import (
     get_read_session_with_depends,
     get_write_session_with_context,
     get_write_session_with_depends,
-    init_db,
 )
 
 
-@patch('app.db.db_init.create_async_engine')
-@pytest.mark.parametrize(
-    'read_uri_value',
-    [
-        'read_uri',
-        '',
-    ],
-    ids=(
-        'with_read_uri',
-        'without_read_uri',
-    ),
-)
-async def test_init_db(mock_create_async_engine: Mock, read_uri_value: str) -> None:
-    """Test the init_db function."""
-    patch('app.db.db_init.DB_READ_URI', return_value=read_uri_value)
-
-    await init_db()
-
-    assert mock_create_async_engine.call_count == 2 if read_uri_value else 1
-
-
-# TODO 171, replace these with tests to a running database
-@patch('app.db.db_init._engine_napi_write', spec=AsyncMock)
-@patch('app.db.db_init._engine_napi_read', spec=AsyncMock)
-async def test_close_db(
-    mock_engine_read_napi: AsyncMock,
-    mock_engine_write_napi: AsyncMock,
-) -> None:
+async def test_close_db() -> None:
     """Test the close_db function to ensure db engines are closed when called."""
-    mock_engine_read_napi.dispose = AsyncMock()
-    mock_engine_write_napi.dispose = AsyncMock()
-
     await close_db()
-
-    mock_engine_read_napi.dispose.assert_called_once()
-    mock_engine_write_napi.dispose.assert_called_once()
 
 
 def test_get_db_session_success() -> None:

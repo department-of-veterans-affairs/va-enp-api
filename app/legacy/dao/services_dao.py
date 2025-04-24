@@ -17,7 +17,7 @@ class LegacyServiceDao:
     """
 
     @staticmethod
-    async def get_service(id: UUID4) -> Row[Any]:
+    async def get_service(id: UUID4) -> Row[Any] | None:
         """Get a Service from the legacy database.
 
         Args:
@@ -29,7 +29,7 @@ class LegacyServiceDao:
         async with get_read_session_with_context() as session:
             legacy_services = metadata_legacy.tables['services']
             stmt = select(legacy_services).where(legacy_services.c.id == id)
-            return (await session.execute(stmt)).one()
+            return (await session.execute(stmt)).first()
 
     @staticmethod
     async def create_service(
@@ -48,12 +48,26 @@ class LegacyServiceDao:
     ) -> Row[Any]:
         """Create a Service for the legacy database.
 
+        Args:
+            id (UUID4): id of this Service
+            name (str): Service name
+            created_at (datetime): Time of creation
+            active (bool): Is the Service active
+            message_limit (int): How many messages can be sent per day
+            restricted (bool): Is the Service in restricted mode
+            research_mode (bool): Is the Service in research mode
+            created_by_id (UUID4): User that created this Service
+            prefix_sms (bool): Is there a prefix for SMS messages?
+            rate_limit (int): Maximum rate of notifications per 60 seconds
+            count_as_live (bool): Deprecated - unused in notification-api
+            version (int): Service version
+
         Returns:
-            Row: created services table row
+            Row[Any]: Object representing a Service
         """
         async with get_write_session_with_context() as session:
             legacy_services = metadata_legacy.tables['services']
-            stmt = insert(legacy_services).values(
+            insert_stmt = insert(legacy_services).values(
                 id=id,
                 name=name,
                 created_at=created_at,
@@ -68,9 +82,9 @@ class LegacyServiceDao:
                 version=version,
             )
             try:
-                await session.execute(stmt)
+                await session.execute(insert_stmt)
                 await session.commit()
             except Exception:
                 raise
-            stmt = select(legacy_services).where(legacy_services.c.id == id)
-            return (await session.execute(stmt)).one()
+            select_stmt = select(legacy_services).where(legacy_services.c.id == id)
+            return (await session.execute(select_stmt)).one()

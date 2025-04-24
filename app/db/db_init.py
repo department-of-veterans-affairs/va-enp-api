@@ -18,11 +18,13 @@ from app.db import NAPI_DB_READ_URI, NAPI_DB_WRITE_URI
 
 _engine_napi_read: AsyncEngine
 _engine_napi_write: AsyncEngine
+_initialzied: bool = False
 metadata_legacy: MetaData = MetaData()
 
 
 async def init_db() -> None:
     """Initialize the database engine."""
+    global _initialzied
     logger.info('Initializing the database engines...')
 
     # These methods are copy/paste due to globals.
@@ -30,6 +32,7 @@ async def init_db() -> None:
 
     # notification_api database connections
     await init_napi_metadata()
+    _initialzied = True
 
     logger.info('...database engines initialized.')
 
