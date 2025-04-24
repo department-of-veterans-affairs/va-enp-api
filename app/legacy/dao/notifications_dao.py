@@ -13,7 +13,6 @@ class LegacyNotificationDao:
 
     Methods:
         get_notification: Get a Notification from the legacy database.
-        persist_notification: Persist a notification to the database.
     """
 
     @staticmethod
