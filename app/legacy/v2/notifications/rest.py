@@ -253,9 +253,12 @@ async def _handle_identifier_sms_notification(
         # Lookup contact info
         contact_info = await _lookup_contact_info(recipient_id_type, recipient_id_value, masked_id)
 
-        if not contact_info.get('phone_number'):
-            # No phone number found in profile
-            logger.warning('No phone number found in VA Profile for recipient_identifier {}', masked_id)
+        # Get phone number - explicitly check for empty string vs None
+        phone_number = contact_info.get('phone_number')
+
+        if phone_number == '':
+            # Empty phone number found in profile
+            logger.warning('Empty phone number found in VA Profile for recipient_identifier {}', masked_id)
             return _create_notification_record(
                 notification_id,
                 template_id,
@@ -266,12 +269,8 @@ async def _handle_identifier_sms_notification(
                 reason='no_phone_number',
             )
 
-        # Successfully retrieved phone number
-        logger.info('Successfully retrieved contact info for recipient_identifier {}', masked_id)
-
-        # Get phone number and create masked version for logs
-        phone_number = contact_info.get('phone_number')
-        # Ensure phone_number is not None before accessing its index
+        # If phone_number is None, we'll handle it differently from empty string
+        # Create masked version for logs
         if phone_number is None:
             masked_phone = 'UNKNOWN'
         else:

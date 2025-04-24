@@ -10,8 +10,10 @@ from fastapi.encoders import jsonable_encoder
 
 from app.constants import IdentifierType, MobileAppType
 from app.legacy.v2.notifications.rest import (
+    _create_notification_record,
     _handle_direct_sms_notification,
     _handle_identifier_sms_notification,
+    _lookup_contact_info,
     get_sms_notification_handler,
 )
 from app.legacy.v2.notifications.route_schema import (
@@ -314,10 +316,9 @@ class TestV2SMS:
         response = client.post(self.sms_route, json=sms_request_data)
 
         assert response.status_code == status.HTTP_400_BAD_REQUEST
-
-        response_errors = response.json()['errors']
-        assert len(response_errors) == 1
-        assert 'Missing personalisation:' in response_errors[0]['message']
+        response_json = response.json()
+        assert len(response_json['errors']) == 1
+        assert response_json['errors'][0]['message'] == 'Missing personalisation: content'
 
     async def test_v2_sms_returns_custom_uuid_message_for_invalid_uuid(
         self,
@@ -327,21 +328,270 @@ class TestV2SMS:
     ) -> None:
         """Test route returns 400 and custom UUID formatting message."""
         sms_request_data['template_id'] = 'bad_uuid'
-
-        response = client.post(self.sms_route, json=sms_request_data)
-        assert response.status_code == status.HTTP_400_BAD_REQUEST
-
-        response_errors = response.json()['errors']
-        assert any(
-            error['message'] == 'template_id: Input should be a valid UUID version 4' for error in response_errors
-        )
-        assert response.status_code == status.HTTP_400_BAD_REQUEST
-        assert response.json() == {
+        expected_message = 'template_id: Input should be a valid UUID version 4'
+        expected_response = {
             'errors': [
                 {
                     'error': 'ValidationError',
-                    'message': 'template_id: Input should be a valid UUID version 4',
+                    'message': expected_message,
                 },
             ],
             'status_code': 400,
         }
+
+        response = client.post(self.sms_route, json=sms_request_data)
+
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+        assert response.json() == expected_response
+
+
+@patch('app.legacy.v2.notifications.rest.get_contact_info')
+class TestHandleIdentifierSmsNotification:
+    """Test the _handle_identifier_sms_notification function."""
+
+    @pytest.fixture
+    def request_with_recipient_identifier(self) -> V2PostSmsRequestModel:
+        """Return a V2PostSmsRequestModel with a recipient identifier."""
+        return V2PostSmsRequestModel(
+            reference=str(uuid4()),
+            template_id=uuid4(),
+            sms_sender_id=uuid4(),
+            recipient_identifier=RecipientIdentifierModel(
+                id_type=IdentifierType.ICN,
+                id_value='1234567890V123456',
+            ),
+        )
+
+    async def test_handle_with_none_phone_number(
+        self,
+        mock_get_contact_info: AsyncMock,
+        request_with_recipient_identifier: V2PostSmsRequestModel,
+    ) -> None:
+        """Test _handle_identifier_sms_notification when phone_number is None but contact_info exists."""
+        from starlette_context import request_cycle_context
+
+        notification_id = uuid4()
+        template_id = uuid4()
+        template_version = 1
+
+        # Return a contact_info dict with None phone_number
+        mock_get_contact_info.return_value = {'phone_number': None, 'email': 'test@example.com'}
+
+        # Create a proper request context
+        with request_cycle_context(
+            {'template_id': f'{template_id}:1', 'notification_id': notification_id, 'service_id': uuid4()}
+        ):
+            # Call the handler within the context
+            result = await _handle_identifier_sms_notification(
+                request_with_recipient_identifier, notification_id, template_id, template_version
+            )
+
+            # Assertions
+            mock_get_contact_info.assert_called_once()
+            # Check that the status is delivered
+            assert result['status'] == 'delivered'
+            # Check that phone_number is present and set to 'UNKNOWN'
+            assert 'phone_number' in result
+            assert result['phone_number'] == 'UNKNOWN'
+
+    async def test_handle_with_empty_phone_number(
+        self,
+        mock_get_contact_info: AsyncMock,
+        request_with_recipient_identifier: V2PostSmsRequestModel,
+    ) -> None:
+        """Test _handle_identifier_sms_notification when phone_number is empty string."""
+        from starlette_context import request_cycle_context
+
+        notification_id = uuid4()
+        template_id = uuid4()
+        template_version = 1
+
+        # Return a contact_info dict with empty phone_number
+        mock_get_contact_info.return_value = {'phone_number': '', 'email': 'test@example.com'}
+
+        # Create a proper request context
+        with request_cycle_context(
+            {'template_id': f'{template_id}:1', 'notification_id': notification_id, 'service_id': uuid4()}
+        ):
+            # Call the handler within the context
+            result = await _handle_identifier_sms_notification(
+                request_with_recipient_identifier, notification_id, template_id, template_version
+            )
+
+            # Assert failure due to missing phone number (empty string is falsy)
+            assert result['status'] == 'failed'
+            assert result['reason'] == 'no_phone_number'
+            # phone_number should not be present in this failure case
+            assert 'phone_number' not in result
+
+
+@patch('app.legacy.v2.notifications.rest.get_contact_info')
+class TestLookupContactInfo:
+    """Test the _lookup_contact_info function."""
+
+    async def test_successful_contact_info_lookup(self, mock_get_contact_info: AsyncMock) -> None:
+        """Test successful contact information lookup."""
+        mock_contact_info = {'phone_number': '+18005550101', 'email': 'test@example.com'}
+        mock_get_contact_info.return_value = mock_contact_info
+
+        result = await _lookup_contact_info('ICN', '1234567890V123456', 'MASKED_ID')
+
+        mock_get_contact_info.assert_called_once_with('ICN', '1234567890V123456')
+        assert result == mock_contact_info
+
+    async def test_invalid_identifier_raises_value_error(self, mock_get_contact_info: AsyncMock) -> None:
+        """Test value error is propagated when client raises it."""
+        mock_get_contact_info.side_effect = ValueError('Invalid identifier format')
+
+        with pytest.raises(ValueError, match='Invalid identifier format') as exc_info:
+            await _lookup_contact_info('ICN', 'INVALID_ID', 'MASKED_ID')
+
+        assert 'Invalid identifier format' in str(exc_info.value)
+        mock_get_contact_info.assert_called_once()
+
+    async def test_user_not_found_raises_key_error(self, mock_get_contact_info: AsyncMock) -> None:
+        """Test key error is propagated when user is not found."""
+        mock_get_contact_info.side_effect = KeyError('User not found')
+
+        with pytest.raises(KeyError) as exc_info:
+            await _lookup_contact_info('ICN', '1234567890V123456', 'MASKED_ID')
+
+        # KeyError's args[0] contains the key that wasn't found
+        assert 'User not found' == str(exc_info.value.args[0])
+        mock_get_contact_info.assert_called_once()
+
+    async def test_connection_error_is_propagated(self, mock_get_contact_info: AsyncMock) -> None:
+        """Test that connection error is propagated."""
+        mock_get_contact_info.side_effect = ConnectionError('Failed to connect to VA Profile')
+
+        with pytest.raises(ConnectionError) as exc_info:
+            await _lookup_contact_info('ICN', '1234567890V123456', 'MASKED_ID')
+
+        assert 'Failed to connect to VA Profile' in str(exc_info.value)
+        mock_get_contact_info.assert_called_once()
+
+    async def test_unexpected_error_converts_to_connection_error(self, mock_get_contact_info: AsyncMock) -> None:
+        """Test that unexpected exceptions are converted to ConnectionError."""
+        mock_get_contact_info.side_effect = Exception('Unexpected error occurred')
+
+        with pytest.raises(ConnectionError, match=r'Error connecting to VA Profile.*Unexpected error occurred'):
+            await _lookup_contact_info('ICN', '1234567890V123456', 'MASKED_ID')
+
+        mock_get_contact_info.assert_called_once()
+
+
+class TestCreateNotificationRecord:
+    """Test the _create_notification_record function."""
+
+    def test_create_notification_record_basic(self) -> None:
+        """Test _create_notification_record with basic required fields."""
+        notification_id = uuid4()
+        template_id = uuid4()
+        template_version = 1
+        recipient_id_type = 'ICN'
+        masked_id = '1234567XXXXXX'
+        status = 'delivered'
+
+        record = _create_notification_record(
+            notification_id,
+            template_id,
+            template_version,
+            recipient_id_type,
+            masked_id,
+            status,
+        )
+
+        # Test basic fields
+        assert record['id'] == str(notification_id)
+        assert record['template_id'] == str(template_id)
+        assert record['template_version'] == str(template_version)
+        assert record['recipient_identifier_type'] == recipient_id_type
+        assert record['recipient_identifier_value'] == masked_id
+        assert record['status'] == status
+        assert 'timestamp' in record
+
+        # Ensure optional fields aren't included
+        assert 'reason' not in record
+        assert 'phone_number' not in record
+        assert 'recipient' not in record
+
+    def test_create_notification_record_with_reason(self) -> None:
+        """Test _create_notification_record with reason field."""
+        notification_id = uuid4()
+        template_id = uuid4()
+        reason = 'no_phone_number'
+
+        record = _create_notification_record(
+            notification_id, template_id, 1, 'ICN', '1234567XXXXXX', 'failed', reason=reason
+        )
+
+        assert record['reason'] == reason
+
+    def test_create_notification_record_with_phone_number(self) -> None:
+        """Test _create_notification_record with phone_number field."""
+        notification_id = uuid4()
+        template_id = uuid4()
+        phone_number = '+1XXXXXXX1234'
+
+        record = _create_notification_record(
+            notification_id, template_id, 1, 'ICN', '1234567XXXXXX', 'delivered', phone_number=phone_number
+        )
+
+        assert record['phone_number'] == phone_number
+
+    def test_create_notification_record_with_recipient(self) -> None:
+        """Test _create_notification_record with recipient field."""
+        notification_id = uuid4()
+        template_id = uuid4()
+        recipient = '+18005550101'
+
+        record = _create_notification_record(
+            notification_id, template_id, 1, 'ICN', '1234567XXXXXX', 'delivered', recipient=recipient
+        )
+
+        # This is the specific test for line 213
+        assert record['recipient'] == recipient
+
+    def test_create_notification_record_with_multiple_additional_fields(self) -> None:
+        """Test _create_notification_record with all additional fields."""
+        notification_id = uuid4()
+        template_id = uuid4()
+
+        record = _create_notification_record(
+            notification_id,
+            template_id,
+            1,
+            'ICN',
+            '1234567XXXXXX',
+            'delivered',
+            reason='testing',
+            phone_number='+1XXXXXXX5555',
+            recipient='+18005550101',
+        )
+
+        # Verify all additional fields are present
+        assert record['reason'] == 'testing'
+        assert record['phone_number'] == '+1XXXXXXX5555'
+        assert record['recipient'] == '+18005550101'
+
+    def test_create_notification_record_with_none_values(self) -> None:
+        """Test _create_notification_record with None values in additional fields."""
+        notification_id = uuid4()
+        template_id = uuid4()
+
+        record = _create_notification_record(
+            notification_id,
+            template_id,
+            1,
+            'ICN',
+            '1234567XXXXXX',
+            'delivered',
+            reason=None,
+            phone_number=None,
+            recipient=None,
+        )
+
+        # None values should not be included in the record
+        assert 'reason' not in record
+        assert 'phone_number' not in record
+        assert 'recipient' not in record
