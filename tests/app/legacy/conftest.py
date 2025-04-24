@@ -1,8 +1,7 @@
-"""."""
+"""Pytest setup for all legacy code."""
 
 from datetime import datetime, timezone
-from types import CoroutineType
-from typing import Any, Callable
+from typing import Any, AsyncGenerator, Awaitable, Callable
 from uuid import uuid4
 
 import pytest
@@ -15,11 +14,11 @@ from app.legacy.dao.users_dao import LegacyUserDao
 
 
 @pytest.fixture
-async def sample_user() -> CoroutineType[Any, Any, Row[Any]]:
+async def sample_user() -> AsyncGenerator[Callable[..., Awaitable[Row[Any]]], None]:
     """Creates a User in the database and cleans up when the fixture is torn down.
 
     Yields:
-        CoroutineType[Any, Any, Row[Any]]: The function to create a User
+        AsyncGenerator[Callable[..., Awaitable[Row[Any]]], None]: The function to create a User
     """
     user_ids = []
 
@@ -54,14 +53,16 @@ async def sample_user() -> CoroutineType[Any, Any, Row[Any]]:
 
 
 @pytest.fixture
-async def sample_service(sample_user: Callable) -> CoroutineType[Any, Any, Row[Any]]:
+async def sample_service(
+    sample_user: Callable[..., Awaitable[Row[Any]]],
+) -> AsyncGenerator[Callable[..., Awaitable[Row[Any]]], None]:
     """Generate a sample Service.
 
     Args:
-        sample_user (Callable): Generates sample Users
+        sample_user (Callable[..., Awaitable[Row[Any]]]): Generates sample Users
 
     Yields:
-        Iterator[CoroutineType[Any, Any, Row[Any]]]: _description_
+        AsyncGenerator[Callable[..., Awaitable[Row[Any]]], None]: The function to create a Service
     """
     service_ids = []
 
