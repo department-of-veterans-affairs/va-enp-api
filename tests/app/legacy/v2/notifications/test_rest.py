@@ -462,6 +462,46 @@ class TestHandleIdentifierSmsNotification:
             assert 'timestamp' in result
 
 
+def test_create_notification_record_with_all_optional_fields() -> None:
+    """Test _create_notification_record with all optional fields."""
+    notification_id = uuid4()
+    template_id = uuid4()
+    template_version = 1
+    recipient_id_type = 'ICN'
+    masked_id = 'MASKED_ID'
+    status = 'delivered'
+
+    # Call with all optional fields
+    with request_cycle_context(
+        {'template_id': f'{template_id}:1', 'notification_id': notification_id, 'service_id': uuid4()}
+    ):
+        record = _create_notification_record(
+            notification_id,
+            template_id,
+            template_version,
+            recipient_id_type,
+            masked_id,
+            status,
+            reason='test_reason',
+            phone_number='+18005550101',
+            recipient='test_recipient',
+        )
+
+    # Verify all fields are present in the record
+    assert record['id'] == str(notification_id)
+    assert record['template_id'] == str(template_id)
+    assert record['template_version'] == str(template_version)
+    assert record['recipient_identifier_type'] == recipient_id_type
+    assert record['recipient_identifier_value'] == masked_id
+    assert record['status'] == status
+    assert 'timestamp' in record
+
+    # Verify optional fields
+    assert record['reason'] == 'test_reason'
+    assert record['phone_number'] == '+18005550101'
+    assert record['recipient'] == 'test_recipient'
+
+
 @patch('app.legacy.v2.notifications.rest.get_contact_info')
 class TestLookupContactInfo:
     """Test the _lookup_contact_info function."""
@@ -515,120 +555,3 @@ class TestLookupContactInfo:
             await _lookup_contact_info('ICN', '1234567890V123456', 'MASKED_ID')
 
         mock_get_contact_info.assert_called_once()
-
-
-class TestCreateNotificationRecord:
-    """Test the _create_notification_record function."""
-
-    def test_create_notification_record_basic(self) -> None:
-        """Test _create_notification_record with basic required fields."""
-        notification_id = uuid4()
-        template_id = uuid4()
-        template_version = 1
-        recipient_id_type = 'ICN'
-        masked_id = '1234567XXXXXX'
-        status = 'delivered'
-
-        record = _create_notification_record(
-            notification_id,
-            template_id,
-            template_version,
-            recipient_id_type,
-            masked_id,
-            status,
-        )
-
-        # Test basic fields
-        assert record['id'] == str(notification_id)
-        assert record['template_id'] == str(template_id)
-        assert record['template_version'] == str(template_version)
-        assert record['recipient_identifier_type'] == recipient_id_type
-        assert record['recipient_identifier_value'] == masked_id
-        assert record['status'] == status
-        assert 'timestamp' in record
-
-        # Ensure optional fields aren't included
-        assert 'reason' not in record
-        assert 'phone_number' not in record
-        assert 'recipient' not in record
-
-    def test_create_notification_record_with_reason(self) -> None:
-        """Test _create_notification_record with reason field."""
-        notification_id = uuid4()
-        template_id = uuid4()
-        reason = 'no_phone_number'
-
-        record = _create_notification_record(
-            notification_id, template_id, 1, 'ICN', '1234567XXXXXX', 'failed', reason=reason
-        )
-
-        assert record['reason'] == reason
-
-    def test_create_notification_record_with_phone_number(self) -> None:
-        """Test _create_notification_record with phone_number field."""
-        notification_id = uuid4()
-        template_id = uuid4()
-        phone_number = '+1XXXXXXX1234'
-
-        record = _create_notification_record(
-            notification_id, template_id, 1, 'ICN', '1234567XXXXXX', 'delivered', phone_number=phone_number
-        )
-
-        assert record['phone_number'] == phone_number
-
-    def test_create_notification_record_with_recipient(self) -> None:
-        """Test _create_notification_record with recipient field."""
-        notification_id = uuid4()
-        template_id = uuid4()
-        recipient = '+18005550101'
-
-        record = _create_notification_record(
-            notification_id, template_id, 1, 'ICN', '1234567XXXXXX', 'delivered', recipient=recipient
-        )
-
-        # This is the specific test for line 213
-        assert record['recipient'] == recipient
-
-    def test_create_notification_record_with_multiple_additional_fields(self) -> None:
-        """Test _create_notification_record with all additional fields."""
-        notification_id = uuid4()
-        template_id = uuid4()
-
-        record = _create_notification_record(
-            notification_id,
-            template_id,
-            1,
-            'ICN',
-            '1234567XXXXXX',
-            'delivered',
-            reason='testing',
-            phone_number='+1XXXXXXX5555',
-            recipient='+18005550101',
-        )
-
-        # Verify all additional fields are present
-        assert record['reason'] == 'testing'
-        assert record['phone_number'] == '+1XXXXXXX5555'
-        assert record['recipient'] == '+18005550101'
-
-    def test_create_notification_record_with_none_values(self) -> None:
-        """Test _create_notification_record with None values in additional fields."""
-        notification_id = uuid4()
-        template_id = uuid4()
-
-        record = _create_notification_record(
-            notification_id,
-            template_id,
-            1,
-            'ICN',
-            '1234567XXXXXX',
-            'delivered',
-            reason=None,
-            phone_number=None,
-            recipient=None,
-        )
-
-        # None values should not be included in the record
-        assert 'reason' not in record
-        assert 'phone_number' not in record
-        assert 'recipient' not in record
