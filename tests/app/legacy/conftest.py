@@ -1,6 +1,8 @@
+"""."""
+
 from datetime import datetime, timezone
 from types import CoroutineType
-from typing import Any
+from typing import Any, Callable
 from uuid import uuid4
 
 import pytest
@@ -14,10 +16,7 @@ from app.legacy.dao.users_dao import LegacyUserDao
 
 @pytest.fixture
 async def sample_user() -> CoroutineType[Any, Any, Row[Any]]:
-    """Creates a User in the database and cleans up when the fixture is torn down
-
-    Returns:
-        Row[Any]: A User row
+    """Creates a User in the database and cleans up when the fixture is torn down.
 
     Yields:
         CoroutineType[Any, Any, Row[Any]]: The function to create a User
@@ -33,7 +32,7 @@ async def sample_user() -> CoroutineType[Any, Any, Row[Any]]:
         state: str = 'pending',
         platform_admin: bool = False,
         blocked: bool = False,
-    ):
+    ) -> Row[Any]:
         id = id or uuid4()
         user = await LegacyUserDao.create_user(
             id=id,
@@ -55,7 +54,15 @@ async def sample_user() -> CoroutineType[Any, Any, Row[Any]]:
 
 
 @pytest.fixture
-async def sample_service(sample_user):
+async def sample_service(sample_user: Callable) -> CoroutineType[Any, Any, Row[Any]]:
+    """Generate a sample Service.
+
+    Args:
+        sample_user (Callable): Generates sample Users
+
+    Yields:
+        Iterator[CoroutineType[Any, Any, Row[Any]]]: _description_
+    """
     service_ids = []
 
     async def _wrapper(
@@ -71,7 +78,7 @@ async def sample_service(sample_user):
         rate_limit: int = 3000,
         count_as_live: bool = True,
         version: int = 0,
-    ):
+    ) -> Row[Any]:
         id = id or uuid4()
         service = await LegacyServiceDao.create_service(
             id=id,
@@ -97,6 +104,11 @@ async def sample_service(sample_user):
 
 
 async def user_cleanup(user_ids: list[UUID4]) -> None:
+    """Cleanup created Users.
+
+    Args:
+        user_ids (list[UUID4]): List of User ids
+    """
     legacy_users = metadata_legacy.tables['users']
     async with get_write_session_with_context() as session:
         for user_id in user_ids:
@@ -105,6 +117,11 @@ async def user_cleanup(user_ids: list[UUID4]) -> None:
 
 
 async def service_cleanup(service_ids: list[UUID4]) -> None:
+    """Cleanup created Services.
+
+    Args:
+        service_ids (list[UUID4]): List of Service ids
+    """
     legacy_services = metadata_legacy.tables['services']
     async with get_write_session_with_context() as session:
         for service_id in service_ids:

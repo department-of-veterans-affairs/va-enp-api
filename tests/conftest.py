@@ -4,7 +4,7 @@ import asyncio
 import os
 import time
 from datetime import datetime, timezone
-from typing import Callable
+from typing import Any, Callable
 from unittest.mock import AsyncMock, Mock
 from uuid import uuid4
 
@@ -25,7 +25,8 @@ ACCESS_TOKEN_EXPIRE_SECONDS = int(os.getenv('ENP_ACCESS_TOKEN_EXPIRE_SECONDS', 6
 
 
 @pytest.fixture(autouse=True)
-async def init_database():
+async def init_database() -> None:
+    """Ensure the database is always initialized."""
     # Need to reflect after the pytest async loop is running
     from app.db.db_init import _initialzied, init_db
 
@@ -147,11 +148,18 @@ def mock_template() -> Callable[..., AsyncMock]:
     return _create_mock_template
 
 
-def pytest_sessionfinish(session, exitstatus):
-    asyncio.run(_clean_table_data())
+# This is a pytest built in function, we cannot change the type hints
+def pytest_sessionfinish(session: Any, exitstatus: Any) -> None:  # pragma: no cover  # noqa: ANN401
+    """Ran after all tests.
+
+    Args:
+        session (Any): The pytest session, not DB related
+        exitstatus (Any): Unknown but mandatory
+    """
+    asyncio.run(_clean_table_data(session))
 
 
-async def _clean_table_data():
+async def _clean_table_data(pt_session: Any) -> None:  # pragma: no cover  # noqa: ANN401,C901
     from sqlalchemy import select, text
 
     from app.db.db_init import get_write_session_with_context, init_db, metadata_legacy
@@ -175,6 +183,9 @@ async def _clean_table_data():
         'template_process_type',
         'provider_details',
         'provider_details_history',
+        'organisation_types',
+        'invite_status_type',
+        'job_status',
     )
 
     acceptable_counts = {
@@ -203,18 +214,18 @@ async def _clean_table_data():
                 elif row_count > 0:
                     artifact_counts.append((row_count))
                     tables_with_artifacts.append(v.name)
-                    session.exitstatus = 1
+                    pt_session.exitstatus = 1
 
         if tables_with_artifacts and TRUNCATE_ARTIFACTS:
             print('\n')
             for i, table in enumerate(tables_with_artifacts):
                 # Skip tables that may have necessary information
                 if table not in acceptable_counts:
-                    session.execute(text(f"""TRUNCATE TABLE {table} CASCADE"""))
+                    await session.execute(text(f"""TRUNCATE TABLE {table} CASCADE"""))
                     print(f'Truncating {color}{table}{reset} with cascade...{artifact_counts[i]} records removed')
                 else:
                     print(f'Table {table} contains too many records but {color}cannot be truncated{reset}.')
-            session.commit()
+            await session.commit()
             print(f'\n\nThese tables contained artifacts: {tables_with_artifacts}\n\n{color}UNIT TESTS FAILED{reset}')
         elif tables_with_artifacts:
             print(f'\n\nThese tables contain artifacts: {color}{tables_with_artifacts}\n\nUNIT TESTS FAILED{reset}')
