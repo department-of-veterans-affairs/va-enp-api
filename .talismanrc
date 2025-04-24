@@ -7,6 +7,8 @@ fileignoreconfig:
   checksum: fc90179b23528cc9668f868361e0889635deb8ebd4b78ff738f4143a151b3e64
 - filename: app/auth.py
   checksum: 06eb4b4c65191921104dc39381a937843a6ce155eeac7dc72990b5d10b5eb275
+- filename: app/clients/va_profile.py
+  checksum: 4c15663b347f4d79d8daa63e2083258a7fc7493efa699245a2d9fd0378ada694
 - filename: app/db/__init__.py
   checksum: 66575249d84eff02f539737ad2fa9f5a59b1b8982b5a3b8ff114e309ef62303d
 - filename: app/legacy/dao/notifications_dao.py
@@ -14,7 +16,7 @@ fileignoreconfig:
 - filename: app/legacy/v2/notifications/process_notifications.py
   checksum: 468b717b451ad4a959ec02c90fa9226e980f31c830751623bbc5200a96b8188a
 - filename: app/legacy/v2/notifications/rest.py
-  checksum: 415986fabaaf8022e03dc64c81cfe0d3a4fecb0485aedf8cab57910112096206
+  checksum: dc4379e1c5c3759c22c2fbffd3049ca4114c66965cb9c72825d104a417dcae77
 - filename: app/legacy/v2/notifications/utils.py
   checksum: b8fe6a823967dec1b572b3823b226c2b73a33129f2b09176069b69782ab86d6e
 - filename: app/providers/provider_aws.py
