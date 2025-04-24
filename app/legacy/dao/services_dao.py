@@ -17,7 +17,7 @@ class LegacyServiceDao:
     """
 
     @staticmethod
-    async def get_service(id: UUID4) -> Row[Any] | None:
+    async def get_service(id: UUID4) -> Row[Any]:
         """Get a Service from the legacy database.
 
         Args:
@@ -29,7 +29,7 @@ class LegacyServiceDao:
         async with get_read_session_with_context() as session:
             legacy_services = metadata_legacy.tables['services']
             stmt = select(legacy_services).where(legacy_services.c.id == id)
-            return (await session.execute(stmt)).first()
+            return (await session.execute(stmt)).one()
 
     @staticmethod
     async def create_service(

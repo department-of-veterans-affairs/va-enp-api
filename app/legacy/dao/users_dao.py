@@ -17,7 +17,7 @@ class LegacyUserDao:
     """
 
     @staticmethod
-    async def get_user(id: UUID4) -> Row[Any] | None:
+    async def get_user(id: UUID4) -> Row[Any]:
         """Get a User from the legacy database.
 
         Args:
@@ -29,7 +29,7 @@ class LegacyUserDao:
         async with get_read_session_with_context() as session:
             legacy_users = metadata_legacy.tables['users']
             stmt = select(legacy_users).where(legacy_users.c.id == id)
-            return (await session.execute(stmt)).first()
+            return (await session.execute(stmt)).one()
 
     @staticmethod
     async def create_user(
