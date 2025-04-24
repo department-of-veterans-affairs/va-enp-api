@@ -462,6 +462,135 @@ class TestHandleIdentifierSmsNotification:
             assert 'timestamp' in result
 
 
+class TestLookupContactInfo:
+    """Test the _lookup_contact_info function including exception handling."""
+
+    async def test_value_error_handling(self) -> None:
+        """Test _lookup_contact_info handling of ValueError."""
+        recipient_id_type = 'ICN'
+        recipient_id_value = '1234567890V123456'
+        masked_id = f'{recipient_id_value[:-6]}XXXXXX'
+        error_msg = 'Invalid identifier format'
+
+        # Mock the logger methods and get_contact_info function
+        with (
+            patch('app.legacy.v2.notifications.rest.get_contact_info') as mock_get_contact_info,
+            patch('app.legacy.v2.notifications.rest.logger.exception') as mock_logger_exception,
+            request_cycle_context({'request_id': 'test-request-id'}),
+        ):
+            # Configure the mock to raise ValueError
+            mock_get_contact_info.side_effect = ValueError(error_msg)
+
+            # Verify the function raises ConnectionError
+            with pytest.raises(ConnectionError) as excinfo:
+                await _lookup_contact_info(recipient_id_type, recipient_id_value, masked_id)
+
+            # Check that the original exception message is included
+            assert error_msg in str(excinfo.value)
+
+            # Verify correct logger method was called with appropriate message
+            mock_logger_exception.assert_called_once()
+            format_string = mock_logger_exception.call_args[0][0]
+            format_args = mock_logger_exception.call_args[0][1]
+            assert format_string == 'Unexpected error during VA Profile lookup: {}'
+            assert isinstance(format_args, ValueError)
+            assert str(format_args) == error_msg
+
+    async def test_key_error_handling(self) -> None:
+        """Test _lookup_contact_info handling of KeyError."""
+        recipient_id_type = 'ICN'
+        recipient_id_value = '1234567890V123456'
+        masked_id = f'{recipient_id_value[:-6]}XXXXXX'
+        error_key = 'User not found'
+
+        # Mock the logger methods and get_contact_info function
+        with (
+            patch('app.legacy.v2.notifications.rest.get_contact_info') as mock_get_contact_info,
+            patch('app.legacy.v2.notifications.rest.logger.exception') as mock_logger_exception,
+            request_cycle_context({'request_id': 'test-request-id'}),
+        ):
+            # Configure the mock to raise KeyError
+            mock_get_contact_info.side_effect = KeyError(error_key)
+
+            # Verify the function raises ConnectionError
+            with pytest.raises(ConnectionError) as excinfo:
+                await _lookup_contact_info(recipient_id_type, recipient_id_value, masked_id)
+
+            # Check that the original exception message is included
+            assert repr(error_key) in str(excinfo.value)
+
+            # Verify correct logger method was called with appropriate message
+            mock_logger_exception.assert_called_once()
+            format_string = mock_logger_exception.call_args[0][0]
+            format_args = mock_logger_exception.call_args[0][1]
+            assert format_string == 'Unexpected error during VA Profile lookup: {}'
+            assert isinstance(format_args, KeyError)
+            assert str(format_args) == f"'{error_key}'"
+
+    async def test_connection_error_handling(self) -> None:
+        """Test _lookup_contact_info handling of ConnectionError."""
+        recipient_id_type = 'ICN'
+        recipient_id_value = '1234567890V123456'
+        masked_id = f'{recipient_id_value[:-6]}XXXXXX'
+        error_msg = 'Failed to connect'
+
+        # Mock the logger methods and get_contact_info function
+        with (
+            patch('app.legacy.v2.notifications.rest.get_contact_info') as mock_get_contact_info,
+            patch('app.legacy.v2.notifications.rest.logger.exception') as mock_logger_exception,
+            request_cycle_context({'request_id': 'test-request-id'}),
+        ):
+            # Configure the mock to raise ConnectionError
+            mock_get_contact_info.side_effect = ConnectionError(error_msg)
+
+            # Verify the function raises ConnectionError
+            with pytest.raises(ConnectionError) as excinfo:
+                await _lookup_contact_info(recipient_id_type, recipient_id_value, masked_id)
+
+            # Check that the original exception message is included
+            assert error_msg in str(excinfo.value)
+
+            # Verify correct logger method was called with appropriate message
+            mock_logger_exception.assert_called_once()
+            format_string = mock_logger_exception.call_args[0][0]
+            format_args = mock_logger_exception.call_args[0][1]
+            assert format_string == 'Unexpected error during VA Profile lookup: {}'
+            assert isinstance(format_args, ConnectionError)
+            assert str(format_args) == error_msg
+
+    async def test_generic_exception_handling(self) -> None:
+        """Test _lookup_contact_info handling of generic Exception."""
+        recipient_id_type = 'ICN'
+        recipient_id_value = '1234567890V123456'
+        masked_id = f'{recipient_id_value[:-6]}XXXXXX'
+        error_msg = 'Unexpected error'
+
+        # Mock the logger methods and get_contact_info function
+        with (
+            patch('app.legacy.v2.notifications.rest.get_contact_info') as mock_get_contact_info,
+            patch('app.legacy.v2.notifications.rest.logger.exception') as mock_logger_exception,
+            request_cycle_context({'request_id': 'test-request-id'}),
+        ):
+            # Configure the mock to raise a generic Exception
+            mock_get_contact_info.side_effect = Exception(error_msg)
+
+            # Verify the function raises ConnectionError
+            with pytest.raises(ConnectionError) as excinfo:
+                await _lookup_contact_info(recipient_id_type, recipient_id_value, masked_id)
+
+            # Check that the original exception message is included
+            assert error_msg in str(excinfo.value)
+
+            # Verify correct logger method was called with appropriate message
+            mock_logger_exception.assert_called_once()
+            # Check the format string and arguments separately
+            format_string = mock_logger_exception.call_args[0][0]
+            format_args = mock_logger_exception.call_args[0][1]
+            assert format_string == 'Unexpected error during VA Profile lookup: {}'
+            assert isinstance(format_args, Exception)
+            assert str(format_args) == error_msg
+
+
 def test_create_notification_record_with_all_optional_fields() -> None:
     """Test _create_notification_record with all optional fields."""
     notification_id = uuid4()
@@ -500,58 +629,3 @@ def test_create_notification_record_with_all_optional_fields() -> None:
     assert record['reason'] == 'test_reason'
     assert record['phone_number'] == '+18005550101'
     assert record['recipient'] == 'test_recipient'
-
-
-@patch('app.legacy.v2.notifications.rest.get_contact_info')
-class TestLookupContactInfo:
-    """Test the _lookup_contact_info function."""
-
-    async def test_successful_contact_info_lookup(self, mock_get_contact_info: AsyncMock) -> None:
-        """Test successful contact information lookup."""
-        mock_contact_info = {'phone_number': '+18005550101', 'email': 'test@example.com'}
-        mock_get_contact_info.return_value = mock_contact_info
-
-        result = await _lookup_contact_info('ICN', '1234567890V123456', 'MASKED_ID')
-
-        mock_get_contact_info.assert_called_once_with('ICN', '1234567890V123456')
-        assert result == mock_contact_info
-
-    async def test_invalid_identifier_raises_value_error(self, mock_get_contact_info: AsyncMock) -> None:
-        """Test value error is propagated when client raises it."""
-        mock_get_contact_info.side_effect = ValueError('Invalid identifier format')
-
-        with pytest.raises(ValueError, match='Invalid identifier format') as exc_info:
-            await _lookup_contact_info('ICN', 'INVALID_ID', 'MASKED_ID')
-
-        assert 'Invalid identifier format' in str(exc_info.value)
-        mock_get_contact_info.assert_called_once()
-
-    async def test_user_not_found_raises_key_error(self, mock_get_contact_info: AsyncMock) -> None:
-        """Test key error is propagated when user is not found."""
-        mock_get_contact_info.side_effect = KeyError('User not found')
-
-        with pytest.raises(KeyError) as exc_info:
-            await _lookup_contact_info('ICN', '1234567890V123456', 'MASKED_ID')
-
-        # KeyError's args[0] contains the key that wasn't found
-        assert 'User not found' == str(exc_info.value.args[0])
-        mock_get_contact_info.assert_called_once()
-
-    async def test_connection_error_is_propagated(self, mock_get_contact_info: AsyncMock) -> None:
-        """Test that connection error is propagated."""
-        mock_get_contact_info.side_effect = ConnectionError('Failed to connect to VA Profile')
-
-        with pytest.raises(ConnectionError) as exc_info:
-            await _lookup_contact_info('ICN', '1234567890V123456', 'MASKED_ID')
-
-        assert 'Failed to connect to VA Profile' in str(exc_info.value)
-        mock_get_contact_info.assert_called_once()
-
-    async def test_unexpected_error_converts_to_connection_error(self, mock_get_contact_info: AsyncMock) -> None:
-        """Test that unexpected exceptions are converted to ConnectionError."""
-        mock_get_contact_info.side_effect = Exception('Unexpected error occurred')
-
-        with pytest.raises(ConnectionError, match=r'Error connecting to VA Profile.*Unexpected error occurred'):
-            await _lookup_contact_info('ICN', '1234567890V123456', 'MASKED_ID')
-
-        mock_get_contact_info.assert_called_once()

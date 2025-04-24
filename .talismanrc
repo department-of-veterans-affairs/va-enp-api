@@ -38,7 +38,7 @@ fileignoreconfig:
 - filename: scripts/run_tests.sh
   checksum: 80cd986074c12205493156f86b43e732777e2fae75683780006fb1baea90b82b
 - filename: tests/app/legacy/v2/notifications/test_rest.py
-  checksum: 3a99993b1578891ddc79cca7cc11a421fded8cd0efa06e484faf6a2bc97ac87f
+  checksum: b2c24689a86151d5ae8fabd9121f2fd2deddb4150ad5ae5b774be92bc425c175
 - filename: tests/app/providers/__init__.py
   checksum: 0e3ae2fd3a50245a8c143d31c4316b164b51161d2db6e660aa956b78eda1b4d8
 - filename: tests/app/providers/test_provider_aws.py

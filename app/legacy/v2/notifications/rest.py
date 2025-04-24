@@ -155,20 +155,19 @@ async def _lookup_contact_info(recipient_id_type: str, recipient_id_value: str, 
     logger.info('Starting contact info lookup for recipient_identifier {}', masked_id)
 
     try:
+        # Validate identifier before proceeding
+        if not recipient_id_value:
+            raise ValueError('Invalid recipient identifier provided')
+
         # Use the VA Profile client to get contact information
-        return await get_contact_info(recipient_id_type, recipient_id_value)
-    except ValueError as e:
-        # Handle validation errors
-        logger.error('Invalid identifier provided for VA Profile lookup: {}', e)
-        raise
-    except KeyError as e:
-        # Handle case where user is not found
-        logger.error('User not found in VA Profile: {}', e)
-        raise
-    except ConnectionError as e:
-        # Handle connection errors
-        logger.error('Failed to connect to VA Profile service: {}', e)
-        raise
+        contact_info = await get_contact_info(recipient_id_type, recipient_id_value)
+
+        # Check if user was found
+        if contact_info is None:
+            raise KeyError(f'User with identifier type {recipient_id_type} not found')
+
+        return contact_info
+
     except Exception as e:
         # Handle any other unexpected errors
         logger.exception('Unexpected error during VA Profile lookup: {}', e)
