@@ -1,6 +1,8 @@
 """All endpoints for the v2/notifications route."""
 
-from typing import Annotated, Dict, Optional
+import asyncio
+from datetime import datetime
+from typing import Annotated, Any, Callable, Coroutine, Dict
 from uuid import UUID, uuid4
 
 from fastapi import APIRouter, BackgroundTasks, Body, Depends, Request, status
@@ -9,11 +11,6 @@ from starlette_context import context
 
 from app.auth import JWTBearer
 from app.constants import NotificationType
-from app.legacy.dao.notifications_dao import LegacyNotificationDao
-from app.legacy.v2.notifications.process_notifications import (
-    send_notification_to_queue,
-    send_to_queue_for_recipient_info_based_on_recipient_identifier,
-)
 from app.legacy.v2.notifications.route_schema import (
     HttpsUrl,
     V2PostPushRequestModel,
@@ -89,8 +86,7 @@ async def _handle_direct_sms_notification(
     notification_id: UUID,
     template_id: UUID,
     template_version: int,
-    background_tasks: BackgroundTasks,
-) -> Dict:
+) -> Dict[str, str]:
     """Handle direct SMS notification via phone number.
 
     Args:
@@ -101,35 +97,27 @@ async def _handle_direct_sms_notification(
         background_tasks: FastAPI background tasks
 
     Returns:
-        Dict: The persisted notification data
+        Dict[str, str]: The persisted notification data
     """
-    # Mock service and API key IDs
-    service_id = uuid4()
-    api_key_id = uuid4()
-
-    notification = await LegacyNotificationDao.persist_notification(
-        notification_id=notification_id,
-        template_id=template_id,
-        template_version=template_version,
-        recipient=request.phone_number,
-        service_id=service_id,
-        personalisation=request.personalisation,
-        notification_type=NotificationType.SMS,
-        api_key_id=api_key_id,
-        key_type='team',  # Would come from actual API key
-        reference=request.reference,
-        billing_code=request.billing_code,
-        sms_sender_id=request.sms_sender_id,
-        callback_url=request.callback_url,
+    logger.info(
+        'Direct SMS notification created with recipient {} and template_id {}.',
+        request.phone_number,
+        template_id,
     )
 
-    # Queue for delivery (unless simulated)
-    if not request.phone_number.startswith('+1650555'):  # Example simulation check
-        background_tasks.add_task(
-            send_notification_to_queue, notification=notification, sms_sender_id=request.sms_sender_id
-        )
+    # Simulate an async operation
+    await asyncio.sleep(0.01)
 
-    return notification
+    # Record notification details that would be stored
+    notification_data = {
+        'id': str(notification_id),
+        'template_id': str(template_id),
+        'template_version': str(template_version),  # Convert int to string
+        'recipient': str(request.phone_number),
+        'timestamp': datetime.now().isoformat(),
+    }
+
+    return notification_data
 
 
 async def _handle_identifier_sms_notification(
@@ -137,8 +125,7 @@ async def _handle_identifier_sms_notification(
     notification_id: UUID,
     template_id: UUID,
     template_version: int,
-    background_tasks: BackgroundTasks,
-) -> Dict:
+) -> Dict[str, str]:
     """Handle SMS notification via recipient identifier.
 
     Args:
@@ -146,62 +133,53 @@ async def _handle_identifier_sms_notification(
         notification_id: Generated notification ID
         template_id: Template ID from request
         template_version: Template version
-        background_tasks: FastAPI background tasks
 
     Returns:
-        Dict: The persisted notification data
+        Dict[str, str]: The persisted notification data
     """
-    # Mock service and API key IDs
-    service_id = uuid4()
-    api_key_id = uuid4()
+    assert request.recipient_identifier is not None, 'recipient_identifier should not be None'
 
-    notification = await LegacyNotificationDao.persist_notification(
-        notification_id=notification_id,
-        template_id=template_id,
-        template_version=template_version,
-        service_id=service_id,
-        personalisation=request.personalisation,
-        notification_type=NotificationType.SMS,
-        api_key_id=api_key_id,
-        key_type='team',  # Would come from actual API key
-        reference=request.reference,
-        billing_code=request.billing_code,
-        recipient_identifier={
-            'id_type': request.recipient_identifier.id_type,
-            'id_value': request.recipient_identifier.id_value,
-        },
-        callback_url=request.callback_url,
+    recipient_id_type = request.recipient_identifier.id_type
+    masked_id = f'{request.recipient_identifier.id_value[:-6]}XXXXXX'  # Do not log ICNs (PII)
+    logger.info(
+        'Identifier SMS notification created with recipient_identifier {} and template_id {}.',
+        masked_id,
+        template_id,
     )
 
-    # Queue for contact info lookup
-    background_tasks.add_task(
-        send_to_queue_for_recipient_info_based_on_recipient_identifier,
-        notification=notification,
-        id_type=request.recipient_identifier.id_type,
-        id_value=request.recipient_identifier.id_value,
-        communication_item_id=None,  # Optional param we don't currently use
-    )
+    # Simulate an async operation, this is where we'd enqueue the celery task
+    await asyncio.sleep(0.01)
 
-    return notification
+    notification_data = {
+        'id': str(notification_id),
+        'template_id': str(template_id),
+        'template_version': str(template_version),  # Convert int to string
+        'recipient_identifier_type': recipient_id_type,
+        'recipient_identifier_value': masked_id,  # Use masked value for logging
+        'timestamp': datetime.now().isoformat(),
+    }
+
+    return notification_data
 
 
-def _create_template_content(request: V2PostSmsRequestModel, validated_content: Optional[str] = None) -> str:
-    """Create template content for the response.
+def get_sms_notification_handler(
+    request: V2PostSmsRequestModel,
+) -> Callable[[V2PostSmsRequestModel, UUID, UUID, int], Coroutine[Any, Any, Dict[str, str]]]:
+    """Determine the appropriate SMS notification handler based on request content.
 
     Args:
-        request: The SMS request model
-        validated_content: Optional validated content from template
+        request: The SMS notification request model
 
     Returns:
-        str: Template content
+        The appropriate handler function
     """
-    if validated_content:
-        return validated_content
-
-    if request.personalisation:
-        return f'Example message with personalization: {request.personalisation}'
-
-    return 'Example message content'
+    # Our model validator guarantees exactly one of phone_number or recipient_identifier is provided
+    if request.phone_number:
+        return _handle_direct_sms_notification
+    else:
+        # At this point, mypy knows recipient_identifier cannot be None
+        # because of our model validator ensuring exactly one is provided
+        return _handle_identifier_sms_notification
 
 
 @v2_notification_router.post('/sms', status_code=status.HTTP_201_CREATED)
@@ -213,53 +191,43 @@ async def create_sms_notification(
             openapi_examples=V2PostSmsRequestModel.json_schema_extra['examples'],
         ),
     ],
-    background_tasks: BackgroundTasks,
-    request_obj: Request,
+    handler: Annotated[
+        Callable[[V2PostSmsRequestModel, UUID, UUID, int], Coroutine[Any, Any, Dict[str, str]]],
+        Depends(get_sms_notification_handler),
+    ],
 ) -> V2PostSmsResponseModel:
     """Create an SMS notification.
-
-    This endpoint implements the SMS flow for both direct phone number and
-    recipient-identifier based notifications. The flow includes:
-    1. Template validation
-    2. Notification persistence
-    3. Enqueueing tasks for delivery or contact lookup
 
     Args:
         request: The SMS notification request model
         background_tasks: FastAPI background tasks object
-        request_obj: FastAPI request object
+        handler: Injected handler function based on request content
 
     Returns:
         V2PostSmsResponseModel: The notification response data
     """
-    context['template_id'] = request.template_id
     logger.debug('Creating SMS notification with request data: {}', request)
 
-    # 1. Validate the template
-    template_content = None
+    # Mock a template as if we had retrieved it
+    template = {
+        'id': request.template_id,
+        'version': 1,
+        'service_id': uuid4(),
+    }
+    notification_id = uuid4()
+    template_version: int = 1  # Explicitly define template version with type annotation
+    context['template_id'] = f'{request.template_id}:{template_version}'
+    context['notification_id'] = notification_id
+    context['service_id'] = template['service_id']
+
     try:
-        template_content = await validate_template(request.template_id, NotificationType.SMS, request.personalisation)
+        await validate_template(request.template_id, NotificationType.SMS, request.personalisation)
     except ValueError as e:
         raise_request_validation_error(str(e))
 
-    # Generate notification ID and set template version
-    notification_id = uuid4()
-    template_version = 1  # Would come from actual template
+    # Use the injected handler - the handlers are now async so we need to await them
+    await handler(request, notification_id, request.template_id, template_version)
 
-    # 2. Process notification based on delivery method
-    if request.phone_number:
-        await _handle_direct_sms_notification(
-            request, notification_id, request.template_id, template_version, background_tasks
-        )
-    else:
-        await _handle_identifier_sms_notification(
-            request, notification_id, request.template_id, template_version, background_tasks
-        )
-
-    # 3. Generate content for response
-    content = _create_template_content(request, template_content)
-
-    # 4. Build and return response
     return V2PostSmsResponseModel(
         id=notification_id,
         reference=request.reference,
@@ -269,11 +237,11 @@ async def create_sms_notification(
         template=V2Template(
             id=request.template_id,
             uri=HttpsUrl(f'https://example.com/templates/{request.template_id}'),
-            version=template_version,
+            version=template_version,  # Use the explicitly typed variable instead
         ),
         uri=HttpsUrl(f'https://example.com/notifications/{notification_id}'),
         content=V2SmsContentModel(
-            body=content,
+            body='',
             from_number=ValidatedPhoneNumber('+18005550101'),  # Would be determined from sms_sender_id
         ),
     )

@@ -9,7 +9,13 @@ from fastapi import BackgroundTasks, status
 from fastapi.encoders import jsonable_encoder
 
 from app.constants import IdentifierType, MobileAppType
+from app.legacy.v2.notifications.rest import (
+    _handle_direct_sms_notification,
+    _handle_identifier_sms_notification,
+    get_sms_notification_handler,
+)
 from app.legacy.v2.notifications.route_schema import (
+    RecipientIdentifierModel,
     V2PostPushRequestModel,
     V2PostPushResponseModel,
     V2PostSmsRequestModel,
@@ -204,6 +210,21 @@ class TestV2SMS:
         data: dict[str, str] = jsonable_encoder(request_data)
         return data
 
+    @pytest.fixture
+    def sms_request_with_identifier_data(self) -> dict[str, str]:
+        """Return valid request data with recipient identifier instead of phone number."""
+        request_data = V2PostSmsRequestModel(
+            reference=str(uuid4()),
+            template_id=self.template_id,
+            sms_sender_id=self.sms_sender_id,
+            recipient_identifier=RecipientIdentifierModel(
+                id_type=IdentifierType.ICN,
+                id_value='1234567890V123456',  # Valid ICN format: 10 digits + 'V' + 6 digits
+            ),
+        )
+        data: dict[str, str] = jsonable_encoder(request_data)
+        return data
+
     async def test_v2_sms_returns_201(
         self,
         mock_validate_template: AsyncMock,
@@ -214,6 +235,49 @@ class TestV2SMS:
         response = client.post(self.sms_route, json=sms_request_data)
 
         assert response.status_code == status.HTTP_201_CREATED
+
+    async def test_v2_sms_with_recipient_identifier_returns_201(
+        self,
+        mock_validate_template: AsyncMock,
+        client: ENPTestClient,
+        sms_request_with_identifier_data: dict[str, str],
+    ) -> None:
+        """Test sms notification route returns 201 with valid recipient identifier."""
+        response = client.post(self.sms_route, json=sms_request_with_identifier_data)
+
+        assert response.status_code == status.HTTP_201_CREATED
+        response_json = response.json()
+        # Verify response has expected structure with ID and URI
+        assert 'id' in response_json
+        assert 'uri' in response_json
+
+    async def test_sms_notification_handler_selection(
+        self,
+        mock_validate_template: AsyncMock,
+    ) -> None:
+        """Test the get_sms_notification_handler function selects the appropriate handler."""
+        # Test with phone number
+        request_with_phone = V2PostSmsRequestModel(
+            reference=str(uuid4()),
+            template_id=self.template_id,
+            phone_number=ValidatedPhoneNumber('+18005550101'),
+            sms_sender_id=self.sms_sender_id,
+        )
+        handler = get_sms_notification_handler(request_with_phone)
+        assert handler == _handle_direct_sms_notification
+
+        # Test with recipient identifier
+        request_with_identifier = V2PostSmsRequestModel(
+            reference=str(uuid4()),
+            template_id=self.template_id,
+            sms_sender_id=self.sms_sender_id,
+            recipient_identifier=RecipientIdentifierModel(
+                id_type=IdentifierType.ICN,
+                id_value='1234567890V123456',  # Valid ICN format: 10 digits + 'V' + 6 digits
+            ),
+        )
+        handler = get_sms_notification_handler(request_with_identifier)
+        assert handler == _handle_identifier_sms_notification
 
     async def test_v2_sms_returns_400_with_invalid_template(
         self,
@@ -265,9 +329,19 @@ class TestV2SMS:
         sms_request_data['template_id'] = 'bad_uuid'
 
         response = client.post(self.sms_route, json=sms_request_data)
-
         assert response.status_code == status.HTTP_400_BAD_REQUEST
 
         response_errors = response.json()['errors']
-        assert len(response_errors) == 1
-        assert response_errors[0]['message'] == 'template_id: Input should be a valid UUID version 4'
+        assert any(
+            error['message'] == 'template_id: Input should be a valid UUID version 4' for error in response_errors
+        )
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+        assert response.json() == {
+            'errors': [
+                {
+                    'error': 'ValidationError',
+                    'message': 'template_id: Input should be a valid UUID version 4',
+                },
+            ],
+            'status_code': 400,
+        }
