@@ -7,6 +7,7 @@ from uuid import uuid4
 import pytest
 from fastapi import BackgroundTasks, status
 from fastapi.encoders import jsonable_encoder
+from starlette_context import request_cycle_context
 
 from app.constants import IdentifierType, MobileAppType
 from app.legacy.v2.notifications.rest import (
@@ -423,6 +424,42 @@ class TestHandleIdentifierSmsNotification:
             assert result['reason'] == 'no_phone_number'
             # phone_number should not be present in this failure case
             assert 'phone_number' not in result
+
+    async def test_handle_general_exception(
+        self,
+        mock_get_contact_info: AsyncMock,
+        request_with_recipient_identifier: V2PostSmsRequestModel,
+    ) -> None:
+        """Test _handle_identifier_sms_notification when a general exception occurs."""
+        notification_id = uuid4()
+        template_id = uuid4()
+        template_version = 1
+
+        # Simulate a general exception during contact info lookup
+        mock_get_contact_info.side_effect = Exception('Something went wrong')
+
+        # Create a proper request context
+        with request_cycle_context(
+            {'template_id': f'{template_id}:1', 'notification_id': notification_id, 'service_id': uuid4()}
+        ):
+            # Call the handler within the context
+            result = await _handle_identifier_sms_notification(
+                request_with_recipient_identifier, notification_id, template_id, template_version
+            )
+
+            # Assertions
+            mock_get_contact_info.assert_called_once()
+            # Check that the status is failed
+            assert result['status'] == 'failed'
+            # Check that reason contains the exception message
+            assert 'reason' in result
+            assert 'lookup_error:' in result['reason']
+            assert 'Something went wrong' in result['reason']
+            # Verify the notification record contains the proper fields
+            assert result['id'] == str(notification_id)
+            assert result['template_id'] == str(template_id)
+            assert result['template_version'] == str(template_version)
+            assert 'timestamp' in result
 
 
 @patch('app.legacy.v2.notifications.rest.get_contact_info')
