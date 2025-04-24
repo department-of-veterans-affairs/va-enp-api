@@ -13,7 +13,7 @@ repos:
         exclude: 'tests/'
   - repo: https://github.com/astral-sh/ruff-pre-commit
     # Ruff version.
-    rev: "v0.9.4"
+    rev: "v0.11.3"
     hooks:
       # Run the linter.
       - id: ruff

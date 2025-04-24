@@ -4,7 +4,7 @@ import asyncio
 import os
 import time
 from datetime import datetime, timezone
-from typing import Any, Callable
+from typing import Callable
 from unittest.mock import AsyncMock, Mock
 from uuid import uuid4
 
@@ -148,87 +148,117 @@ def mock_template() -> Callable[..., AsyncMock]:
     return _create_mock_template
 
 
-# This is a pytest built in function, we cannot change the type hints
-def pytest_sessionfinish(session: Any, exitstatus: Any) -> None:  # pragma: no cover  # noqa: ANN401
+_COLOR_GREEN = '\033[32m'
+_COLOR_RED = '\033[91m'
+_COLOR_RESET = '\033[0m'
+_TRUNCATE_ARTIFACTS = os.getenv('TRUNCATE_ARTIFACTS', 'False') == 'True'
+
+_skip_tables = (
+    'alembic_version',
+    'auth_type',
+    'branding_type',
+    'dm_datetime',
+    'key_types',
+    'notification_status_types',
+    'template_process_type',
+    'provider_details',
+    'provider_details_history',
+    'organisation_types',
+    'invite_status_type',
+    'job_status',
+)
+
+_acceptable_counts = {
+    'communication_items': 4,
+    'job_status': 9,
+    'key_types': 3,
+    # 'provider_details': 9,  # TODO: 1631
+    # 'provider_details_history': 9,  # TODO: 1631
+    'provider_rates': 5,
+    # 'rates': 2,
+    'service_callback_channel': 2,
+    'service_callback_type': 3,
+    'service_permission_types': 12,
+}
+
+
+# No need to cover the test cleanup with a test
+def pytest_sessionfinish(
+    session: pytest.Session,
+    exitstatus: int | pytest.ExitCode,
+) -> None:  # pragma: no cover
     """Ran after all tests.
 
     Args:
         session (Any): The pytest session, not DB related
         exitstatus (Any): Unknown but mandatory
     """
-    asyncio.run(_clean_table_data(session))
+    asyncio.run(_validate_and_clean_tables(session))
 
 
-async def _clean_table_data(pt_session: Any) -> None:  # pragma: no cover  # noqa: ANN401,C901
-    from sqlalchemy import select, text
+async def _validate_and_clean_tables(pt_session: pytest.Session) -> None:  # pragma: no cover
+    """Validate and clean tables.
 
-    from app.db.db_init import get_write_session_with_context, init_db, metadata_legacy
+    Args:
+        pt_session (pytest.Session): Pytest Session object, used for setting exit status
+    """
+    from sqlalchemy import select
+
+    from app.db.db_init import get_read_session_with_context, init_db, metadata_legacy
 
     # Reflect the metadata, prep write session
     await init_db()
 
-    print()
-
-    color = '\033[91m'
-    reset = '\033[0m'
-    TRUNCATE_ARTIFACTS = os.getenv('TRUNCATE_ARTIFACTS', 'False') == 'True'
-
-    skip_tables = (
-        'alembic_version',
-        'auth_type',
-        'branding_type',
-        'dm_datetime',
-        'key_types',
-        'notification_status_types',
-        'template_process_type',
-        'provider_details',
-        'provider_details_history',
-        'organisation_types',
-        'invite_status_type',
-        'job_status',
-    )
-
-    acceptable_counts = {
-        'communication_items': 4,
-        'job_status': 9,
-        'key_types': 3,
-        # 'provider_details': 9,  # TODO: 1631
-        # 'provider_details_history': 9,  # TODO: 1631
-        'provider_rates': 5,
-        # 'rates': 2,
-        'service_callback_channel': 2,
-        'service_callback_type': 3,
-        'service_permission_types': 12,
-    }
     tables_with_artifacts = []
     artifact_counts = []
+    print()
 
     # Use metadata to query the table and add the table name to the list if there are any records
-    async with get_write_session_with_context() as session:
+    async with get_read_session_with_context() as session:
         for _, v in metadata_legacy.tables.items():
-            if v.name not in skip_tables:
+            if v.name not in _skip_tables:
                 row_count = len((await session.execute(select(metadata_legacy.tables[v.name]))).all())
 
-                if v.name in acceptable_counts and row_count <= acceptable_counts[v.name]:
+                if v.name in _acceptable_counts and row_count <= _acceptable_counts[v.name]:
                     continue
                 elif row_count > 0:
                     artifact_counts.append((row_count))
                     tables_with_artifacts.append(v.name)
                     pt_session.exitstatus = 1
 
-        if tables_with_artifacts and TRUNCATE_ARTIFACTS:
-            print('\n')
+    await clean_tables(artifact_counts, tables_with_artifacts)
+
+
+async def clean_tables(artifact_counts: list[int], tables_with_artifacts: list[str]) -> None:  # pragma: no cover
+    """Cleans database tables if the environment variable is set and there are tables to clean.
+
+    Args:
+        artifact_counts (list[int]): Parallel list of artifact counts
+        tables_with_artifacts (list[str]): Parallel list of tables with artifacts
+    """
+    from sqlalchemy import text
+
+    from app.db.db_init import get_write_session_with_context
+
+    if tables_with_artifacts and _TRUNCATE_ARTIFACTS:
+        print('\n')
+        async with get_write_session_with_context() as session:
             for i, table in enumerate(tables_with_artifacts):
                 # Skip tables that may have necessary information
-                if table not in acceptable_counts:
+                if table not in _acceptable_counts:
                     await session.execute(text(f"""TRUNCATE TABLE {table} CASCADE"""))
-                    print(f'Truncating {color}{table}{reset} with cascade...{artifact_counts[i]} records removed')
+                    print(
+                        f'Truncating {_COLOR_RED}{table}{_COLOR_RESET} with cascade...{artifact_counts[i]} records removed'
+                    )
                 else:
-                    print(f'Table {table} contains too many records but {color}cannot be truncated{reset}.')
+                    print(f'Table {table} contains too many records but {_COLOR_RED}cannot be truncated{_COLOR_RESET}.')
             await session.commit()
-            print(f'\n\nThese tables contained artifacts: {tables_with_artifacts}\n\n{color}UNIT TESTS FAILED{reset}')
-        elif tables_with_artifacts:
-            print(f'\n\nThese tables contain artifacts: {color}{tables_with_artifacts}\n\nUNIT TESTS FAILED{reset}')
-        else:
-            color = '\033[32m'  # Green - pulled out for clarity
-            print(f'\n\n{color}DATABASE IS CLEAN{reset}')
+            print(
+                f'\n\nThese tables contained artifacts: {tables_with_artifacts}\n\n{_COLOR_RED}UNIT TESTS FAILED{_COLOR_RESET}'
+            )
+    elif tables_with_artifacts:
+        print(
+            f'\n\nThese tables contain artifacts: {_COLOR_RED}{tables_with_artifacts}\n\nUNIT TESTS FAILED{_COLOR_RESET}'
+        )
+    else:
+        print(f'\n\n{_COLOR_GREEN}DATABASE IS CLEAN{_COLOR_RESET}')
