@@ -9,6 +9,12 @@ fileignoreconfig:
   checksum: 06eb4b4c65191921104dc39381a937843a6ce155eeac7dc72990b5d10b5eb275
 - filename: app/db/__init__.py
   checksum: 66575249d84eff02f539737ad2fa9f5a59b1b8982b5a3b8ff114e309ef62303d
+- filename: app/legacy/dao/notifications_dao.py
+  checksum: fceabe858d02440756f122b5ac34e2464060644cf07f731b04dcae72476bb1d2
+- filename: app/legacy/v2/notifications/process_notifications.py
+  checksum: 468b717b451ad4a959ec02c90fa9226e980f31c830751623bbc5200a96b8188a
+- filename: app/legacy/v2/notifications/rest.py
+  checksum: 415986fabaaf8022e03dc64c81cfe0d3a4fecb0485aedf8cab57910112096206
 - filename: app/legacy/v2/notifications/utils.py
   checksum: b8fe6a823967dec1b572b3823b226c2b73a33129f2b09176069b69782ab86d6e
 - filename: app/providers/provider_aws.py
