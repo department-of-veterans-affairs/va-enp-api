@@ -3,7 +3,8 @@
 from unittest.mock import Mock, patch
 
 import pytest
-from sqlalchemy.ext.asyncio import AsyncEngine, async_scoped_session
+from sqlalchemy import text
+from sqlalchemy.ext.asyncio import AsyncEngine
 
 from app.db.db_init import (
     close_db,
@@ -35,39 +36,28 @@ def test_get_db_session_failure() -> None:
         get_db_session(None, 'test')
 
 
-@patch('app.db.db_init.async_scoped_session', return_value=Mock(spec=async_scoped_session))
-@patch('app.db.db_init._engine_napi_read', Mock(spec=AsyncEngine))
-@patch('app.db.db_init._engine_napi_write', Mock(spec=AsyncEngine))
 class TestReadWriteSessions:
     """Test the read and write session functions."""
 
-    async def test_get_read_session(self, mock_session: Mock) -> None:
+    async def test_get_read_session(self) -> None:
         """Test the get_read_session function."""
         async for _session in get_read_session_with_depends():
-            ...
+            await _session.execute(text("SELECT 'Hello world!'"))
 
-        mock_session.assert_called_once()
-
-    async def test_get_read_session_with_context(self, mock_session: Mock) -> None:
+    async def test_get_read_session_with_context(self) -> None:
         """Test the get_read_session_with_context function."""
-        async with get_read_session_with_context():
-            ...
+        async with get_read_session_with_context() as session:
+            await session.execute(text("SELECT 'Hello world!'"))
 
-        mock_session.assert_called_once()
-
-    async def test_get_write_session(self, mock_session: Mock) -> None:
+    async def test_get_write_session(self) -> None:
         """Test the get_write_session function."""
         async for _session in get_write_session_with_depends():
-            ...
+            await _session.execute(text("SELECT 'Hello world!'"))
 
-        mock_session.assert_called_once()
-
-    async def test_get_write_session_with_context(self, mock_session: Mock) -> None:
+    async def test_get_write_session_with_context(self) -> None:
         """Test the get_write_session_with_context function."""
-        async with get_write_session_with_context():
-            ...
-
-        mock_session.assert_called_once()
+        async with get_write_session_with_context() as session:
+            await session.execute(text("SELECT 'Hello world!'"))
 
 
 @patch('app.db.db_init._engine_napi_write', None)
