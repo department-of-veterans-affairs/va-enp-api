@@ -148,17 +148,12 @@ async def _lookup_contact_info(recipient_id_type: str, recipient_id_value: str, 
         Dict containing the contact information
 
     Raises:
-        ValueError: If the provided identifier is invalid
         KeyError: If the user is not found
         ConnectionError: If there's an error connecting to VA Profile
     """
     logger.info('Starting contact info lookup for recipient_identifier {}', masked_id)
 
     try:
-        # Validate identifier before proceeding
-        if not recipient_id_value:
-            raise ValueError('Invalid recipient identifier provided')
-
         # Use the VA Profile client to get contact information
         contact_info = await get_contact_info(recipient_id_type, recipient_id_value)
 
