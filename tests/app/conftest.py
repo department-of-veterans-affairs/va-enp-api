@@ -29,7 +29,7 @@ async def test_init_db() -> AsyncGenerator[None, None]:
     await close_db()
 
 
-@pytest_asyncio.fixture
+@pytest.fixture
 async def test_db_session() -> AsyncGenerator[AsyncSession, None]:
     """Yield a transactional, read-write database session.
 
@@ -46,6 +46,7 @@ async def test_db_session() -> AsyncGenerator[AsyncSession, None]:
             session_maker = get_db_session(_engine_napi_write, 'write')
             async with session_maker() as session:
                 yield session
+                # session.rollback()
         # A rollback should occur automatically because the "begin" block doesn't manually commit.
 
 

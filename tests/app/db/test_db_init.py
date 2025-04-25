@@ -44,7 +44,6 @@ def test_get_db_session_none(engine_type: str) -> None:
 
 
 @pytest.mark.parametrize('engine', ['_engine_napi_read', '_engine_napi_write'])
-@pytest.mark.asyncio
 async def test_get_db_session_read(engine: str) -> None:
     """The read and write database engines both should be able to execute read queries."""
     imports = __import__('app.db.db_init', fromlist=[engine])
