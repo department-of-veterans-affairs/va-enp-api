@@ -6,16 +6,14 @@ from uuid import uuid4
 
 import pytest
 from pydantic import UUID4
-from sqlalchemy import Row, delete
+from sqlalchemy import Row, delete, insert, select
 
 from app.db.db_init import get_write_session_with_context, metadata_legacy
-from app.legacy.dao.api_key_dao import LegacyApiKeyDao
 from app.legacy.dao.services_dao import LegacyServiceDao
-from app.legacy.dao.users_dao import LegacyUserDao
 
 
 @pytest.fixture
-async def sample_user() -> AsyncGenerator[Callable[..., Awaitable[Row[Any]]], None]:
+async def sample_user(test_db_session) -> AsyncGenerator[Callable[..., Awaitable[Row[Any]]], None]:
     """Creates a User in the database and cleans up when the fixture is torn down.
 
     Yields:
@@ -24,6 +22,7 @@ async def sample_user() -> AsyncGenerator[Callable[..., Awaitable[Row[Any]]], No
     user_ids = []
 
     async def _wrapper(
+        session=None,
         id: UUID4 | None = None,
         name: str | None = None,
         email_address: str | None = None,
@@ -34,7 +33,8 @@ async def sample_user() -> AsyncGenerator[Callable[..., Awaitable[Row[Any]]], No
         blocked: bool = False,
     ) -> Row[Any]:
         id = id or uuid4()
-        user = await LegacyUserDao.create_user(
+        legacy_users = metadata_legacy.tables['users']
+        insert_stmt = insert(legacy_users).values(
             id=id,
             name=name or f'sample-user-{id}',
             email_address=email_address or f'create-user-{id}@va.gov',
@@ -44,17 +44,24 @@ async def sample_user() -> AsyncGenerator[Callable[..., Awaitable[Row[Any]]], No
             platform_admin=platform_admin,
             blocked=blocked,
         )
-        user_ids.append(id)
+        select_stmt = select(legacy_users).where(legacy_users.c.id == id)
+        if session:
+            print('7777777777777777777777777777777777777')
+            await session.execute(insert_stmt)
+            user = (await session.execute(select_stmt)).one()
+        else:
+            print('9999999999999999999999999999999999999')
+            async with test_db_session as session:
+                await session.execute(insert_stmt)
+                user = (await session.execute(select_stmt)).one()
         return user
 
-    yield _wrapper
-
-    # Teardown
-    await user_cleanup(user_ids)
+    return _wrapper
 
 
 @pytest.fixture
 async def sample_service(
+    test_db_session,
     sample_user: Callable[..., Awaitable[Row[Any]]],
 ) -> AsyncGenerator[Callable[..., Awaitable[Row[Any]]], None]:
     """Generate a sample Service.
@@ -65,9 +72,9 @@ async def sample_service(
     Yields:
         AsyncGenerator[Callable[..., Awaitable[Row[Any]]], None]: The function to create a Service
     """
-    service_ids = []
 
     async def _wrapper(
+        session=None,
         id: UUID4 | None = None,
         name: str | None = None,
         created_at: datetime | None = None,
@@ -82,31 +89,44 @@ async def sample_service(
         version: int = 0,
     ) -> Row[Any]:
         id = id or uuid4()
-        service = await LegacyServiceDao.create_service(
-            id=id,
-            name=name or f'sample-service-{id}',
-            created_at=created_at or datetime.now(timezone.utc),
-            active=active,
-            message_limit=message_limit,
-            restricted=restricted,
-            research_mode=research_mode,
-            created_by_id=created_by_id or (await sample_user()).id,
-            prefix_sms=prefix_sms,
-            rate_limit=rate_limit,
-            count_as_live=count_as_live,
-            version=version,
-        )
-        service_ids.append(id)
+        legacy_services = metadata_legacy.tables['services']
+        data = {
+            'id': id,
+            'name': name or f'sample-service-{id}',
+            'created_at': created_at or datetime.now(timezone.utc),
+            'active': active,
+            'message_limit': message_limit,
+            'restricted': restricted,
+            'research_mode': research_mode,
+            'created_by_id': created_by_id,
+            'prefix_sms': prefix_sms,
+            'rate_limit': rate_limit,
+            'count_as_live': count_as_live,
+            'version': version,
+        }
+        select_stmt = select(legacy_services).where(legacy_services.c.id == id)
+
+        async def add_user_build_service_stmt():
+            user = await sample_user(session, uuid4())
+            data['created_by_id'] = user.id
+            return insert(legacy_services).values(**data)
+
+        if session:
+            await session.execute(await add_user_build_service_stmt())
+            service = (await session.execute(select_stmt)).one()
+        else:
+            async with test_db_session as session:
+                await session.execute(await add_user_build_service_stmt())
+                service = (await session.execute(select_stmt)).one()
+
         return service
 
-    yield _wrapper
-
-    # Teardown
-    await service_cleanup(service_ids)
+    return _wrapper
 
 
 @pytest.fixture
 async def sample_api_key(
+    test_db_session,
     sample_service: Callable[..., Awaitable[Row[Any]]],
 ) -> AsyncGenerator[Callable[..., Awaitable[Row[Any]]], None]:
     """Generate a sample API Key.
@@ -131,28 +151,38 @@ async def sample_api_key(
         version: int = 0,
     ) -> Row[Any]:
         id = id or uuid4()
-        if created_by_id is None:
-            if service_id is not None:
-                # Look it up if one exists
-                created_by_id = (await LegacyServiceDao.get_service(service_id)).created_by_id
-            else:
-                service = await sample_service()
-                service_id = service.id
-                created_by_id = service.created_by_id
+        # if created_by_id is None:
+        #     if service_id is not None:
+        #         # Look it up if one exists
+        #         created_by_id = (await LegacyServiceDao.get_service(service_id)).created_by_id
+        #     else:
+        #         service = await sample_service()
+        #         service_id = service.id
+        #         created_by_id = service.created_by_id
 
-        api_key = await LegacyApiKeyDao.create_api_key(
-            id=id,
-            name=name or f'sample-api-key-{id}',
-            secret=secret or f'secret-{uuid4()}',
-            service_id=service_id or (await sample_service()).id,
-            key_type=key_type or LegacyApiKeyDao.NORMAL_TYPE,
-            revoked=revoked,
-            created_at=created_at or datetime.now(timezone.utc),
-            created_by_id=created_by_id,
-            version=version,
-        )
-        api_key_ids.append(id)
-        return api_key
+        # api_key = await LegacyApiKeyDao.create_api_key(
+        #     id=id,
+        #     name=name or f'sample-api-key-{id}',
+        #     secret=secret or f'secret-{uuid4()}',
+        #     service_id=service_id or (await sample_service()).id,
+        #     key_type=key_type or LegacyApiKeyDao.NORMAL_TYPE,
+        #     revoked=revoked,
+        #     created_at=created_at or datetime.now(timezone.utc),
+        #     created_by_id=created_by_id,
+        #     version=version,
+        # )
+        # api_key_ids.append(id)
+        # return api_key
+        async with test_db_session as session:
+            if created_by_id is None:
+                if service_id is not None:
+                    # Look it up if one exists
+
+                    created_by_id = (await LegacyServiceDao.get_service(service_id)).created_by_id
+                else:
+                    service = await sample_service()
+                    service_id = service.id
+                    created_by_id = service.created_by_id
 
     yield _wrapper
 
