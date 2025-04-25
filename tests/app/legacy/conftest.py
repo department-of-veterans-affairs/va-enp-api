@@ -19,7 +19,6 @@ async def sample_user(test_db_session) -> AsyncGenerator[Callable[..., Awaitable
     Yields:
         AsyncGenerator[Callable[..., Awaitable[Row[Any]]], None]: The function to create a User
     """
-    user_ids = []
 
     async def _wrapper(
         session=None,
@@ -46,11 +45,9 @@ async def sample_user(test_db_session) -> AsyncGenerator[Callable[..., Awaitable
         )
         select_stmt = select(legacy_users).where(legacy_users.c.id == id)
         if session:
-            print('7777777777777777777777777777777777777')
             await session.execute(insert_stmt)
             user = (await session.execute(select_stmt)).one()
         else:
-            print('9999999999999999999999999999999999999')
             async with test_db_session as session:
                 await session.execute(insert_stmt)
                 user = (await session.execute(select_stmt)).one()
@@ -82,7 +79,7 @@ async def sample_service(
         message_limit: int = 1000,
         restricted: bool = False,
         research_mode: bool = False,
-        created_by_id: UUID4 | None = None,
+        created_by_id: UUID4 | None = None,  # Expecting a FK to this if it is here
         prefix_sms: bool = False,
         rate_limit: int = 3000,
         count_as_live: bool = True,
@@ -107,8 +104,9 @@ async def sample_service(
         select_stmt = select(legacy_services).where(legacy_services.c.id == id)
 
         async def add_user_build_service_stmt():
-            user = await sample_user(session, uuid4())
-            data['created_by_id'] = user.id
+            if created_by_id is None:
+                user = await sample_user(session, uuid4())
+                data['created_by_id'] = user.id
             return insert(legacy_services).values(**data)
 
         if session:
@@ -140,11 +138,12 @@ async def sample_api_key(
     api_key_ids = []
 
     async def _wrapper(
+        session=None,
         id: UUID4 | None = None,
         name: str | None = None,
         secret: str | None = None,
         service_id: UUID4 | None = None,
-        key_type: str | None = None,
+        key_type: str = 'normal',
         revoked: bool = False,
         created_at: datetime | None = None,
         created_by_id: UUID4 | None = None,
@@ -173,16 +172,44 @@ async def sample_api_key(
         # )
         # api_key_ids.append(id)
         # return api_key
-        async with test_db_session as session:
-            if created_by_id is None:
-                if service_id is not None:
-                    # Look it up if one exists
+        legacy_api_keys = metadata_legacy.tables['api_keys']
+        data = {
+            'id': id,
+            'name': name or f'sample-api-key-{id}',
+            'secret': secret or f'secret-{uuid4()}',
+            'service_id': service_id or (await sample_service()).id,
+            'key_type': key_type,
+            'revoked': revoked,
+            'created_at': created_at or datetime.now(timezone.utc),
+            'created_by_id': created_by_id,
+            'version': version,
+        }
 
-                    created_by_id = (await LegacyServiceDao.get_service(service_id)).created_by_id
-                else:
-                    service = await sample_service()
-                    service_id = service.id
-                    created_by_id = service.created_by_id
+        async def add_user_service_build_key_stmt():
+            if created_by_id is None:
+                service = await sample_service(session, uuid4())
+                data['created_by_id'] = service.created_by_id
+            return insert(legacy_api_keys).values(**data)
+
+        select_stmt = select(legacy_api_keys).where(legacy_api_keys.c.id == id)
+        if session:
+            await session.execute(await add_user_service_build_key_stmt())
+            service = (await session.execute(select_stmt)).one()
+        else:
+            async with test_db_session as session:
+                await session.execute(await add_user_service_build_key_stmt())
+                service = (await session.execute(select_stmt)).one()
+        return service
+        # async with test_db_session as session:
+        #     if created_by_id is None:
+        #         if service_id is not None:
+        #             # Look it up if one exists
+
+        #             created_by_id = (await LegacyServiceDao.get_service(service_id)).created_by_id
+        #         else:
+        #             service = await sample_service()
+        #             service_id = service.id
+        #             created_by_id = service.created_by_id
 
     yield _wrapper
 
