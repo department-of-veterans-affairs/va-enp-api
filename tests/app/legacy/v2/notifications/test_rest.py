@@ -590,6 +590,82 @@ class TestLookupContactInfo:
             assert isinstance(format_args, Exception)
             assert str(format_args) == error_msg
 
+    async def test_user_not_found_when_contact_info_is_none(self) -> None:
+        """Test _lookup_contact_info when get_contact_info returns None."""
+        recipient_id_type = 'ICN'
+        recipient_id_value = '1234567890V123456'
+        masked_id = f'{recipient_id_value[:-6]}XXXXXX'
+
+        # Mock the logger methods and get_contact_info function
+        with (
+            patch('app.legacy.v2.notifications.rest.get_contact_info') as mock_get_contact_info,
+            patch('app.legacy.v2.notifications.rest.logger.exception') as mock_logger_exception,
+            request_cycle_context({'request_id': 'test-request-id'}),
+        ):
+            # Configure the mock to return None (user not found)
+            mock_get_contact_info.return_value = None
+
+            # Verify the function raises ConnectionError with appropriate message
+            with pytest.raises(ConnectionError) as excinfo:
+                await _lookup_contact_info(recipient_id_type, recipient_id_value, masked_id)
+
+            # Check that the error message contains the expected text
+            assert f'User with identifier type {recipient_id_type} not found' in str(excinfo.value)
+
+            # Verify correct logger method was called
+            mock_logger_exception.assert_called_once()
+            format_string = mock_logger_exception.call_args[0][0]
+            format_args = mock_logger_exception.call_args[0][1]
+            assert format_string == 'Unexpected error during VA Profile lookup: {}'
+            assert isinstance(format_args, KeyError)
+            assert f'User with identifier type {recipient_id_type} not found' in str(format_args)
+
+    async def test_contact_info_none_propagation_to_handler(self) -> None:
+        """Test that None contact_info properly propagates from _lookup_contact_info to _handle_identifier_sms_notification."""
+        notification_id = uuid4()
+        template_id = uuid4()
+        template_version = 1
+        request = V2PostSmsRequestModel(
+            reference=str(uuid4()),
+            template_id=template_id,
+            sms_sender_id=uuid4(),
+            recipient_identifier=RecipientIdentifierModel(
+                id_type=IdentifierType.ICN,
+                id_value='1234567890V123456',
+            ),
+        )
+
+        with (
+            patch('app.legacy.v2.notifications.rest.get_contact_info') as mock_get_contact_info,
+            patch('app.legacy.v2.notifications.rest.logger.exception') as mock_logger_exception,
+            request_cycle_context(
+                {
+                    'request_id': 'test-request-id',
+                    'template_id': f'{template_id}:1',
+                    'notification_id': notification_id,
+                    'service_id': uuid4(),
+                }
+            ),
+        ):
+            # Configure the mock to return None (user not found)
+            mock_get_contact_info.return_value = None
+
+            # Call the handler directly
+            result = await _handle_identifier_sms_notification(request, notification_id, template_id, template_version)
+
+            # Verify the handler properly handled the None contact_info case
+            assert result['status'] == 'failed'
+            assert 'reason' in result
+            assert 'lookup_error' in result['reason']
+            assert 'User with identifier type' in result['reason']
+            assert 'not found' in result['reason']
+
+            # Verify that the logger was called with the right exception
+            mock_logger_exception.assert_called()
+            # The first call should be in _lookup_contact_info
+            # The second call should be in _handle_identifier_sms_notification
+            assert len(mock_logger_exception.call_args_list) >= 1
+
 
 def test_create_notification_record_with_all_optional_fields() -> None:
     """Test _create_notification_record with all optional fields."""
