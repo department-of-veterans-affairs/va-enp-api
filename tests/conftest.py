@@ -23,15 +23,11 @@ ADMIN_SECRET_KEY = os.getenv('ENP_ADMIN_SECRET_KEY', 'not-very-secret')
 ALGORITHM = os.getenv('ENP_ALGORITHM', 'HS256')
 ACCESS_TOKEN_EXPIRE_SECONDS = int(os.getenv('ENP_ACCESS_TOKEN_EXPIRE_SECONDS', 60))
 
-
-@pytest.fixture(autouse=True)
-async def init_database() -> None:
-    """Ensure the database is always initialized."""
-    # Need to reflect after the pytest async loop is running
-    from app.db.db_init import _initialzied, init_db
-
-    if not _initialzied:
-        await init_db()
+# pytest cleanup script values
+_COLOR_GREEN = '\033[32m'
+_COLOR_RED = '\033[91m'
+_COLOR_RESET = '\033[0m'
+_TRUNCATE_ARTIFACTS = os.getenv('TRUNCATE_ARTIFACTS', 'False') == 'True'
 
 
 class ENPTestClient(TestClient):
@@ -147,11 +143,6 @@ def mock_template() -> Callable[..., AsyncMock]:
 
     return _create_mock_template
 
-
-_COLOR_GREEN = '\033[32m'
-_COLOR_RED = '\033[91m'
-_COLOR_RESET = '\033[0m'
-_TRUNCATE_ARTIFACTS = os.getenv('TRUNCATE_ARTIFACTS', 'False') == 'True'
 
 _skip_tables = (
     'alembic_version',
