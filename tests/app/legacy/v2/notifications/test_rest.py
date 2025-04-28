@@ -280,7 +280,9 @@ class TestV2SMS:
             ),
         )
         resolver = get_sms_task_resolver(request_with_identifier)
+
         assert isinstance(resolver, IdentifierSmsTaskResolver)
+        assert request_with_identifier.recipient_identifier is not None
         assert (
             resolver.recipient_identifier[IdentifierType('id_type')]
             == request_with_identifier.recipient_identifier.id_type
