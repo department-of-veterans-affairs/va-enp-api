@@ -25,7 +25,8 @@ class LegacyNotificationDao:
         Returns:
             Row: notification table row
         """
+        legacy_notifications = metadata_legacy.tables['notifications']
+        stmt = select(legacy_notifications).where(legacy_notifications.c.id == id)
+
         async with get_read_session_with_context() as session:
-            legacy_notifications = metadata_legacy.tables['notifications']
-            stmt = select(legacy_notifications).where(legacy_notifications.c.id == id)
             return (await session.execute(stmt)).one()
