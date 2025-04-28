@@ -1,7 +1,6 @@
 """Contains helpers for VA Profile.
 
 - register_device_with_vaprofile: Register a device with VA Profile.
-- get_contact_info: Get contact information for a user from VA Profile.
 """
 
 from loguru import logger
