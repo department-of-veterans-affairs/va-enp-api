@@ -76,7 +76,12 @@ class IdentifierSmsNotificationHandler(SmsNotificationHandler):
         Args:
             notification_id (UUID): Generated notification ID
         """
-        logger.info('Calling celery task lookup_va_profile_id with notification id {}.', notification_id)
+        # If the Recipient Identifier is a VAProfile ID
+        if self.recipient_identifier['id_type'] == 'VAPROFILEID':
+            logger.info('Calling celery task lookup_va_profile_id with notification id {}.', notification_id)
+            await asyncio.sleep(0.01)
+
+        logger.info('Calling celery task lookup_contact_info with notification id {}.', notification_id)
         await asyncio.sleep(0.01)
 
         logger.info('Calling celery task deliver_sms with notification id {}', notification_id)
