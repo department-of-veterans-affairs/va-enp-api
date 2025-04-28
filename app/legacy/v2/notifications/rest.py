@@ -2,7 +2,7 @@
 
 import asyncio
 from typing import Annotated, List, Tuple
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 from fastapi import APIRouter, BackgroundTasks, Body, Depends, Request, status
 from pydantic import UUID4
@@ -169,7 +169,7 @@ async def legacy_notification_post_handler(
     )
 
 
-async def process_tasks_helper(tasks: List[Tuple[str, str]]) -> None:
+async def process_tasks_helper(tasks: List[Tuple[str, Tuple[str, UUID]]]) -> None:
     """Process the list of tasks in the background.
 
     This helper function logs the tasks that would be processed but doesn't actually execute them.
