@@ -67,9 +67,8 @@ class LegacyTimedAPIRoute(APIRoute):
             e,
         )
 
-        # Create a set to track unique error messages and prevent duplicates
-        unique_error_messages = set()
         errors = []
+        seen_messages = set()
 
         for error in e.errors():
             error_location = error.get('loc', ())
@@ -83,10 +82,9 @@ class LegacyTimedAPIRoute(APIRoute):
                 # prepend last entry in error location if available, skip global and leading context
                 error_message = f'{error_location[-1]}: {error_message}'
 
-            # Only add this error if we haven't seen this message before
-            if error_message not in unique_error_messages:
-                unique_error_messages.add(error_message)
+            if error_message not in seen_messages:
                 errors.append({'error': 'ValidationError', 'message': error_message})
+                seen_messages.add(error_message)
 
         return JSONResponse(status_code=status_code, content={'errors': errors, 'status_code': status_code})
 
