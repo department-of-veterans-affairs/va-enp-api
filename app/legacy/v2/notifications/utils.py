@@ -115,7 +115,7 @@ async def validate_template(
             personalisation is missing, or is archived.
     """
     try:
-        template = await LegacyTemplateDao.get_template(template_id, template_version)
+        template = await LegacyTemplateDao.get_template(template_id)
     except NoResultFound:
         logger.exception('Template not found with ID {}', template_id)
         raise ValueError('Template not found')

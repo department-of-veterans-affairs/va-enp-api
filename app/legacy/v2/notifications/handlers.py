@@ -4,7 +4,7 @@ from abc import ABC, abstractmethod
 from typing import List, Tuple, TypedDict
 from uuid import UUID
 
-from app.constants import QueueNames
+from app.constants import IdentifierType, QueueNames
 from app.logging.logging_config import logger
 
 
@@ -60,17 +60,17 @@ class DirectSmsTaskResolver(SmsTaskResolver):
             List[Tuple[str, str]]: List containing the queue name and task name
         """
         logger.info('Preparing task deliver_sms with notification id {}', notification_id)
-        return [(QueueNames.SEND_SMS, f'deliver_sms_{notification_id}')]
+        return [(str(QueueNames.SEND_SMS), f'deliver_sms_{notification_id}')]
 
 
 class IdentifierSmsTaskResolver(SmsTaskResolver):
     """Resolver for SMS notification tasks via recipient identifier."""
 
-    def __init__(self, recipient_identifier: dict) -> None:
+    def __init__(self, recipient_identifier: dict[IdentifierType, str]) -> None:
         """Initialize with recipient identifier.
 
         Args:
-            recipient_identifier (dict): The recipient identifier dictionary
+            recipient_identifier (dict[IdentifierType, str]): The recipient identifier dictionary
         """
         self.recipient_identifier = recipient_identifier
 
@@ -85,15 +85,15 @@ class IdentifierSmsTaskResolver(SmsTaskResolver):
         """
         tasks = []
 
-        # If the Recipient Identifier is a VAProfile ID
-        if self.recipient_identifier['id_type'] == 'VAPROFILEID':
+        # If the Recipient Identifier is a VAProfile ID also include a lookup
+        if self.recipient_identifier[IdentifierType('id_type')] == 'VAPROFILEID':
             logger.info('Preparing task lookup_va_profile_id with notification id {}.', notification_id)
-            tasks.append((QueueNames.LOOKUP_VA_PROFILE_ID, f'lookup_va_profile_id_{notification_id}'))
+            tasks.append((str(QueueNames.LOOKUP_VA_PROFILE_ID), f'lookup_va_profile_id_{notification_id}'))
 
         logger.info('Preparing task lookup_contact_info with notification id {}.', notification_id)
-        tasks.append((QueueNames.LOOKUP_CONTACT_INFO, f'lookup_contact_info_{notification_id}'))
+        tasks.append((str(QueueNames.LOOKUP_CONTACT_INFO), f'lookup_contact_info_{notification_id}'))
 
         logger.info('Preparing task deliver_sms with notification id {}', notification_id)
-        tasks.append((QueueNames.SEND_SMS, f'deliver_sms_{notification_id}'))
+        tasks.append((str(QueueNames.SEND_SMS), f'deliver_sms_{notification_id}'))
 
         return tasks

@@ -9,7 +9,7 @@ from pydantic import UUID4
 from starlette_context import context
 
 from app.auth import JWTBearer
-from app.constants import NotificationType
+from app.constants import IdentifierType, NotificationType
 from app.legacy.v2.notifications.handlers import (
     DirectSmsTaskResolver,
     IdentifierSmsTaskResolver,
@@ -101,7 +101,11 @@ def get_sms_task_resolver(request: V2PostSmsRequestModel) -> SmsTaskResolver:
         # At this point, we know recipient_identifier cannot be None
         # because of our model validator ensuring exactly one is provided
         assert request.recipient_identifier is not None
-        return IdentifierSmsTaskResolver(recipient_identifier=request.recipient_identifier.model_dump())
+        return IdentifierSmsTaskResolver(
+            recipient_identifier={
+                IdentifierType(key): value for key, value in request.recipient_identifier.model_dump().items()
+            }
+        )
 
 
 @v2_notification_router.post('/sms', status_code=status.HTTP_201_CREATED)
