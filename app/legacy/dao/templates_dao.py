@@ -17,19 +17,18 @@ class LegacyTemplateDao:
     """
 
     @staticmethod
-    async def get_template(id: UUID4, version: int) -> Row[Any]:
+    async def get_template(id: UUID4) -> Row[Any]:
         """Get a Template from the legacy database.
 
         Args:
             id (UUID4): id of the template
-            version (int): version of the template
 
         Returns:
             Row: template table row
         """
-        logger.debug('Getting template {} version {} from legacy database', id, version)
+        logger.debug('Getting template {} version {} from legacy database', id)
         async with get_read_session_with_context() as session:
             legacy_templates = metadata_legacy.tables['templates']
-            stmt = select(legacy_templates).where(legacy_templates.c.id == id, legacy_templates.c.version == version)
+            stmt = select(legacy_templates).where(legacy_templates.c.id == id)
             logger.debug('Executing query: {}', stmt)
             return (await session.execute(stmt)).one()
