@@ -94,13 +94,10 @@ def get_sms_task_resolver(request: V2PostSmsRequestModel) -> SmsTaskResolver:
     Returns:
         SmsTaskResolver: The appropriate task resolver implementation
     """
-    # Our model validator guarantees exactly one of phone_number or recipient_identifier is provided
     if request.phone_number:
         return DirectSmsTaskResolver(phone_number=request.phone_number)
     else:
-        # At this point, we know recipient_identifier cannot be None
-        # because of our model validator ensuring exactly one is provided
-        assert request.recipient_identifier is not None
+        assert request.recipient_identifier is not None  # For mypy, the model validation ensures this will not occur
         model_data = request.recipient_identifier.model_dump()
         # Create a dictionary with the appropriate IdentifierType enum as key
         id_type = model_data['id_type']
