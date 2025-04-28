@@ -1,4 +1,7 @@
 fileignoreconfig:
+- filename: poetry.lock
+  ignore_detectors:
+  - filecontent
 - filename: .env.example
   checksum: f04bd8b8a51131d412bea4b8098e714ca01f4c7475eeb0a40d196d922070ba43
 - filename: .env.local
@@ -21,8 +24,6 @@ fileignoreconfig:
   checksum: ff5147be5734e677fcb8bfbeaaa59e54d5b395f531ac371fb183494eaf954582
 - filename: ci/docker-compose-local.yml
   checksum: c73beda98c39232441d86f6d6f6f2858274f9703f8a462eac1effacfbb9aa39d
-- filename: poetry.lock
-  checksum: cc9eb5caad462bce95b69d2f7136f4f0890e6ef6d7e20c23f3711a33e183e118
 - filename: postman/enp-api.postman_collection.json
   checksum: 09d876de545985b9cd21e1961387f1cce2189f56cc515565b2bb3924d38e0fe3
 - filename: pyproject.toml
