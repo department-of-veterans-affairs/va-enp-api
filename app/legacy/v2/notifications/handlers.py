@@ -36,7 +36,6 @@ class SmsTaskResolver(ABC):
         Returns:
             List[Tuple[str, str]]: List of tuples containing (queue name, task name)
         """
-        pass
 
 
 class DirectSmsTaskResolver(SmsTaskResolver):
