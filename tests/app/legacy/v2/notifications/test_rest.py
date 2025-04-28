@@ -9,7 +9,7 @@ from fastapi import BackgroundTasks, status
 from fastapi.encoders import jsonable_encoder
 
 from app.constants import IdentifierType, MobileAppType
-from app.legacy.v2.notifications.handlers import (
+from app.legacy.v2.notifications.resolvers import (
     DirectSmsTaskResolver,
     IdentifierSmsTaskResolver,
 )

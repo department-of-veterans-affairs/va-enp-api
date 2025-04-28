@@ -6,7 +6,7 @@ from uuid import UUID
 import pytest
 
 from app.constants import IdentifierType, QueueNames
-from app.legacy.v2.notifications.handlers import (
+from app.legacy.v2.notifications.resolvers import (
     DirectSmsTaskResolver,
     IdentifierSmsTaskResolver,
     SmsTaskResolver,

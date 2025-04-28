@@ -10,7 +10,7 @@ from starlette_context import context
 
 from app.auth import JWTBearer
 from app.constants import IdentifierType, NotificationType
-from app.legacy.v2.notifications.handlers import (
+from app.legacy.v2.notifications.resolvers import (
     DirectSmsTaskResolver,
     IdentifierSmsTaskResolver,
     SmsTaskResolver,
