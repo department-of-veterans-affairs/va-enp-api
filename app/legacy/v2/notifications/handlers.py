@@ -85,8 +85,8 @@ class IdentifierSmsTaskResolver(SmsTaskResolver):
         """
         tasks = []
 
-        # If the Recipient Identifier is a VAProfile ID also include a lookup
-        if self.recipient_identifier[IdentifierType('id_type')] == 'VAPROFILEID':
+        # Check if any of the values in the recipient_identifier dictionary is 'VAPROFILEID'
+        if IdentifierType.VA_PROFILE_ID in self.recipient_identifier:
             logger.info('Preparing task lookup_va_profile_id with notification id {}.', notification_id)
             tasks.append((str(QueueNames.LOOKUP_VA_PROFILE_ID), f'lookup_va_profile_id_{notification_id}'))
 

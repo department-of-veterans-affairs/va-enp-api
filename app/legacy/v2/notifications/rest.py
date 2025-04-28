@@ -101,11 +101,11 @@ def get_sms_task_resolver(request: V2PostSmsRequestModel) -> SmsTaskResolver:
         # At this point, we know recipient_identifier cannot be None
         # because of our model validator ensuring exactly one is provided
         assert request.recipient_identifier is not None
-        return IdentifierSmsTaskResolver(
-            recipient_identifier={
-                IdentifierType(key): value for key, value in request.recipient_identifier.model_dump().items()
-            }
-        )
+        model_data = request.recipient_identifier.model_dump()
+        # Create a dictionary with the appropriate IdentifierType enum as key
+        id_type = model_data['id_type']
+        id_value = model_data['id_value']
+        return IdentifierSmsTaskResolver(recipient_identifier={IdentifierType(id_type): id_value})
 
 
 @v2_notification_router.post('/sms', status_code=status.HTTP_201_CREATED)

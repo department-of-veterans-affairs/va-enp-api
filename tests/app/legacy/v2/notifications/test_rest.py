@@ -283,14 +283,10 @@ class TestV2SMS:
 
         assert isinstance(resolver, IdentifierSmsTaskResolver)
         assert request_with_identifier.recipient_identifier is not None
-        assert (
-            resolver.recipient_identifier[IdentifierType('id_type')]
-            == request_with_identifier.recipient_identifier.id_type
-        )
-        assert (
-            resolver.recipient_identifier[IdentifierType('id_value')]
-            == request_with_identifier.recipient_identifier.id_value
-        )
+        # Check that the ICN enum is in the recipient_identifier dictionary
+        assert IdentifierType.ICN in resolver.recipient_identifier
+        # Check that the value stored for the ICN key is correct
+        assert resolver.recipient_identifier[IdentifierType.ICN] == '1234567890V123456'
 
     async def test_v2_sms_returns_400_with_invalid_template(
         self,
