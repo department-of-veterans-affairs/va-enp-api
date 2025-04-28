@@ -177,12 +177,9 @@ async def process_tasks_helper(tasks: List[Tuple[str, str]]) -> None:
     Args:
         tasks (List[Tuple[str, str]]): List of tuples containing queue name and task name
     """
-    logger.info('Starting background processing of {} tasks', len(tasks))
-    await asyncio.sleep(0.1)
+    await asyncio.sleep(0.1)  # Allows async def for now
 
-    for queue_name, task_name in tasks:
-        logger.info("Processing task '{}' from queue '{}'", task_name, queue_name)
-        # In a real implementation, this is where we would actually send the task to the queue
-        logger.info("Task '{}' would be processed here if this wasn't a simulation", task_name)
+    for queue_name, task_args in tasks:
+        logger.info('Enqueuing task {} into {}', task_args, queue_name)
 
     logger.info('Completed background processing of tasks')

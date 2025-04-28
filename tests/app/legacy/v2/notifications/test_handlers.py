@@ -5,7 +5,7 @@ from uuid import UUID
 
 import pytest
 
-from app.constants import IdentifierType
+from app.constants import IdentifierType, QueueNames
 from app.legacy.v2.notifications.handlers import (
     DirectSmsTaskResolver,
     IdentifierSmsTaskResolver,
@@ -45,7 +45,9 @@ class TestDirectSmsTaskResolver:
 
         # Verify a single task is returned with correct queue name and task name
         assert len(tasks) == 1
-        assert tasks[0][1] == f'deliver_sms_{notification_id}'
+        assert tasks[0][0] == QueueNames.SEND_SMS
+        assert tasks[0][1][0] == 'deliver_sms'
+        assert tasks[0][1][1] == notification_id
 
 
 class TestIdentifierSmsTaskResolver:
@@ -64,10 +66,16 @@ class TestIdentifierSmsTaskResolver:
         resolver = IdentifierSmsTaskResolver(recipient_identifier)
         tasks = resolver.get_tasks(notification_id)
 
-        # Verify two tasks are returned with correct queue names and task names
+        # Verify two tasks are returned with correct queue names and task names and args
         assert len(tasks) == 2
-        assert tasks[0][1] == f'lookup_contact_info_{notification_id}'
-        assert tasks[1][1] == f'deliver_sms_{notification_id}'
+
+        assert tasks[0][0] == QueueNames.LOOKUP_CONTACT_INFO
+        assert tasks[0][1][0] == 'lookup_contact_info'
+        assert tasks[0][1][1] == notification_id
+
+        assert tasks[1][0] == QueueNames.SEND_SMS
+        assert tasks[1][1][0] == 'deliver_sms'
+        assert tasks[1][1][1] == notification_id
 
     def test_get_tasks_with_va_profile_id(self) -> None:
         """Test get_tasks with VA_PROFILE_ID identifier type returns expected tasks."""
@@ -76,8 +84,16 @@ class TestIdentifierSmsTaskResolver:
         resolver = IdentifierSmsTaskResolver(recipient_identifier)
         tasks = resolver.get_tasks(notification_id)
 
-        # Verify three tasks are returned with correct queue names and task names
+        # Verify three tasks are returned with correct queue names and task names and args
         assert len(tasks) == 3
-        assert tasks[0][1] == f'lookup_va_profile_id_{notification_id}'
-        assert tasks[1][1] == f'lookup_contact_info_{notification_id}'
-        assert tasks[2][1] == f'deliver_sms_{notification_id}'
+        assert tasks[0][0] == QueueNames.LOOKUP_VA_PROFILE_ID
+        assert tasks[0][1][0] == 'lookup_va_profile_id'
+        assert tasks[0][1][1] == notification_id
+
+        assert tasks[1][0] == QueueNames.LOOKUP_CONTACT_INFO
+        assert tasks[1][1][0] == 'lookup_contact_info'
+        assert tasks[1][1][1] == notification_id
+
+        assert tasks[2][0] == QueueNames.SEND_SMS
+        assert tasks[2][1][0] == 'deliver_sms'
+        assert tasks[2][1][1] == notification_id
