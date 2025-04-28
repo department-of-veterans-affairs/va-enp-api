@@ -151,6 +151,7 @@ def sample_api_key(
         id = id or uuid4()
         session = session or test_db_session
         legacy_api_keys = metadata_legacy.tables['api_keys']
+        legacy_key_type = metadata_legacy.tables['key_types']
         data = {
             'id': id,
             'name': name or f'sample-api-key-{id}',
@@ -171,8 +172,9 @@ def sample_api_key(
             select_service_stmt = select(legacy_services).where(legacy_services.c.id == service_id)
             service = (await session.execute(select_service_stmt)).one()
 
-        if created_by_id is None:
-            data['created_by_id'] = service.created_by_id
+        data['created_by_id'] = created_by_id or service.created_by_id
+        select_key_type_stmt = select(legacy_key_type).where(legacy_key_type.c.name == (key_type or 'normal'))
+        data['key_type'] = (await session.execute(select_key_type_stmt)).one().name
 
         # Insert without commit
         insert_stmt = insert(legacy_api_keys).values(**data)
@@ -212,12 +214,13 @@ def sample_template(
         hidden: bool = False,
         onsite_notification: bool = False,
         service_id: UUID4 | None = None,
-        process_type: str | None = 'normal',
+        process_type: str | None = None,
         created_by_id: UUID4 | None = None,
         version: int = 0,
     ) -> Row[Any]:
         id = id or uuid4()
         legacy_templates = metadata_legacy.tables['templates']
+        legacy_process_type = metadata_legacy.tables['template_process_type']
         data = {
             'id': id,
             'name': name or f'sample-template-{id}',
@@ -244,6 +247,10 @@ def sample_template(
             service = (await session.execute(select_service_stmt)).one()
 
         data['created_by_id'] = created_by_id or service.created_by_id
+        select_process_stmt = select(legacy_process_type).where(
+            legacy_process_type.c.name == (process_type or 'normal')
+        )
+        data['process_type'] = (await session.execute(select_process_stmt)).one().name
 
         # Insert without commit
         insert_stmt = insert(legacy_templates).values(**data)
