@@ -135,14 +135,12 @@ async def legacy_notification_post_handler(
     notification_id = uuid4()
     service_id = uuid4()
 
-    context['template_id'] = f'{request.template_id}:{request.template_version}'
-    context['notification_id'] = notification_id
     context['service_id'] = service_id
+    context['template_id'] = request.template_id
+    context['notification_id'] = notification_id
 
     try:
-        await validate_template(
-            request.template_id, request.template_version, NotificationType.SMS, request.personalisation
-        )
+        await validate_template(request.template_id, NotificationType.SMS, request.personalisation)
     except ValueError as e:
         raise_request_validation_error(str(e))
 
@@ -162,7 +160,6 @@ async def legacy_notification_post_handler(
         template=V2Template(
             id=request.template_id,
             uri=HttpsUrl(f'https://example.com/templates/{request.template_id}'),
-            version=request.template_version,
         ),
         uri=HttpsUrl(f'https://example.com/notifications/{notification_id}'),
         content=V2SmsContentModel(

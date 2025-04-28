@@ -13,7 +13,6 @@ class NotificationRecord(TypedDict, total=False):
 
     id: str
     template_id: str
-    template_version: str
     recipient_identifier_type: str
     recipient_identifier_value: str
     recipient: str  # Add this field for direct SMS notifications

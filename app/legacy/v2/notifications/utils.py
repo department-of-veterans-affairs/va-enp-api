@@ -94,7 +94,6 @@ async def validate_push_template(template_id: UUID4) -> None:
 
 async def validate_template(
     template_id: UUID4,
-    template_version: int,
     expected_type: NotificationType,
     personalisation: dict[str, str | int | float | list[str | int | float] | PersonalisationFileObject] | None,
 ) -> None:
@@ -105,7 +104,6 @@ async def validate_template(
 
     Args:
         template_id (UUID4): The template_id to validate
-        template_version (int): The specific version of the template to validate
         expected_type (NotificationType): The expected type of the template
         personalisation (dict[str, str | int | float | list[str | int | float] | PersonalisationFileObject] | None):
             The personalisation data to validate
