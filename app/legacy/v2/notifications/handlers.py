@@ -1,25 +1,11 @@
 """Handlers for processing notification requests."""
 
 from abc import ABC, abstractmethod
-from typing import List, Tuple, TypedDict
+from typing import List, Tuple
 from uuid import UUID
 
 from app.constants import IdentifierType, QueueNames
 from app.logging.logging_config import logger
-
-
-class NotificationRecord(TypedDict, total=False):
-    """Type definition for notification records."""
-
-    id: str
-    template_id: str
-    recipient_identifier_type: str
-    recipient_identifier_value: str
-    recipient: str  # Add this field for direct SMS notifications
-    status: str
-    timestamp: str
-    reason: str
-    phone_number: str
 
 
 class SmsTaskResolver(ABC):
