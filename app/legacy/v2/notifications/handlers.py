@@ -12,7 +12,7 @@ class SmsTaskResolver(ABC):
     """Abstract base class for resolving SMS notification tasks and queues."""
 
     @abstractmethod
-    def get_tasks(self, notification_id: UUID) -> List[Tuple[str, str]]:
+    def get_tasks(self, notification_id: UUID) -> List[Tuple[str, UUID]]:
         """Get tasks for the notification request.
 
         Args:
