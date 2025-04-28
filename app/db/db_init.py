@@ -18,7 +18,6 @@ from app.db import NAPI_DB_READ_URI, NAPI_DB_WRITE_URI
 
 _engine_napi_read: AsyncEngine | None = None
 _engine_napi_write: AsyncEngine | None = None
-_initialzied: bool = False
 metadata_legacy: MetaData = MetaData()
 
 
@@ -28,7 +27,6 @@ async def init_db(pool_pre_ping: bool = False) -> None:
     Args:
         pool_pre_ping (bool): should test for a live db connection before query
     """
-    global _initialzied
     logger.info('Initializing the database engines...')
 
     # These methods are copy/paste due to globals.
@@ -36,7 +34,6 @@ async def init_db(pool_pre_ping: bool = False) -> None:
 
     # notification_api database connections
     await init_napi_metadata()
-    _initialzied = True
 
     logger.info('...database engines initialized.')
 
