@@ -87,10 +87,15 @@ def test_v2_post_sms_request_model_invalid_phone_number(phone_number: str | int,
     [
         {'phone_number': VALID_PHONE_NUMBER},
         {'recipient_identifier': {'id_type': IdentifierType.ICN, 'id_value': VALID_ICN_VALUE}},
+        {
+            'phone_number': VALID_PHONE_NUMBER,
+            'recipient_identifier': {'id_type': IdentifierType.ICN, 'id_value': VALID_ICN_VALUE},
+        },
     ],
     ids=(
         'phone number',
         'recipient ID',
+        'phone number and recipient ID',
     ),
 )
 def test_v2_post_sms_request_model_valid(data: dict[str, str | dict[str, str]]) -> None:
