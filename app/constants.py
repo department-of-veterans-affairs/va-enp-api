@@ -49,3 +49,18 @@ class OSPlatformType(StrEnum):
 
     ANDROID = 'ANDROID'
     IOS = 'IOS'
+
+
+class QueueNames(StrEnum):
+    """Celery queue names."""
+
+    CALLBACKS = 'service-callbacks'
+    COMMUNICATION_ITEM_PERMISSIONS = 'communication-item-permissions'
+    DELIVERY_STATUS_RESULT_TASKS = 'delivery-status-result-tasks'
+    LOOKUP_CONTACT_INFO = 'lookup-contact-info-tasks'
+    LOOKUP_VA_PROFILE_ID = 'lookup-va-profile-id-tasks'
+    NOTIFY = 'notify-internal-tasks'
+    PERIODIC = 'periodic-tasks'
+    RETRY = 'retry-tasks'
+    SEND_EMAIL = 'send-email-tasks'
+    SEND_SMS = 'send-sms-tasks'

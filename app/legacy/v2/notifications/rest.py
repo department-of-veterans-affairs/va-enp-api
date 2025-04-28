@@ -1,6 +1,7 @@
 """All endpoints for the v2/notifications route."""
 
-from typing import Annotated
+import asyncio
+from typing import Annotated, List, Tuple
 from uuid import uuid4
 
 from fastapi import APIRouter, BackgroundTasks, Body, Depends, Request, status
@@ -10,9 +11,9 @@ from starlette_context import context
 from app.auth import JWTBearer
 from app.constants import NotificationType
 from app.legacy.v2.notifications.handlers import (
-    DirectSmsNotificationHandler,
-    IdentifierSmsNotificationHandler,
-    SmsNotificationHandler,
+    DirectSmsTaskResolver,
+    IdentifierSmsTaskResolver,
+    SmsTaskResolver,
 )
 from app.legacy.v2.notifications.route_schema import (
     HttpsUrl,
@@ -84,23 +85,23 @@ async def create_push_notification(
     return V2PostPushResponseModel()
 
 
-def get_sms_notification_handler(request: V2PostSmsRequestModel) -> SmsNotificationHandler:
-    """Determine the appropriate SMS notification handler based on request content.
+def get_sms_task_resolver(request: V2PostSmsRequestModel) -> SmsTaskResolver:
+    """Determine the appropriate SMS task resolver based on request content.
 
     Args:
         request (V2PostSmsRequestModel): The SMS notification request model
 
     Returns:
-        SmsNotificationHandler: The appropriate handler implementation
+        SmsTaskResolver: The appropriate task resolver implementation
     """
     # Our model validator guarantees exactly one of phone_number or recipient_identifier is provided
     if request.phone_number:
-        return DirectSmsNotificationHandler(phone_number=request.phone_number)
+        return DirectSmsTaskResolver(phone_number=request.phone_number)
     else:
         # At this point, we know recipient_identifier cannot be None
         # because of our model validator ensuring exactly one is provided
         assert request.recipient_identifier is not None
-        return IdentifierSmsNotificationHandler(recipient_identifier=request.recipient_identifier.model_dump())
+        return IdentifierSmsTaskResolver(recipient_identifier=request.recipient_identifier.model_dump())
 
 
 @v2_notification_router.post('/sms', status_code=status.HTTP_201_CREATED)
@@ -112,13 +113,15 @@ async def legacy_notification_post_handler(
             openapi_examples=V2PostSmsRequestModel.json_schema_extra['examples'],
         ),
     ],
-    handler: Annotated[SmsNotificationHandler, Depends(get_sms_notification_handler)],
+    sms_task_resolver: Annotated[SmsTaskResolver, Depends(get_sms_task_resolver)],
+    background_tasks: BackgroundTasks,
 ) -> V2PostSmsResponseModel:
     """Create an SMS notification.
 
     Args:
         request (V2PostSmsRequestModel): The SMS notification request model
-        handler (SmsNotificationHandler): Injected handler based on request content
+        sms_task_resolver (SmsTaskResolver): Injected task resolver based on request content
+        background_tasks (BackgroundTasks): The FastAPI background tasks object
 
     Returns:
         V2PostSmsResponseModel: The notification response data
@@ -139,8 +142,12 @@ async def legacy_notification_post_handler(
     except ValueError as e:
         raise_request_validation_error(str(e))
 
-    # Process the notification using the appropriate handler
-    await handler.process(notification_id)
+    # Get tasks for the notification using the appropriate resolver
+    tasks = sms_task_resolver.get_tasks(notification_id)
+
+    # Add the background task to process the tasks
+    background_tasks.add_task(process_tasks_helper, tasks)
+    logger.info('Background task added to process {} tasks', len(tasks))
 
     return V2PostSmsResponseModel(
         id=notification_id,
@@ -159,3 +166,22 @@ async def legacy_notification_post_handler(
             from_number=ValidatedPhoneNumber('+18005550101'),  # Would be determined from sms_sender_id
         ),
     )
+
+
+async def process_tasks_helper(tasks: List[Tuple[str, str]]) -> None:
+    """Process the list of tasks in the background.
+
+    This helper function logs the tasks that would be processed but doesn't actually execute them.
+
+    Args:
+        tasks (List[Tuple[str, str]]): List of tuples containing queue name and task name
+    """
+    logger.info('Starting background processing of {} tasks', len(tasks))
+    await asyncio.sleep(0.1)
+
+    for queue_name, task_name in tasks:
+        logger.info("Processing task '{}' from queue '{}'", task_name, queue_name)
+        # In a real implementation, this is where we would actually send the task to the queue
+        logger.info("Task '{}' would be processed here if this wasn't a simulation", task_name)
+
+    logger.info('Completed background processing of tasks')

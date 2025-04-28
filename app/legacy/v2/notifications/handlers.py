@@ -1,10 +1,10 @@
 """Handlers for processing notification requests."""
 
-import asyncio
 from abc import ABC, abstractmethod
-from typing import TypedDict
+from typing import List, Tuple, TypedDict
 from uuid import UUID
 
+from app.constants import QueueNames
 from app.logging.logging_config import logger
 
 
@@ -23,21 +23,24 @@ class NotificationRecord(TypedDict, total=False):
     phone_number: str
 
 
-class SmsNotificationHandler(ABC):
-    """Abstract base class for handling SMS notifications."""
+class SmsTaskResolver(ABC):
+    """Abstract base class for resolving SMS notification tasks and queues."""
 
     @abstractmethod
-    async def process(self, notification_id: UUID) -> None:
-        """Process the notification request.
+    def get_tasks(self, notification_id: UUID) -> List[Tuple[str, str]]:
+        """Get tasks for the notification request.
 
         Args:
             notification_id (UUID): The generated notification ID
+
+        Returns:
+            List[Tuple[str, str]]: List of tuples containing (queue name, task name)
         """
         pass
 
 
-class DirectSmsNotificationHandler(SmsNotificationHandler):
-    """Handler for direct SMS notifications via phone number."""
+class DirectSmsTaskResolver(SmsTaskResolver):
+    """Resolver for direct SMS notification tasks via phone number."""
 
     def __init__(self, phone_number: str) -> None:
         """Initialize with recipient phone number.
@@ -47,20 +50,21 @@ class DirectSmsNotificationHandler(SmsNotificationHandler):
         """
         self.phone_number = phone_number
 
-    async def process(self, notification_id: UUID) -> None:
-        """Process a direct SMS notification.
+    def get_tasks(self, notification_id: UUID) -> List[Tuple[str, str]]:
+        """Get tasks for a direct SMS notification.
 
         Args:
             notification_id (UUID): Generated notification ID
+
+        Returns:
+            List[Tuple[str, str]]: List containing the queue name and task name
         """
-        logger.info('Calling celery task deliver_sms with notification id {}', notification_id)
-
-        # Simulate an async operation
-        await asyncio.sleep(0.01)
+        logger.info('Preparing task deliver_sms with notification id {}', notification_id)
+        return [(QueueNames.SEND_SMS, f'deliver_sms_{notification_id}')]
 
 
-class IdentifierSmsNotificationHandler(SmsNotificationHandler):
-    """Handler for SMS notifications via recipient identifier."""
+class IdentifierSmsTaskResolver(SmsTaskResolver):
+    """Resolver for SMS notification tasks via recipient identifier."""
 
     def __init__(self, recipient_identifier: dict) -> None:
         """Initialize with recipient identifier.
@@ -70,19 +74,26 @@ class IdentifierSmsNotificationHandler(SmsNotificationHandler):
         """
         self.recipient_identifier = recipient_identifier
 
-    async def process(self, notification_id: UUID) -> None:
-        """Process an SMS notification via recipient identifier.
+    def get_tasks(self, notification_id: UUID) -> List[Tuple[str, str]]:
+        """Get tasks for an SMS notification via recipient identifier.
 
         Args:
             notification_id (UUID): Generated notification ID
+
+        Returns:
+            List[Tuple[str, str]]: List of tuples containing queue names and task names
         """
+        tasks = []
+
         # If the Recipient Identifier is a VAProfile ID
         if self.recipient_identifier['id_type'] == 'VAPROFILEID':
-            logger.info('Calling celery task lookup_va_profile_id with notification id {}.', notification_id)
-            await asyncio.sleep(0.01)
+            logger.info('Preparing task lookup_va_profile_id with notification id {}.', notification_id)
+            tasks.append((QueueNames.LOOKUP_VA_PROFILE_ID, f'lookup_va_profile_id_{notification_id}'))
 
-        logger.info('Calling celery task lookup_contact_info with notification id {}.', notification_id)
-        await asyncio.sleep(0.01)
+        logger.info('Preparing task lookup_contact_info with notification id {}.', notification_id)
+        tasks.append((QueueNames.LOOKUP_CONTACT_INFO, f'lookup_contact_info_{notification_id}'))
 
-        logger.info('Calling celery task deliver_sms with notification id {}', notification_id)
-        await asyncio.sleep(0.01)
+        logger.info('Preparing task deliver_sms with notification id {}', notification_id)
+        tasks.append((QueueNames.SEND_SMS, f'deliver_sms_{notification_id}'))
+
+        return tasks
