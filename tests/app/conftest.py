@@ -46,7 +46,6 @@ async def test_db_session() -> AsyncGenerator[AsyncSession, None]:
             session_maker = get_db_session(_engine_napi_write, 'write')
             async with session_maker() as session:
                 yield session
-                # session.rollback()
         # A rollback should occur automatically because the "begin" block doesn't manually commit.
 
 

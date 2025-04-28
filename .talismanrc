@@ -38,9 +38,9 @@ fileignoreconfig:
 - filename: tests/conftest.py
   checksum: 35e538d03d3a2d0b2696b9a93994b77a1a041090d160ac9518a958e640a09488
 - filename: tests/app/legacy/test_samples.py
-  checksum: 22d1c223a19a55f640afbb9a3b1452dbeac809ebe48c245c6da8ea5e8562cf33
+  checksum: a1ba3739af869483479432aefcae8b1152e1a28f105b69b95e8fa3e02f4c8f0d
 - filename: app/legacy/dao/api_key_dao.py
   checksum: 9eb496d3ae4238193baf5c5627d8d186beeda815133e9b4e1bc6e56ce57a3802
 - filename: tests/app/legacy/conftest.py
-  checksum: 27e7990ffc3e0ce64eb6a3a7d62ca24d0e8b2c90486cd60ffd8946025c012811
+  checksum: 37ff8880ee3c69bbbfd74820b15186ec3e7faae20df91a3ec32830973eb2150c
 version: "1.0"
