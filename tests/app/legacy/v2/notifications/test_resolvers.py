@@ -66,24 +66,6 @@ class TestIdentifierSmsTaskResolver:
         resolver = IdentifierSmsTaskResolver(recipient_identifier)
         tasks = resolver.get_tasks(notification_id)
 
-        # Verify two tasks are returned with correct queue names and task names and args
-        assert len(tasks) == 2
-
-        assert tasks[0][0] == QueueNames.LOOKUP_CONTACT_INFO
-        assert tasks[0][1][0] == 'lookup_contact_info'
-        assert tasks[0][1][1] == notification_id
-
-        assert tasks[1][0] == QueueNames.SEND_SMS
-        assert tasks[1][1][0] == 'deliver_sms'
-        assert tasks[1][1][1] == notification_id
-
-    def test_get_tasks_with_va_profile_id(self) -> None:
-        """Test get_tasks with VA_PROFILE_ID identifier type returns expected tasks."""
-        recipient_identifier = {IdentifierType.VA_PROFILE_ID: '123456789'}
-        notification_id = UUID('a71400e3-b2f8-4bd1-91c0-27f9ca7106a1')
-        resolver = IdentifierSmsTaskResolver(recipient_identifier)
-        tasks = resolver.get_tasks(notification_id)
-
         # Verify three tasks are returned with correct queue names and task names and args
         assert len(tasks) == 3
         assert tasks[0][0] == QueueNames.LOOKUP_VA_PROFILE_ID
@@ -97,3 +79,21 @@ class TestIdentifierSmsTaskResolver:
         assert tasks[2][0] == QueueNames.SEND_SMS
         assert tasks[2][1][0] == 'deliver_sms'
         assert tasks[2][1][1] == notification_id
+
+    def test_get_tasks_with_va_profile_id(self) -> None:
+        """Test get_tasks with VA_PROFILE_ID identifier type returns expected tasks."""
+        recipient_identifier = {IdentifierType.VA_PROFILE_ID: '123456789'}
+        notification_id = UUID('a71400e3-b2f8-4bd1-91c0-27f9ca7106a1')
+        resolver = IdentifierSmsTaskResolver(recipient_identifier)
+        tasks = resolver.get_tasks(notification_id)
+
+        # Verify two tasks are returned with correct queue names and task names and args
+        assert len(tasks) == 2
+
+        assert tasks[0][0] == QueueNames.LOOKUP_CONTACT_INFO
+        assert tasks[0][1][0] == 'lookup_contact_info'
+        assert tasks[0][1][1] == notification_id
+
+        assert tasks[1][0] == QueueNames.SEND_SMS
+        assert tasks[1][1][0] == 'deliver_sms'
+        assert tasks[1][1][1] == notification_id

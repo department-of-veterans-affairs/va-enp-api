@@ -78,7 +78,7 @@ class IdentifierSmsTaskResolver(SmsTaskResolver):
         tasks = []
 
         # Check if any of the values in the recipient_identifier dictionary is 'VAPROFILEID'
-        if IdentifierType.VA_PROFILE_ID in self.recipient_identifier:
+        if IdentifierType.VA_PROFILE_ID not in self.recipient_identifier:
             logger.info('Preparing task lookup_va_profile_id with notification id {}.', notification_id)
             tasks.append(
                 (
