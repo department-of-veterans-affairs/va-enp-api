@@ -290,7 +290,7 @@ class V2PostSmsRequestModel(V2PostNotificationRequestModel):
 
     @model_validator(mode='after')
     def phone_number_or_recipient_id(self) -> Self:
-        """One, and only one, of 'phone_number' or 'recipient_identifier' must not be None.
+        """At least one, of 'phone_number' or 'recipient_identifier' must not be None.
 
         Raises:
             ValueError: Bad input
