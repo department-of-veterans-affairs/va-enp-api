@@ -26,7 +26,7 @@ class LegacyTemplateDao:
         Returns:
             Row: template table row
         """
-        logger.debug('Getting template {} version {} from legacy database', id)
+        logger.debug('Getting template {} from legacy database', id)
         async with get_read_session_with_context() as session:
             legacy_templates = metadata_legacy.tables['templates']
             stmt = select(legacy_templates).where(legacy_templates.c.id == id)
