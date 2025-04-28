@@ -67,7 +67,7 @@ omit = [
     "app/logging/*",
     "app/main.py",
     "tests/app/test_main.py",
-    "app/legacy/dao/*",
+    "app/legacy/dao/*",  # Need to be able to add to the database before we can remove this
 ]
 
 [tool.coverage.report]

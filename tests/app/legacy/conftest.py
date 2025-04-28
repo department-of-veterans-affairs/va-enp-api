@@ -9,6 +9,7 @@ from pydantic import UUID4
 from sqlalchemy import Row, insert, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.constants import NotificationType
 from app.db.db_init import metadata_legacy
 
 
@@ -224,7 +225,7 @@ def sample_template(
         data = {
             'id': id,
             'name': name or f'sample-template-{id}',
-            'template_type': template_type or 'sms',
+            'template_type': template_type or NotificationType.SMS,
             'created_at': created_at or datetime.now(timezone.utc),
             'content': content or f'sample-content{id}',
             'archived': archived,

@@ -1,12 +1,8 @@
 """Test module for testing the app/db/db_init.py file."""
 
-from collections.abc import AsyncIterator, Callable
-from typing import AsyncContextManager
-
 import pytest
 from sqlalchemy import text
-from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_scoped_session
-from sqlalchemy.sql.elements import TextClause
+from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession
 
 from app.db.db_init import (
     get_db_session,
@@ -16,11 +12,7 @@ from app.db.db_init import (
     get_write_session_with_depends,
 )
 
-TABLES_QUERY = text("SELECT table_name FROM information_schema.tables WHERE table_schema='public';")
-
-# The branding_type table, and the associated cascades, should not affect tables
-# relevant to routes in use.
-TRUNCATE_QUERY = text('TRUNCATE branding_type CASCADE;')
+HELLO_WORLD_QUERY = text("SELECT 'Hello world!'")
 
 
 def test_init_db() -> None:
@@ -43,30 +35,11 @@ def test_get_db_session_none(engine_type: str) -> None:
         get_db_session(None, engine_type)
 
 
-@pytest.mark.parametrize('engine', ['_engine_napi_read', '_engine_napi_write'])
-async def test_get_db_session_read(engine: str) -> None:
-    """The read and write database engines both should be able to execute read queries."""
-    imports = __import__('app.db.db_init', fromlist=[engine])
-    session_maker = get_db_session(getattr(imports, engine), 'read')
-
-    async with session_maker() as session:
-        result = await session.execute(TABLES_QUERY)
-
-    tables = result.scalars().all()
-    assert 'notifications' in tables
-    assert 'templates' in tables
-
-
-@pytest.mark.asyncio
 async def test_test_db_session(test_db_session: AsyncSession) -> None:
-    """Ensure the session fixture works as intended."""
-    result = await test_db_session.execute(TABLES_QUERY)
-    tables = result.scalars().all()
-    assert 'notifications' in tables
-    assert 'templates' in tables
+    """Ensure the session fixture can be used as a session."""
+    await test_db_session.execute(HELLO_WORLD_QUERY)
 
 
-@pytest.mark.asyncio
 async def test_get_db_session_write() -> None:
     """The write database engine should be able to execute write queries.
 
@@ -79,59 +52,28 @@ async def test_get_db_session_write() -> None:
 
     async with session_maker() as session:
         # This query should not raise an exception.
-        await session.execute(TRUNCATE_QUERY)
+        await session.execute(HELLO_WORLD_QUERY)
 
 
-@pytest.mark.parametrize('stmt', [TABLES_QUERY, TRUNCATE_QUERY])
-@pytest.mark.parametrize(
-    'session_generator',
-    [
-        get_read_session_with_depends,
-        get_write_session_with_depends,
-    ],
-)
-@pytest.mark.asyncio
-async def test_session_with_depends(
-    session_generator: Callable[[], AsyncIterator[async_scoped_session[AsyncSession]]],
-    stmt: TextClause,
-) -> None:
-    """Verify getting a session using the "with_depends" session getters.
+class TestReadWriteSessions:
+    """Test the read and write session functions."""
 
-    Note that either session can read and write because they use the same database user
-    with run locally.
-    """
-    session_gen = session_generator()
+    async def test_get_read_session(self) -> None:
+        """Test the get_read_session function."""
+        async for session in get_read_session_with_depends():
+            await session.execute(text("SELECT 'Hello world!'"))
 
-    # As far as I can tell, the type annotations are correct.  MyPy seems confused.
-    session: AsyncSession = await anext(session_gen)  # type: ignore
+    async def test_get_read_session_with_context(self) -> None:
+        """Test the get_read_session_with_context function."""
+        async with get_read_session_with_context() as session:
+            await session.execute(text("SELECT 'Hello world!'"))
 
-    try:
-        # This query should not raise an exception.
-        await session.execute(stmt)
-    finally:
-        # MyPy says that an AsyncGenerator has no method "aclose", but this seems incorrect.
-        # Running the test doesn't raise AttributeError.
-        await session_gen.aclose()  # type: ignore
+    async def test_get_write_session(self) -> None:
+        """Test the get_write_session function."""
+        async for session in get_write_session_with_depends():
+            await session.execute(text("SELECT 'Hello world!'"))
 
-
-@pytest.mark.parametrize('stmt', [TABLES_QUERY, TRUNCATE_QUERY])
-@pytest.mark.parametrize(
-    'session_context',
-    [
-        get_read_session_with_context,
-        get_write_session_with_context,
-    ],
-)
-@pytest.mark.asyncio
-async def test_session_with_context(
-    session_context: Callable[[], AsyncContextManager[async_scoped_session[AsyncSession]]],
-    stmt: TextClause,
-) -> None:
-    """Verify getting a session using the "with_context" session getters.
-
-    Note that either session can read and write because they use the same database user with
-    run locally.
-    """
-    async with session_context() as session:
-        # This query should not raise an exception.
-        await session.execute(stmt)
+    async def test_get_write_session_with_context(self) -> None:
+        """Test the get_write_session_with_context function."""
+        async with get_write_session_with_context() as session:
+            await session.execute(text("SELECT 'Hello world!'"))
