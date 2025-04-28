@@ -87,7 +87,7 @@ class TestValidateTemplate:
 
         with patch('app.legacy.v2.notifications.utils.LegacyTemplateDao.get_template', return_value=mock_template):
             # validate_template either runs successfully or raises an exception
-            await validate_template(mock_template.id, NotificationType.SMS, None)
+            await validate_template(mock_template.id, 1, NotificationType.SMS, None)
 
     async def test_validate_template_with_personalisation(self, mock_template: Callable[..., AsyncMock]) -> None:
         """Test validate_template for happy path."""
@@ -95,13 +95,13 @@ class TestValidateTemplate:
 
         with patch('app.legacy.v2.notifications.utils.LegacyTemplateDao.get_template', return_value=mock_template):
             # validate_template either runs successfully or raises an exception
-            await validate_template(mock_template.id, NotificationType.SMS, {'Content': 'test content'})
+            await validate_template(mock_template.id, 1, NotificationType.SMS, {'Content': 'test content'})
 
     async def test_validate_template_raises_exception_when_template_not_found(self) -> None:
         """Test validate_template raises an exception when the template is not found."""
         with patch('app.legacy.v2.notifications.utils.LegacyTemplateDao.get_template', side_effect=NoResultFound):
             with pytest.raises(ValueError, match='Template not found'):
-                await validate_template(UUID4('55dd7dff-76f2-425b-86c2-f5022426a31d'), NotificationType.SMS, None)
+                await validate_template(UUID4('55dd7dff-76f2-425b-86c2-f5022426a31d'), 1, NotificationType.SMS, None)
 
     async def test_validate_template_raises_exception_when_template_not_expected_type(
         self,
@@ -115,7 +115,7 @@ class TestValidateTemplate:
                 ValueError,
                 match=f'{NotificationType.EMAIL} template is not suitable for {NotificationType.SMS} notification',
             ):
-                await validate_template(mock_template.id, NotificationType.SMS, None)
+                await validate_template(mock_template.id, 1, NotificationType.SMS, None)
 
     async def test_validate_template_type_raises_exception_when_template_not_expected_type(self) -> None:
         """Test validate_template raises an exception when the template is not found."""
@@ -134,7 +134,7 @@ class TestValidateTemplate:
 
         with patch('app.legacy.v2.notifications.utils.LegacyTemplateDao.get_template', return_value=mock_template):
             with pytest.raises(ValueError, match='Template is not active'):
-                await validate_template(mock_template.id, NotificationType.SMS, None)
+                await validate_template(mock_template.id, 1, NotificationType.SMS, None)
 
     async def test_validate_template_active_raises_exception_when_template_not_active(self) -> None:
         """Test validate_template raises an exception when the template is not found."""
@@ -150,7 +150,7 @@ class TestValidateTemplate:
 
         with patch('app.legacy.v2.notifications.utils.LegacyTemplateDao.get_template', return_value=mock_template):
             with pytest.raises(ValueError, match='Missing personalisation: content'):
-                await validate_template(mock_template.id, NotificationType.SMS, {})
+                await validate_template(mock_template.id, 1, NotificationType.SMS, {})
 
     async def test_validate_template_personalisation_raises_exception_when_missing_personalisation(self) -> None:
         """Test validate_template raises an exception when personalisation is missing."""

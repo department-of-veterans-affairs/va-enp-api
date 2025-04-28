@@ -217,6 +217,7 @@ class V2PostNotificationRequestModel(StrictBaseModel):
     recipient_identifier: RecipientIdentifierModel | None = None
     reference: str | None = None
     template_id: Annotated[UUID4, Field(strict=False)]
+    template_version: int = 0
     scheduled_for: Annotated[AwareDatetime, Field(strict=False)] | None = None
 
 

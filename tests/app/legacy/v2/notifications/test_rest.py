@@ -182,7 +182,7 @@ class TestNotificationRouter:
         assert response.json() == error_details
 
 
-@patch('app.legacy.v2.notifications.rest.validate_template', return_value=None)
+@patch('app.legacy.v2.notifications.rest.validate_template')
 class TestV2SMS:
     """Test the v2 SMS notifications router."""
 

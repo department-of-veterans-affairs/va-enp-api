@@ -10,7 +10,7 @@ from loguru import logger
 
 ADMIN_SECRET_KEY = os.getenv('ENP_ADMIN_SECRET_KEY', 'not-very-secret')
 ALGORITHM = os.getenv('ENP_ALGORITHM', 'HS256')
-ACCESS_TOKEN_EXPIRE_SECONDS = int(os.getenv('ENP_ACCESS_TOKEN_EXPIRE_SECONDS', 60))
+ACCESS_TOKEN_EXPIRE_SECONDS = int(os.getenv('ENP_ACCESS_TOKEN_EXPIRE_SECONDS', 3600))
 
 
 class JWTPayloadDict(TypedDict):
