@@ -156,9 +156,9 @@ async def legacy_notification_post_handler(
         scheduled_for=request.scheduled_for,
         template=V2Template(
             id=request.template_id,
-            uri=HttpsUrl(f'https://example.com/templates/{request.template_id}'),
+            uri=HttpsUrl(f'https://mock-notify.va.gov/templates/{request.template_id}'),
         ),
-        uri=HttpsUrl(f'https://example.com/notifications/{notification_id}'),
+        uri=HttpsUrl(f'https://mock-notify.va.gov/notifications/{notification_id}'),
         content=V2SmsContentModel(
             body='',
             from_number=ValidatedPhoneNumber('+18005550101'),  # Would be determined from sms_sender_id
