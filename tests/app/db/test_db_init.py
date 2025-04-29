@@ -12,7 +12,8 @@ from app.db.db_init import (
     get_write_session_with_depends,
 )
 
-HELLO_WORLD_QUERY = text("SELECT 'Hello world!'")
+READ_QUERY = text("SELECT 'Hello world!'")
+WRITE_QUERY = text('TRUNCATE branding_type CASCADE;')
 
 
 def test_init_db() -> None:
@@ -37,7 +38,7 @@ def test_get_db_session_none(engine_type: str) -> None:
 
 async def test_test_db_session(test_db_session: AsyncSession) -> None:
     """Ensure the session fixture can be used as a session."""
-    await test_db_session.execute(HELLO_WORLD_QUERY)
+    await test_db_session.execute(READ_QUERY)
 
 
 async def test_get_db_session_write() -> None:
@@ -52,7 +53,8 @@ async def test_get_db_session_write() -> None:
 
     async with session_maker() as session:
         # This query should not raise an exception.
-        await session.execute(HELLO_WORLD_QUERY)
+        await session.execute(WRITE_QUERY)
+        await session.commit()
 
 
 class TestReadWriteSessions:
@@ -61,19 +63,19 @@ class TestReadWriteSessions:
     async def test_get_read_session(self) -> None:
         """Test the get_read_session function."""
         async for session in get_read_session_with_depends():
-            await session.execute(text("SELECT 'Hello world!'"))
+            await session.execute(READ_QUERY)
 
     async def test_get_read_session_with_context(self) -> None:
         """Test the get_read_session_with_context function."""
         async with get_read_session_with_context() as session:
-            await session.execute(text("SELECT 'Hello world!'"))
+            await session.execute(READ_QUERY)
 
     async def test_get_write_session(self) -> None:
         """Test the get_write_session function."""
         async for session in get_write_session_with_depends():
-            await session.execute(text("SELECT 'Hello world!'"))
+            await session.execute(WRITE_QUERY)
 
     async def test_get_write_session_with_context(self) -> None:
         """Test the get_write_session_with_context function."""
         async with get_write_session_with_context() as session:
-            await session.execute(text("SELECT 'Hello world!'"))
+            await session.execute(WRITE_QUERY)

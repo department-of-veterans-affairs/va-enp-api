@@ -145,19 +145,18 @@ async def _validate_and_clean_tables(pt_session: pytest.Session) -> None:  # pra
 
     tables_with_artifacts = []
     artifact_counts = []
-    print()
 
     # Use metadata to query the table and add the table name to the list if there are any records
     async with get_read_session_with_context() as session:
-        for _, v in metadata_legacy.tables.items():
-            if v.name not in _skip_tables:
-                row_count = len((await session.execute(select(metadata_legacy.tables[v.name]))).all())
+        for table in metadata_legacy.tables.values():
+            if table.name not in _skip_tables:
+                row_count = len((await session.execute(select(metadata_legacy.tables[table.name]))).all())
 
-                if v.name in _acceptable_counts and row_count <= _acceptable_counts[v.name]:
+                if table.name in _acceptable_counts and row_count <= _acceptable_counts[table.name]:
                     continue
                 elif row_count > 0:
                     artifact_counts.append((row_count))
-                    tables_with_artifacts.append(v.name)
+                    tables_with_artifacts.append(table.name)
                     pt_session.exitstatus = 1
 
     await clean_tables(artifact_counts, tables_with_artifacts)
@@ -175,7 +174,7 @@ async def clean_tables(artifact_counts: list[int], tables_with_artifacts: list[s
     from app.db.db_init import get_write_session_with_context
 
     if tables_with_artifacts and _TRUNCATE_ARTIFACTS:
-        print('\n')
+        print('\n\n')
         async with get_write_session_with_context() as session:
             for i, table in enumerate(tables_with_artifacts):
                 # Skip tables that may have necessary information
