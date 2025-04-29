@@ -144,9 +144,9 @@ async def legacy_notification_post_handler(
 
     # Log tasks that would have been processed
     for queue_name, task_args in tasks:
-        logger.info('Task would be enqueued: {} into {}', task_args, queue_name)
+        logger.debug('Task would be enqueued: {} into {}', task_args, queue_name)
 
-    logger.info('Found {} tasks to process', len(tasks))
+    logger.debug('Found {} tasks to process', len(tasks))
 
     return V2PostSmsResponseModel(
         id=notification_id,
