@@ -271,8 +271,8 @@ class TestV2SMS:
         UUID(response_data['id'])  # This will raise an exception if invalid
         assert response_data['reference'] == sms_request_data['reference']
         assert response_data['template']['id'] == str(self.template_id)
-        assert response_data['template']['uri'].startswith('https://example.com/templates/')
-        assert response_data['uri'].startswith('https://example.com/notifications/')
+        assert response_data['template']['uri'].startswith('https://mock-notify.va.gov/templates/')
+        assert response_data['uri'].startswith('https://mock-notify.va.gov/notifications/')
 
         # Check the content structure specific to SMS responses
         assert 'body' in response_data['content']
@@ -380,3 +380,34 @@ class TestV2SMS:
 
         assert response.status_code == status.HTTP_400_BAD_REQUEST
         assert response.json() == expected_response
+
+    async def test_v2_sms_prevents_duplicate_validation_errors(
+        self,
+        mock_validate_template: AsyncMock,
+        client: ENPTestClient,
+        sms_request_data: dict[str, object],
+    ) -> None:
+        """Test that we don't get duplicate validation errors when the same model is used twice.
+
+        This test validates the fix for the issue described in FastAPI issue #4072, where
+        the same model is used both as a request body and in a dependency, causing duplicate
+        validation errors.
+        """
+        # Modify the request data to have an invalid UUID for template_id
+        sms_request_data['template_id'] = 'not-a-valid-uuid'
+
+        # The route handler uses the model both directly and in the get_sms_task_resolver dependency
+        response = client.post(self.sms_route, json=sms_request_data)
+
+        # Check that we get a 400 error as expected
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+
+        # Verify that the error message appears only once in the response
+        response_json = response.json()
+        assert len(response_json['errors']) == 1
+
+        # The message should be formatted as described in the request_validation_error_handler
+        assert response_json['errors'][0]['message'] == 'template_id: Input should be a valid UUID version 4'
+
+        # Verify the status code is included in the response body
+        assert response_json['status_code'] == 400

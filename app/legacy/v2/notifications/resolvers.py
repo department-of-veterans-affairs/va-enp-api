@@ -17,7 +17,6 @@ class SmsTaskResolver(ABC):
 
         Args:
             notification_id (UUID): The generated notification ID
-
         """
 
 
