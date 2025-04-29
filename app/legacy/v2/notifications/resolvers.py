@@ -18,8 +18,6 @@ class SmsTaskResolver(ABC):
         Args:
             notification_id (UUID): The generated notification ID
 
-        Returns:
-            List[Tuple[str, str]]: List of tuples containing (queue name, task name)
         """
 
 
