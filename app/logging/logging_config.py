@@ -33,9 +33,6 @@ LOGLEVEL_MAPPING: Dict[int, str] = {
 SERIALIZE = os.getenv('ENP_ENV', 'development') in ('development', 'perf', 'staging', 'production')
 
 
-logger = loguru_logger.patch(lambda r: r['extra'].update(**get_context()))
-
-
 def get_context() -> dict[str, str]:
     """Return the context for the logger.
 
@@ -47,6 +44,10 @@ def get_context() -> dict[str, str]:
     with suppress(ContextDoesNotExistError):
         ctx = context.data
     return ctx
+
+
+# Define the logger after the get_context function is defined
+logger = loguru_logger.patch(lambda r: r['extra'].update(**get_context()))
 
 
 class InterceptHandler(logging.Handler):

@@ -49,3 +49,11 @@ class OSPlatformType(StrEnum):
 
     ANDROID = 'ANDROID'
     IOS = 'IOS'
+
+
+class QueueNames(StrEnum):
+    """Celery queue names."""
+
+    LOOKUP_CONTACT_INFO = 'lookup-contact-info-tasks'
+    LOOKUP_VA_PROFILE_ID = 'lookup-va-profile-id-tasks'
+    SEND_SMS = 'send-sms-tasks'

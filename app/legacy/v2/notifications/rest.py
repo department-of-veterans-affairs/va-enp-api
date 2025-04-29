@@ -9,6 +9,10 @@ from starlette_context import context
 
 from app.auth import JWTBearer
 from app.constants import NotificationType
+from app.legacy.v2.notifications.resolvers import (
+    SmsTaskResolver,
+    get_sms_task_resolver,
+)
 from app.legacy.v2.notifications.route_schema import (
     HttpsUrl,
     V2PostPushRequestModel,
@@ -81,46 +85,60 @@ async def create_push_notification(
 
 @v2_notification_router.post('/sms', status_code=status.HTTP_201_CREATED)
 @v2_legacy_notification_router.post('/sms', status_code=status.HTTP_201_CREATED)
-async def create_sms_notification(
+async def legacy_notification_post_handler(
     request: Annotated[
         V2PostSmsRequestModel,
         Body(
             openapi_examples=V2PostSmsRequestModel.json_schema_extra['examples'],
         ),
     ],
+    sms_task_resolver: Annotated[SmsTaskResolver, Depends(get_sms_task_resolver)],
 ) -> V2PostSmsResponseModel:
     """Create an SMS notification.
 
     Args:
-        request_data (V2PostSmsRequestModel): The data necessary for the notification.
-        request (Request): The FastAPI request object.
+        request (V2PostSmsRequestModel): The SMS notification request model
+        sms_task_resolver (SmsTaskResolver): Injected task resolver based on request content
 
     Returns:
-        V2PostSmsResponseModel: The notification response data if notification is created successfully.
+        V2PostSmsResponseModel: The notification response data
     """
+    logger.debug('Creating SMS notification with request data: {}', request)
+
+    notification_id = uuid4()
+    service_id = uuid4()
+
+    context['service_id'] = service_id
     context['template_id'] = request.template_id
-    logger.debug('Received SMS request with data: {}', request)
+    context['notification_id'] = notification_id
 
     try:
         await validate_template(request.template_id, NotificationType.SMS, request.personalisation)
     except ValueError as e:
         raise_request_validation_error(str(e))
 
-    logger.debug('Creating SMS notification with request data {}.', request)
+    # Get tasks for the notification using the appropriate resolver
+    tasks = sms_task_resolver.get_tasks(notification_id)
+
+    # Log tasks that would have been processed
+    for queue_name, task_args in tasks:
+        logger.debug('Task would be enqueued: {} into {}', task_args, queue_name)
+
+    logger.debug('Found {} tasks to process', len(tasks))
 
     return V2PostSmsResponseModel(
-        id=uuid4(),
-        billing_code='123456',
-        callback_url=HttpsUrl('https://example.com'),
-        reference='123456',
+        id=notification_id,
+        reference=request.reference,
+        billing_code=request.billing_code,
+        callback_url=request.callback_url,
+        scheduled_for=request.scheduled_for,
         template=V2Template(
-            id=uuid4(),
-            uri=HttpsUrl('https://example.com'),
-            version=1,
+            id=request.template_id,
+            uri=HttpsUrl(f'https://mock-notify.va.gov/templates/{request.template_id}'),
         ),
-        uri=HttpsUrl('https://example.com'),
+        uri=HttpsUrl(f'https://mock-notify.va.gov/notifications/{notification_id}'),
         content=V2SmsContentModel(
-            body='example' if not request.personalisation else f'example - {request.personalisation}',
-            from_number=ValidatedPhoneNumber('+18005550101'),
+            body='',
+            from_number=ValidatedPhoneNumber('+18005550101'),  # Would be determined from sms_sender_id
         ),
     )
