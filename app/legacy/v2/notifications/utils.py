@@ -77,14 +77,11 @@ async def get_arn_from_icn(icn: str) -> str:
     raise NotImplementedError('get_arn_from_icn has not been implemented.')
 
 
-async def validate_push_template(template_id: UUID4) -> str:
+async def validate_push_template(template_id: UUID4) -> None:
     """Future method to validate the template.
 
     Args:
         template_id (UUID4): The template ID to validate
-
-    Returns:
-        Template: The template if it exists
 
     Raises:
         NotImplementedError: For now, raise an exception. Change the type when implemented.
@@ -114,7 +111,6 @@ async def validate_template(
     Raises:
         ValueError: If the template is not found, or is invalid based on the expected type,
             personalisation is missing, or is archived.
-
     """
     try:
         template = await LegacyTemplateDao.get_template(template_id)

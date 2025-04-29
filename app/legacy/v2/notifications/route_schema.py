@@ -41,7 +41,7 @@ class V2Template(StrictBaseModel):
 
     id: Annotated[UUID4, Field(strict=False)]
     uri: HttpUrl
-    version: int
+    version: int = 0
 
 
 class RecipientIdentifierModel(StrictBaseModel):
@@ -256,7 +256,7 @@ class V2PostSmsRequestModel(V2PostNotificationRequestModel):
                 'description': 'Send an SMS notification to a phone number.',
                 'value': {
                     'billing_code': '12345',
-                    'callback_url': 'https://example.com/',
+                    'callback_url': 'https://mock-notify.va.gov/callback',
                     'personalisation': {
                         'additionalProp1': 'string',
                         'additionalProp2': 'string',
@@ -273,7 +273,7 @@ class V2PostSmsRequestModel(V2PostNotificationRequestModel):
                 'description': 'Send an SMS notification to a recipient identifier.',
                 'value': {
                     'billing_code': 'string',
-                    'callback_url': 'https://example.com/',
+                    'callback_url': 'https://mock-notify.va.gov/callback',
                     'personalisation': {
                         'additionalProp1': 'string',
                         'additionalProp2': 'string',
