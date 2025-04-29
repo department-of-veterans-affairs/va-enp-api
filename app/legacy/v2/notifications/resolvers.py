@@ -41,9 +41,9 @@ class DirectSmsTaskResolver(SmsTaskResolver):
             notification_id (UUID): Generated notification ID
 
         Returns:
-            List[Tuple[str, str]]: List containing the queue name and task name
+            List[Tuple[str, Tuple[str, UUID]]]: List containing the queue name and task name
         """
-        logger.info('Preparing task deliver_sms with notification id {}', notification_id)
+        logger.debug('Preparing task deliver_sms with notification id {}', notification_id)
         return [
             (
                 str(QueueNames.SEND_SMS),
@@ -58,13 +58,15 @@ class DirectSmsTaskResolver(SmsTaskResolver):
 class IdentifierSmsTaskResolver(SmsTaskResolver):
     """Resolver for SMS notification tasks via recipient identifier."""
 
-    def __init__(self, recipient_identifier: dict[IdentifierType, str]) -> None:
-        """Initialize with recipient identifier.
+    def __init__(self, id_type: IdentifierType, id_value: str) -> None:
+        """Initialize with recipient identifier type and value.
 
         Args:
-            recipient_identifier (dict[IdentifierType, str]): The recipient identifier dictionary
+            id_type (IdentifierType): The type of identifier
+            id_value (str): The identifier value
         """
-        self.recipient_identifier = recipient_identifier
+        self.id_type = id_type
+        self.id_value = id_value
 
     def get_tasks(self, notification_id: UUID) -> List[Tuple[str, Tuple[str, UUID]]]:
         """Get tasks for an SMS notification via recipient identifier.
@@ -73,13 +75,13 @@ class IdentifierSmsTaskResolver(SmsTaskResolver):
             notification_id (UUID): Generated notification ID
 
         Returns:
-            List[Tuple[str, str]]: List of tuples containing queue names and task names
+            ListList[Tuple[str, Tuple[str, UUID]]]: List of tuples containing queue names and task names
         """
         tasks = []
 
-        # Check if any of the values in the recipient_identifier dictionary is 'VAPROFILEID'
-        if IdentifierType.VA_PROFILE_ID not in self.recipient_identifier:
-            logger.info('Preparing task lookup_va_profile_id with notification id {}.', notification_id)
+        # Check if identifier is not VA_PROFILE_ID
+        if self.id_type != IdentifierType.VA_PROFILE_ID:
+            logger.debug('Preparing task lookup_va_profile_id with notification id {}.', notification_id)
             tasks.append(
                 (
                     str(QueueNames.LOOKUP_VA_PROFILE_ID),
@@ -90,7 +92,7 @@ class IdentifierSmsTaskResolver(SmsTaskResolver):
                 )
             )
 
-        logger.info('Preparing task lookup_contact_info with notification id {}.', notification_id)
+        logger.debug('Preparing task lookup_contact_info with notification id {}.', notification_id)
         tasks.append(
             (
                 str(QueueNames.LOOKUP_CONTACT_INFO),
@@ -101,7 +103,7 @@ class IdentifierSmsTaskResolver(SmsTaskResolver):
             )
         )
 
-        logger.info('Preparing task deliver_sms with notification id {}', notification_id)
+        logger.debug('Preparing task deliver_sms with notification id {}', notification_id)
         tasks.append(
             (
                 str(QueueNames.SEND_SMS),

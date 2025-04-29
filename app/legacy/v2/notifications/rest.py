@@ -1,8 +1,7 @@
 """All endpoints for the v2/notifications route."""
 
-import asyncio
-from typing import Annotated, List, Tuple
-from uuid import UUID, uuid4
+from typing import Annotated
+from uuid import uuid4
 
 from fastapi import APIRouter, BackgroundTasks, Body, Depends, Request, status
 from pydantic import UUID4
@@ -94,15 +93,16 @@ def get_sms_task_resolver(request: V2PostSmsRequestModel) -> SmsTaskResolver:
     Returns:
         SmsTaskResolver: The appropriate task resolver implementation
     """
-    if request.phone_number:
+    if request.phone_number is not None:
         return DirectSmsTaskResolver(phone_number=request.phone_number)
     else:
         assert request.recipient_identifier is not None  # For mypy, the model validation ensures this will not occur
         model_data = request.recipient_identifier.model_dump()
-        # Create a dictionary with the appropriate IdentifierType enum as key
-        id_type = model_data['id_type']
-        id_value = model_data['id_value']
-        return IdentifierSmsTaskResolver(recipient_identifier={IdentifierType(id_type): id_value})
+        # Use the id_type and id_value directly from model_data
+        return IdentifierSmsTaskResolver(
+            id_type=IdentifierType(model_data['id_type']),
+            id_value=model_data['id_value'],
+        )
 
 
 @v2_notification_router.post('/sms', status_code=status.HTTP_201_CREATED)
@@ -115,14 +115,12 @@ async def legacy_notification_post_handler(
         ),
     ],
     sms_task_resolver: Annotated[SmsTaskResolver, Depends(get_sms_task_resolver)],
-    background_tasks: BackgroundTasks,
 ) -> V2PostSmsResponseModel:
     """Create an SMS notification.
 
     Args:
         request (V2PostSmsRequestModel): The SMS notification request model
         sms_task_resolver (SmsTaskResolver): Injected task resolver based on request content
-        background_tasks (BackgroundTasks): The FastAPI background tasks object
 
     Returns:
         V2PostSmsResponseModel: The notification response data
@@ -144,9 +142,11 @@ async def legacy_notification_post_handler(
     # Get tasks for the notification using the appropriate resolver
     tasks = sms_task_resolver.get_tasks(notification_id)
 
-    # Add the background task to process the tasks
-    background_tasks.add_task(process_tasks_helper, tasks)
-    logger.info('Background task added to process {} tasks', len(tasks))
+    # Log tasks that would have been processed
+    for queue_name, task_args in tasks:
+        logger.info('Task would be enqueued: {} into {}', task_args, queue_name)
+
+    logger.info('Found {} tasks to process', len(tasks))
 
     return V2PostSmsResponseModel(
         id=notification_id,
@@ -164,19 +164,3 @@ async def legacy_notification_post_handler(
             from_number=ValidatedPhoneNumber('+18005550101'),  # Would be determined from sms_sender_id
         ),
     )
-
-
-async def process_tasks_helper(tasks: List[Tuple[str, Tuple[str, UUID]]]) -> None:
-    """Process the list of tasks in the background.
-
-    This helper function logs the tasks that would be processed but doesn't actually execute them.
-
-    Args:
-        tasks (List[Tuple[str, str]]): List of tuples containing queue name and task name
-    """
-    await asyncio.sleep(0.1)  # Allows async def for now
-
-    for queue_name, task_args in tasks:
-        logger.info('Enqueuing task {} into {}', task_args, queue_name)
-
-    logger.info('Completed background processing of tasks')
