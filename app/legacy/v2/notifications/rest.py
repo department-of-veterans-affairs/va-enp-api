@@ -8,11 +8,10 @@ from pydantic import UUID4
 from starlette_context import context
 
 from app.auth import JWTBearer
-from app.constants import IdentifierType, NotificationType
+from app.constants import NotificationType
 from app.legacy.v2.notifications.resolvers import (
-    DirectSmsTaskResolver,
-    IdentifierSmsTaskResolver,
     SmsTaskResolver,
+    get_sms_task_resolver,
 )
 from app.legacy.v2.notifications.route_schema import (
     HttpsUrl,
@@ -82,27 +81,6 @@ async def create_push_notification(
         template_id,
     )
     return V2PostPushResponseModel()
-
-
-def get_sms_task_resolver(request: V2PostSmsRequestModel) -> SmsTaskResolver:
-    """Determine the appropriate SMS task resolver based on request content.
-
-    Args:
-        request (V2PostSmsRequestModel): The SMS notification request model
-
-    Returns:
-        SmsTaskResolver: The appropriate task resolver implementation
-    """
-    if request.phone_number is not None:
-        return DirectSmsTaskResolver(phone_number=request.phone_number)
-    else:
-        assert request.recipient_identifier is not None  # For mypy, the model validation ensures this will not occur
-        model_data = request.recipient_identifier.model_dump()
-        # Use the id_type and id_value directly from model_data
-        return IdentifierSmsTaskResolver(
-            id_type=IdentifierType(model_data['id_type']),
-            id_value=model_data['id_value'],
-        )
 
 
 @v2_notification_router.post('/sms', status_code=status.HTTP_201_CREATED)

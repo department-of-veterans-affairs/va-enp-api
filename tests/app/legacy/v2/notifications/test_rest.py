@@ -12,8 +12,6 @@ from app.constants import IdentifierType, MobileAppType
 from app.legacy.v2.notifications.resolvers import (
     DirectSmsTaskResolver,
     IdentifierSmsTaskResolver,
-)
-from app.legacy.v2.notifications.rest import (
     get_sms_task_resolver,
 )
 from app.legacy.v2.notifications.route_schema import (

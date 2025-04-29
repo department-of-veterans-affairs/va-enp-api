@@ -5,6 +5,7 @@ from typing import List, Tuple
 from uuid import UUID
 
 from app.constants import IdentifierType, QueueNames
+from app.legacy.v2.notifications.route_schema import V2PostSmsRequestModel
 from app.logging.logging_config import logger
 
 
@@ -112,3 +113,24 @@ class IdentifierSmsTaskResolver(SmsTaskResolver):
         )
 
         return tasks
+
+
+def get_sms_task_resolver(request: V2PostSmsRequestModel) -> SmsTaskResolver:
+    """Determine the appropriate SMS task resolver based on request content.
+
+    Args:
+        request (V2PostSmsRequestModel): The SMS notification request model
+
+    Returns:
+        SmsTaskResolver: The appropriate task resolver implementation
+    """
+    if request.phone_number is not None:
+        return DirectSmsTaskResolver(phone_number=request.phone_number)
+    else:
+        assert request.recipient_identifier is not None  # For mypy, the model validation ensures this will not occur
+        model_data = request.recipient_identifier.model_dump()
+        # Use the id_type and id_value directly from model_data
+        return IdentifierSmsTaskResolver(
+            id_type=IdentifierType(model_data['id_type']),
+            id_value=model_data['id_value'],
+        )
