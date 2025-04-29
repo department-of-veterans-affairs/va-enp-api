@@ -389,9 +389,9 @@ class TestV2SMS:
     ) -> None:
         """Test that we don't get duplicate validation errors when the same model is used twice.
 
-        This test validates the fix for the issue described in FastAPI issue #4072, where
-        the same model is used both as a request body and in a dependency, causing duplicate
-        validation errors.
+        This test validates the fix for the issue described in this FastAPI issue, https://github.com/fastapi/fastapi/issues/4072.
+        The underlying problem may be in passing the same request model to a route handler and a dependency resolver, resulting
+        in duplicate validation.
         """
         # Modify the request data to have an invalid UUID for template_id
         sms_request_data['template_id'] = 'not-a-valid-uuid'

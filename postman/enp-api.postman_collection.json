@@ -86,7 +86,7 @@
 						"header": [],
 						"body": {
 							"mode": "raw",
-							"raw": "{\r\n    \"billing_code\": \"12345\",\r\n    \"callback_url\": \"https://example.com/\",\r\n    \"personalisation\": {\r\n        \"Test\": \"string\"\r\n    },\r\n    \"reference\": \"external-id\",\r\n    \"template_id\": \"{{sms-template-id}}\",\r\n    \"phone_number\": \"+18005550101\",\r\n    \"sms_sender_id\": \"4f44ffc8-1ff8-4832-b1af-0b615691b6ea\"\r\n}",
+							"raw": "{\r\n    \"billing_code\": \"12345\",\r\n    \"callback_url\": \"https://mock-notify.va.gov/\",\r\n    \"personalisation\": {\r\n        \"Test\": \"string\"\r\n    },\r\n    \"reference\": \"external-id\",\r\n    \"template_id\": \"{{sms-template-id}}\",\r\n    \"phone_number\": \"+18005550101\",\r\n    \"sms_sender_id\": \"4f44ffc8-1ff8-4832-b1af-0b615691b6ea\"\r\n}",
 							"options": {
 								"raw": {
 									"language": "json"
