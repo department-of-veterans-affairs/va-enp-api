@@ -34,7 +34,7 @@ class CustomFastAPI(FastAPI):
         Args:
             lifespan: The lifespan context manager for the application.
         """
-        super().__init__(lifespan=lifespan)
+        super().__init__(lifespan=lifespan, root_path='/vanotify')
         self.enp_state = ENPState()
 
 
