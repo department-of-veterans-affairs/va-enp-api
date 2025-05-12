@@ -46,6 +46,32 @@ def verify_token(jwtoken: str) -> bool:
     return response
 
 
+class JWTBearerAdmin(HTTPBearer):
+    """JWTBearer class to verify the JWT token sent by the client."""
+
+    async def __call__(self, request: Request) -> HTTPAuthorizationCredentials | None:
+        """Override the __call__ method to verify the JWT token. A JWT token is considered valid if it is not expired, and the signature is valid.
+
+        Args:
+            request (Request): FastAPI request object
+
+        Returns:
+            HTTPAuthorizationCredentials | None: HTTPAuthorizationCredentials object if the token is valid, None otherwise.
+
+        Raises:
+            HTTPException: If the token is invalid or expired
+        """
+        credentials: HTTPAuthorizationCredentials | None = await super(JWTBearer, self).__call__(request)
+        if credentials is None:
+            logger.info('No credentials provided.')
+            raise HTTPException(status_code=401, detail='Unauthorized, authentication token must be provided')
+        if not verify_token(str(credentials.credentials)):
+            logger.info('Invalid or expired token.')
+            raise HTTPException(status_code=403, detail='Invalid token: signature, api token is not valid')
+        return credentials
+
+
+# TODO - implement service-auth here
 class JWTBearer(HTTPBearer):
     """JWTBearer class to verify the JWT token sent by the client."""
 

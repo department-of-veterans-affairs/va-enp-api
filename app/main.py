@@ -12,7 +12,7 @@ from pydantic import UUID4
 from starlette_context import plugins
 from starlette_context.middleware import ContextMiddleware
 
-from app.auth import JWTBearer
+from app.auth import JWTBearerAdmin
 from app.db.db_init import (
     close_db,
     init_db,
@@ -105,7 +105,7 @@ def simple_route() -> dict[str, str]:
     return {'Hello': 'World'}
 
 
-@app.get('/legacy/notifications/{notification_id}', status_code=status.HTTP_200_OK, dependencies=[Depends(JWTBearer())])
+@app.get('/legacy/notifications/{notification_id}', status_code=status.HTTP_200_OK, dependencies=[Depends(JWTBearerAdmin())])
 async def get_legacy_notification(notification_id: UUID4) -> None:
     """Get a legacy Notification.
 
