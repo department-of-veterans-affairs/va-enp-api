@@ -49,6 +49,10 @@ def verify_token(jwtoken: str) -> bool:
 class JWTBearerAdmin(HTTPBearer):
     """JWTBearer class to verify the JWT token sent by the client."""
 
+    def __init__(self) -> None:
+        """Ensure bearer token is shared."""
+        super().__init__(scheme_name='BearerToken')
+
     async def __call__(self, request: Request) -> HTTPAuthorizationCredentials | None:
         """Override the __call__ method to verify the JWT token. A JWT token is considered valid if it is not expired, and the signature is valid.
 
@@ -61,7 +65,7 @@ class JWTBearerAdmin(HTTPBearer):
         Raises:
             HTTPException: If the token is invalid or expired
         """
-        credentials: HTTPAuthorizationCredentials | None = await super(JWTBearer, self).__call__(request)
+        credentials: HTTPAuthorizationCredentials | None = await super(JWTBearerAdmin, self).__call__(request)
         if credentials is None:
             logger.info('No credentials provided.')
             raise HTTPException(status_code=401, detail='Unauthorized, authentication token must be provided')
@@ -74,6 +78,10 @@ class JWTBearerAdmin(HTTPBearer):
 # TODO - implement service-auth here
 class JWTBearer(HTTPBearer):
     """JWTBearer class to verify the JWT token sent by the client."""
+
+    def __init__(self) -> None:
+        """Ensure bearer token is shared."""
+        super().__init__(scheme_name='BearerToken')
 
     async def __call__(self, request: Request) -> HTTPAuthorizationCredentials | None:
         """Override the __call__ method to verify the JWT token. A JWT token is considered valid if it is not expired, and the signature is valid.

@@ -105,7 +105,9 @@ def simple_route() -> dict[str, str]:
     return {'Hello': 'World'}
 
 
-@app.get('/legacy/notifications/{notification_id}', status_code=status.HTTP_200_OK, dependencies=[Depends(JWTBearerAdmin())])
+@app.get(
+    '/legacy/notifications/{notification_id}', status_code=status.HTTP_200_OK, dependencies=[Depends(JWTBearerAdmin())]
+)
 async def get_legacy_notification(notification_id: UUID4) -> None:
     """Get a legacy Notification.
 
