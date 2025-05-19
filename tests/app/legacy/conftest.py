@@ -1,7 +1,7 @@
 """Pytest setup for all legacy code."""
 
 from datetime import datetime, timezone
-from typing import Any, AsyncGenerator, Awaitable, Callable, Coroutine
+from typing import Any, Awaitable, Callable, Coroutine
 from uuid import uuid4
 
 import pytest
@@ -126,7 +126,7 @@ def sample_service(
 def sample_api_key(
     test_db_session: AsyncSession,
     sample_service: Callable[..., Awaitable[Row[Any]]],
-) -> Callable[..., Coroutine[Any, Any, AsyncGenerator[Any, Row[Any]]]]:
+) -> Callable[..., Awaitable[Row[Any]]]:
     """Generates a sample API Key - Does not commit to the database.
 
     Args:
@@ -134,7 +134,7 @@ def sample_api_key(
         sample_service (Callable[..., Awaitable[Row[Any]]]): Generator fixture for Services
 
     Returns:
-        Callable[..., Coroutine[Any, Any, AsyncGenerator[Any, Row[Any]]]]: The function to create a Service
+        Callable[..., Awaitable[Row[Any]]]:: The function to create a Service
     """
 
     async def _wrapper(
@@ -148,7 +148,7 @@ def sample_api_key(
         created_at: datetime | None = None,
         created_by_id: UUID4 | None = None,
         version: int = 0,
-    ) -> AsyncGenerator[Any, Row[Any]]:
+    ) -> Row[Any]:
         id = id or uuid4()
         session = session or test_db_session
         legacy_api_keys = metadata_legacy.tables['api_keys']
