@@ -181,7 +181,7 @@ class TestNotificationRouter:
         assert response.status_code == status.HTTP_201_CREATED
 
     @pytest.mark.parametrize('route', routes)
-    async def test_v2_sms_with_phone_number_returns_403_wrong_admin_secret(
+    async def test_router_returns_403_wrong_admin_secret(
         self,
         client_factory: Callable[[str], ENPTestClient],
         route: str,
@@ -198,6 +198,19 @@ class TestNotificationRouter:
         response = client.post(route)
 
         assert response.status_code == status.HTTP_403_FORBIDDEN
+
+    @pytest.mark.parametrize('route', routes)
+    async def test_router_returns_401_missing_credentials(
+        self,
+        client: ENPTestClient,
+        route: str,
+        mocker: AsyncMock,
+    ) -> None:
+        """Test sms notification route returns 401 with missing credentials."""
+        mocker.patch('app.auth.HTTPBearer.__call__', return_value=None)
+        response = client.post(route)
+
+        assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
     @pytest.mark.parametrize('route', routes)
     async def test_router_returns_400_with_invalid_request_data(
