@@ -43,7 +43,7 @@ fileignoreconfig:
 - filename: tests/app/legacy/dao/test_api_keys.py
   checksum: eb409a9f783b8d2f3a2cabc3f97a2d95ee3c7d8b506f4f28ad3411454ff41ec9
 - filename: tests/app/legacy/v2/notifications/test_rest.py
-  checksum: a8ea33b71cee434cc7165b29b045e325b1db809355842076abe81dc666bd924b
+  checksum: 1099b2bb6d4da368bd921caac6e910a7eb5513389c7fff767f5f81b6c62b6971
 - filename: tests/app/providers/__init__.py
   checksum: 0e3ae2fd3a50245a8c143d31c4316b164b51161d2db6e660aa956b78eda1b4d8
 - filename: tests/app/providers/test_provider_aws.py
