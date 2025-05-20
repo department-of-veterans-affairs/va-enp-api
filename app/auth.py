@@ -2,7 +2,7 @@
 
 import os
 import time
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any, TypedDict, cast
 
 import jwt
@@ -10,6 +10,7 @@ from fastapi import HTTPException, Request
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from loguru import logger
 from pydantic import UUID4
+from sqlalchemy import Row
 from sqlalchemy.exc import DataError, NoResultFound
 
 from app.legacy.dao.api_keys_dao import ApiKeyRecord, LegacyApiKeysDao
@@ -117,9 +118,8 @@ def verify_admin_token(jwtoken: str) -> bool:
     return response
 
 
-# TODO: too complex
-async def verify_service_token(service_id: str, token: str, request: Request) -> None:  # noqa: C901
-    """Verify a JWT token against all active API keys for a given service.
+async def verify_service_token(issuer: str, token: str, request: Request) -> None:
+    """Verify a JWT token against all active API keys for a given issuer service.
 
     This function:
       - Retrieves the service by ID and ensures it exists and is active.
@@ -129,7 +129,7 @@ async def verify_service_token(service_id: str, token: str, request: Request) ->
       - If a valid key is found, sets authentication context on the request.
 
     Args:
-        service_id (str): The identifier of the service attempting authentication.
+        issuer (str): The identifier of the service attempting authentication.
         token (str): The JWT token to be validated.
         request (Request): The FastAPI request object to attach authentication context.
 
@@ -142,47 +142,96 @@ async def verify_service_token(service_id: str, token: str, request: Request) ->
             - If the token is expired beyond the allowed leeway.
             - If the matching API key is revoked.
     """
-    try:
-        service_id_uuid = UUID4(service_id)
-        service = await LegacyServiceDao.get_service(service_id_uuid)
-    except (ValueError, TypeError, DataError):
-        raise HTTPException(status_code=403, detail='Invalid token: service id is not the right data type')
-    except NoResultFound:
-        raise HTTPException(status_code=403, detail='Invalid token: service not found')
+    service = await get_active_service_for_issuer(issuer)
 
     try:
-        api_keys = await LegacyApiKeysDao.get_api_keys(service_id_uuid)
+        api_keys = await LegacyApiKeysDao.get_api_keys(service.id)
     except NoResultFound:
         raise HTTPException(status_code=403, detail='Invalid token: service has no API keys')
-
-    if not service.active:
-        raise HTTPException(status_code=403, detail='Invalid token: service is archived')
 
     for row in api_keys:
         api_key = ApiKeyRecord.from_row(row)
         if api_key.secret is None:
             continue
-        try:
-            decode_jwt_token(token, api_key.secret)
-        except TokenDecodeError:
-            continue
-        except TokenExpiredError:
-            raise HTTPException(
-                status_code=403, detail='Error: Your system clock must be accurate to within 30 seconds'
-            )
 
-        if api_key.revoked:
-            raise HTTPException(status_code=403, detail='Invalid token: API key revoked')
-        if api_key.expiry_date and api_key.expiry_date < datetime.utcnow():
-            logger.warning('Expired API key used for service %s', service_id)
+        if not _verify_service_token(token, api_key):
+            continue
+
+        _validate_service_api_key(api_key, service.id, service.name)
 
         request.state.authenticated_service = service
         request.state.api_user = api_key
-        request.state.service_id = service_id
+        request.state.service_id = service.id
 
         return
 
     raise HTTPException(status_code=403, detail='Invalid token: signature, api token not found')
+
+
+async def get_active_service_for_issuer(issuer: str) -> Row[Any]:
+    """Validate the given issuer string as a UUID4 and return the corresponding active service.
+
+    This function performs the following:
+    - Parses the issuer string into a UUID4.
+    - Retrieves the corresponding service from the database using the DAO layer.
+    - Verifies that the service exists and is marked as active.
+
+    Args:
+        issuer (str): The issuer value extracted from a JWT token, expected to be a UUID4 string.
+
+    Returns:
+        Row[Any]: A SQLAlchemy Core row representing the active service associated with the given issuer.
+
+    Raises:
+        HTTPException:
+            - 403 if the issuer is not a valid UUID4 or wrong type.
+            - 403 if the service is not found.
+            - 403 if the service is found but marked as archived (inactive).
+    """
+    try:
+        service_id = UUID4(issuer)
+        service = await LegacyServiceDao.get_service(service_id)
+    except (AttributeError, ValueError, TypeError, DataError):
+        raise HTTPException(status_code=403, detail='Invalid token: service id is not the right data type')
+    except NoResultFound:
+        raise HTTPException(status_code=403, detail='Invalid token: service not found')
+
+    if not service.active:
+        raise HTTPException(status_code=403, detail='Invalid token: service is archived')
+
+    return service
+
+
+def _verify_service_token(token: str, api_key: ApiKeyRecord) -> bool:
+    try:
+        verified = decode_jwt_token(token, api_key.secret)
+    except TokenDecodeError:
+        verified = False
+    except TokenExpiredError:
+        raise HTTPException(status_code=403, detail='Error: Your system clock must be accurate to within 30 seconds')
+    return verified
+
+
+def _validate_service_api_key(api_key: ApiKeyRecord, service_id: str, service_name: str) -> None:
+    # TODO notification-api-2309 - The revoked field is added as a temporary measure until we can implement proper use of the expiry date
+    if api_key.revoked:
+        raise HTTPException(status_code=403, detail='Invalid token: API key revoked')
+
+    if api_key.expiry_date is not None and api_key.expiry_date < datetime.now(UTC):
+        logger.warning(
+            'service %s - %s used expired api key %s expired as of %s',
+            service_id,
+            service_name,
+            api_key.id,
+            api_key.expiry_date,
+        )
+    elif api_key.expiry_date is None:
+        logger.warning(
+            'service %s - %s used old-style api key %s with no expiry_date',
+            service_id,
+            service_name,
+            api_key.id,
+        )
 
 
 def get_token_issuer(token: str) -> str:
@@ -213,7 +262,7 @@ def get_token_issuer(token: str) -> str:
     return str(unverified.get('iss'))
 
 
-def decode_jwt_token(token: str, secret: str) -> bool:
+def decode_jwt_token(token: str, secret: str | None) -> bool:
     """Decode and validate a JWT token using the provided client-specific secret.
 
     This method verifies the token's signature and ensures that required claims such as
@@ -244,13 +293,12 @@ def decode_jwt_token(token: str, secret: str) -> bool:
         return validate_jwt_token(decoded_token)
 
     except (jwt.InvalidIssuedAtError, jwt.ImmatureSignatureError) as e:
-        print('Token time is invalid', decode_token(token), int(time.time()))
         raise TokenExpiredError('Token time is invalid', decode_token(token)) from e
 
     except jwt.DecodeError as e:
         raise TokenDecodeError from e
 
-    except jwt.InvalidAlgorithmError as e:
+    except (jwt.InvalidAlgorithmError, NotImplementedError) as e:
         raise TokenAlgorithmError from e
 
     except jwt.InvalidTokenError as e:

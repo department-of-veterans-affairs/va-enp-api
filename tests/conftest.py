@@ -3,6 +3,7 @@
 import asyncio
 import os
 import time
+from typing import Any
 from unittest.mock import Mock
 
 import jwt
@@ -85,6 +86,23 @@ def generate_token(sig_key: str = ADMIN_SECRET_KEY, payload: JWTPayloadDict | No
             exp=int(time.time()) + ACCESS_TOKEN_EXPIRE_SECONDS,
         )
     return jwt.encode(dict(payload), sig_key, headers=headers)
+
+
+def generate_token_with_partial_payload(sig_key: str, payload: dict[str, Any]) -> str:
+    """Generate a JWT token with incomplete payload for testing.
+
+    Args:
+        sig_key (str): The key to sign the JWT token with.
+        payload (dict): The payload to include in the JWT token.
+
+    Returns:
+        str: The signed JWT token.
+    """
+    headers = {
+        'typ': 'JWT',
+        'alg': ALGORITHM,
+    }
+    return jwt.encode(payload, sig_key, headers=headers)
 
 
 _skip_tables = (

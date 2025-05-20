@@ -71,7 +71,7 @@ class ApiKeyRecord:
             If the decryption fails due to an invalid format, a ValueError may be raised.
             This is currently unhandled and should be addressed in future revisions.
         """
-        if self._secret_encrypted:
+        if self._secret_encrypted is not None:
             # TODO: catch and log ValueError
             return decrypt(self._secret_encrypted)
         return None
