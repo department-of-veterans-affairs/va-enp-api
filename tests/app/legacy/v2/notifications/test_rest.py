@@ -1,6 +1,6 @@
 """Test module for app/legacy/v2/notifications/rest.py."""
 
-from typing import ClassVar
+from typing import Callable, ClassVar
 from unittest.mock import AsyncMock, patch
 from uuid import UUID, uuid4
 
@@ -21,7 +21,7 @@ from app.legacy.v2.notifications.route_schema import (
     V2PostSmsRequestModel,
     ValidatedPhoneNumber,
 )
-from tests.conftest import ENPTestClient
+from tests.conftest import ENPTestClient, generate_token
 
 _push_path = '/legacy/v2/notifications/push'
 
@@ -217,6 +217,39 @@ class TestV2SMS:
         sms_request_data: dict[str, object],
     ) -> None:
         """Test sms notification route returns 201 with valid template."""
+        response = client.post(self.sms_route, json=sms_request_data)
+
+        assert response.status_code == status.HTTP_201_CREATED
+
+        # Verify response content structure and values
+        response_data = response.json()
+        assert 'id' in response_data
+        assert 'template' in response_data
+        assert 'content' in response_data
+        assert 'uri' in response_data
+
+        # Check that UUID fields are valid UUIDs
+        UUID(response_data['id'])  # This will raise an exception if invalid
+
+        # Check request fields are reflected in response
+        assert response_data['reference'] == sms_request_data['reference']
+        assert response_data['template']['id'] == str(self.template_id)
+
+        # Check content structure
+        assert 'body' in response_data['content']
+        assert 'from_number' in response_data['content']
+        assert response_data['content']['from_number'] == '+18005550101'
+
+    async def test_v2_sms_with_phone_number_returns_201_custom_bearer(
+        self,
+        mock_validate_template: AsyncMock,
+        client_factory: Callable[[str], ENPTestClient],
+        sms_request_data: dict[str, object],
+    ) -> None:
+        """Test sms notification route returns 201 with valid template."""
+        token = generate_token()
+        client = client_factory(token)
+
         response = client.post(self.sms_route, json=sms_request_data)
 
         assert response.status_code == status.HTTP_201_CREATED

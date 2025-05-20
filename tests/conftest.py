@@ -3,7 +3,7 @@
 import asyncio
 import os
 import time
-from typing import Any
+from typing import Any, Callable
 from unittest.mock import Mock
 
 import jwt
@@ -38,14 +38,20 @@ class ENPTestClient(TestClient):
     client_id = 'test'
     client_secret = 'not-very-secret'
 
-    def __init__(self, app: CustomFastAPI) -> None:
-        """Initialize the ENPTestClient.
+    def __init__(self, app: CustomFastAPI, token: str | None = None) -> None:
+        """Initialize the ENPTestClient with optional custom token.
+
+        If no token is provided, a default one is generated using `generate_token()`.
 
         Args:
             app (CustomFastAPI): The FastAPI application instance.
+            token (str | None, optional): A JWT Bearer token to use for Authorization.
         """
+        if token is None:
+            token = generate_token()
+
         headers = {
-            'Authorization': f'Bearer {generate_token()}',
+            'Authorization': f'Bearer {token}',
         }
         super().__init__(app, headers=headers)
 
@@ -63,6 +69,30 @@ def client() -> ENPTestClient:
     app.enp_state.providers['aws'] = Mock(spec=ProviderAWS)
 
     return ENPTestClient(app)
+
+
+@pytest.fixture(scope='session')
+def client_factory() -> Callable[[str], ENPTestClient]:
+    """Returns a factory for creating ENPTestClient with a custom token.
+
+    Returns:
+        Callable[[str], ENPTestClient]: Factory function accepting a token string.
+    """
+
+    def _create_client(token: str) -> ENPTestClient:
+        """Create a test client with the given Bearer token.
+
+        Args:
+            token (str): The Bearer token to include in the Authorization header.
+
+        Returns:
+            ENPTestClient: A configured test client instance.
+        """
+        app.enp_state = ENPState()
+        app.enp_state.providers['aws'] = Mock(spec=ProviderAWS)
+        return ENPTestClient(app, token=token)
+
+    return _create_client
 
 
 def generate_token(sig_key: str = ADMIN_SECRET_KEY, payload: JWTPayloadDict | None = None) -> str:
