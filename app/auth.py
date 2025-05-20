@@ -235,21 +235,38 @@ def _validate_service_api_key(api_key: ApiKeyRecord, service_id: str, service_na
 
 
 def get_token_issuer(token: str) -> str:
-    """Extract the issuer ("iss") field from a JWT token without verifying its signature.
-
-    This method is used to identify the issuer of the token, which is typically required
-    to determine the appropriate secret or key for signature verification. It does not
-    validate the token's signature or claims.
+    """Extract the issuer from a JWT token.
 
     Args:
-        token (str): A signed JWT token in compact serialization format.
+        token (str): The JWT token.
 
     Returns:
-        str: The value of the "iss" (issuer) claim from the JWT payload.
+        str: The issuer ("iss" claim) from the token.
 
     Raises:
-        TokenDecodeError: If the token cannot be decoded due to an invalid format.
-        TokenIssuerError: If the "iss" field is missing from the decoded token.
+        HTTPException: If the token is missing the "iss" claim or cannot be decoded.
+    """
+    try:
+        issuer = _get_token_issuer(token)
+    except TokenIssuerError:
+        raise HTTPException(status_code=403, detail='Invalid token: iss field not provided')
+    except TokenDecodeError:
+        raise HTTPException(status_code=403, detail='Invalid token: signature, api token is not valid')
+    return issuer
+
+
+def _get_token_issuer(token: str) -> str:
+    """Return the 'iss' claim from a JWT without verifying the signature.
+
+    Args:
+        token (str): The JWT token.
+
+    Returns:
+        str: The issuer value.
+
+    Raises:
+        TokenDecodeError: If the token is not decodable.
+        TokenIssuerError: If the 'iss' field is missing.
     """
     try:
         unverified = decode_token(token)
@@ -411,7 +428,6 @@ class JWTBearer(HTTPBearer):
             raise HTTPException(status_code=401, detail='Unauthorized, authentication token must be provided')
 
         token = str(credentials.credentials)
-        # TODO: catch exceptions
         issuer = get_token_issuer(token)
 
         if issuer != ADMIN_CLIENT_USER_NAME:

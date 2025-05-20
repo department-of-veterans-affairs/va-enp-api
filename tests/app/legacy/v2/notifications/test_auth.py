@@ -348,8 +348,12 @@ def test_validate_service_api_key_logs_warning_with_expired_key() -> None:
 
 def test_get_token_issuer_raises_unable_to_decode() -> None:
     """Should raise TokenDecodeError if the token cannot be decoded."""
-    with pytest.raises(TokenDecodeError):
+    with pytest.raises(HTTPException) as exc_info:
         get_token_issuer('not a valid token')
+
+    exc = exc_info.value
+    assert exc.status_code == 403
+    assert exc.detail == 'Invalid token: signature, api token is not valid'
 
 
 def test_get_token_issuer_raises_with_missing_issuer() -> None:
@@ -360,8 +364,12 @@ def test_get_token_issuer_raises_with_missing_issuer() -> None:
         'exp': current_timestamp + 60,
     }
     token = generate_token_with_partial_payload(sig_key='not_so_secret', payload=partial_payload)
-    with pytest.raises(TokenIssuerError):
+    with pytest.raises(HTTPException) as exc_info:
         get_token_issuer(token)
+
+    exc = exc_info.value
+    assert exc.status_code == 403
+    assert exc.detail == 'Invalid token: iss field not provided'
 
 
 def test_decode_jwt_token_raises_with_invalid_algorithm() -> None:
