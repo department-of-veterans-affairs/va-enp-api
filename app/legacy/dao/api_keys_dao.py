@@ -113,6 +113,6 @@ def decrypt(token: str) -> str:
         first_part = token.split('.', 1)[0]
         # Pad to correct base64 length (multiple of 4)
         padded = first_part + '=' * (-len(first_part) % 4)
-        return str(base64.urlsafe_b64decode(padded))
+        return base64.urlsafe_b64decode(padded).decode()
     except Exception as e:
         raise ValueError(f'Invalid base64 prefix: {e}') from e

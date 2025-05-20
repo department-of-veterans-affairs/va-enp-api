@@ -18,7 +18,6 @@ from app.legacy.dao.services_dao import LegacyServiceDao
 ADMIN_CLIENT_USER_NAME = os.getenv('ENP_ADMIN_CLIENT_USER_NAME', 'enp')
 ADMIN_SECRET_KEY = os.getenv('ENP_ADMIN_SECRET_KEY', 'not-very-secret')
 ALGORITHM = os.getenv('ENP_ALGORITHM', 'HS256')
-JWT_LEEWAY_SECONDS = 30
 ACCESS_TOKEN_EXPIRE_SECONDS = int(os.getenv('ENP_ACCESS_TOKEN_EXPIRE_SECONDS', 60))
 
 
@@ -239,12 +238,13 @@ def decode_jwt_token(token: str, secret: str) -> bool:
             token,
             secret,
             algorithms=[ALGORITHM],
-            leeway=JWT_LEEWAY_SECONDS,
+            leeway=ACCESS_TOKEN_EXPIRE_SECONDS,
             options={'verify_signature': True},
         )
         return validate_jwt_token(decoded_token)
 
     except (jwt.InvalidIssuedAtError, jwt.ImmatureSignatureError) as e:
+        print('Token time is invalid', decode_token(token), int(time.time()))
         raise TokenExpiredError('Token time is invalid', decode_token(token)) from e
 
     except jwt.DecodeError as e:
@@ -285,9 +285,9 @@ def validate_jwt_token(decoded_token: dict[str, Any]) -> bool:
     # check iat time is within bounds
     now = int(time.time())
     iat = int(decoded_token['iat'])
-    if now > (iat + JWT_LEEWAY_SECONDS):
+    if now > (iat + ACCESS_TOKEN_EXPIRE_SECONDS):
         raise TokenExpiredError('Token has expired', decoded_token)
-    if iat > (now + JWT_LEEWAY_SECONDS):
+    if iat > (now + ACCESS_TOKEN_EXPIRE_SECONDS):
         raise TokenExpiredError('Token can not be in the future', decoded_token)
 
     return True

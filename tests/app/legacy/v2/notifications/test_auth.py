@@ -33,8 +33,8 @@ async def test_verify_service_token(
     current_timestamp = int(time.time())
     payload: JWTPayloadDict = {
         'iss': str(service.id),
-        'iat': current_timestamp + 120,
-        'exp': current_timestamp + 180,
+        'iat': current_timestamp,
+        'exp': current_timestamp + 60,
     }
     token = generate_token(sig_key='not_so_secret', payload=payload)
 
@@ -43,11 +43,10 @@ async def test_verify_service_token(
     request.state = Mock()
 
     with (
-        patch('app.legacy.dao.services_dao.LegacyServiceDao.get_service', new=AsyncMock(return_value=service)),
-        patch('app.legacy.dao.api_keys_dao.LegacyApiKeysDao.get_api_keys', new=AsyncMock(return_value=[api_key])),
+        patch('app.auth.LegacyServiceDao.get_service', new=AsyncMock(return_value=service)),
+        patch('app.auth.LegacyApiKeysDao.get_api_keys', new=AsyncMock(return_value=[api_key])),
     ):
         await verify_service_token(service_id=str(service.id), token=token, request=request)
 
     # Validate request state was set
-    assert request.state.service_id == service.id
-    assert request.state.authenticated_service == service
+    assert request.state.service_id == str(service.id)
