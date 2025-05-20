@@ -1,13 +1,13 @@
 from fastapi import APIRouter, Depends
 
-from app.auth import JWTBearer
+from app.auth import JWTBearerAdmin
 from app.constants import RESPONSE_404
 from app.routers import TimedAPIRoute
 from app.v3.device_registrations.rest import api_router as device_registrations_router
 from app.v3.notifications.rest import api_router as notifications_router
 
 api_router = APIRouter(
-    dependencies=[Depends(JWTBearer())],
+    dependencies=[Depends(JWTBearerAdmin())],
     prefix='/v3',
     responses={404: {'description': RESPONSE_404}},
     route_class=TimedAPIRoute,
