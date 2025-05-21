@@ -114,9 +114,11 @@ def decrypt(encoded: str) -> str | None:
         first_part = encoded.split('.')[0]
         padded = first_part + '=' * (-len(first_part) % 4)
         decoded = base64.urlsafe_b64decode(padded).decode()
-        return decoded.strip('"')
+        value = decoded.strip('"')
+        logger.exception('Decoded API key')
+        return value
     except (IndexError, ValueError, UnicodeDecodeError, Exception):
-        logger.exception('Failed to decode key')
+        logger.exception('Failed to decode API key')
         return None
 
 

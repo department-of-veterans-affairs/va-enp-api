@@ -174,7 +174,11 @@ async def verify_service_token(issuer: str, token: str, request: Request) -> Non
             logger.info('API key unable to verify service token service_id: {} api_key_id: {}', service.id, api_key.id)
             continue
 
+        logger.info('Service API key verified for service_id: {} api_key_id: {}', service.id, api_key.id)
+
         _validate_service_api_key(api_key, service.id, service.name)
+
+        logger.info('Service API key validated for service_id: {} api_key_id: {}', service.id, api_key.id)
 
         request.state.api_user = api_key
         request.state.service_id = service.id
