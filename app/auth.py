@@ -159,7 +159,6 @@ async def verify_service_token(issuer: str, token: str, request: Request) -> Non
 
         _validate_service_api_key(api_key, service.id, service.name)
 
-        request.state.authenticated_service = service
         request.state.api_user = api_key
         request.state.service_id = service.id
 
