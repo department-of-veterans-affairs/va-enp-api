@@ -315,7 +315,7 @@ def test_validate_service_api_key_logs_warning_with_no_expiry() -> None:
         _validate_service_api_key(api_key, str(service_id), service_name)
 
         mock_warning.assert_called_once_with(
-            'service %s - %s used old-style api key %s with no expiry_date',
+            'service {} - {} used old-style api key {} with no expiry_date',
             str(service_id),
             service_name,
             api_key.id,
@@ -338,7 +338,7 @@ def test_validate_service_api_key_logs_warning_with_expired_key() -> None:
         _validate_service_api_key(api_key, str(service_id), service_name)
 
         mock_warning.assert_called_once_with(
-            'service %s - %s used expired api key %s expired as of %s',
+            'service {} - {} used expired api key {} expired as of {}',
             str(service_id),
             service_name,
             api_key.id,
