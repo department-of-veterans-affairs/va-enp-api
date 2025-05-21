@@ -93,7 +93,7 @@ class ApiKeyRecord:
             id=row.id,
             _secret_encrypted=row.secret,
             service_id=row.service_id,
-            expiry_date=row.expiry_date,
+            expiry_date=row._mapping.get('expiry_date', None),
             revoked=row.revoked,
         )
 
