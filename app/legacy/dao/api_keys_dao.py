@@ -1,10 +1,11 @@
 """The data access objects for API keys."""
 
-import base64
+import os
 from dataclasses import dataclass
 from datetime import datetime
 from typing import Any, Optional, Sequence
 
+from itsdangerous import URLSafeSerializer
 from pydantic import UUID4
 from sqlalchemy import Row, select
 
@@ -98,22 +99,34 @@ class ApiKeyRecord:
 # TODO: temp "decrypt" until isdangerous added or proper encryption implemented
 # does not verify signature
 def decrypt(token: str) -> str:
-    """Splits the token on '.' and base64-decodes the first part.
+    """Verify and deserialize a token using itsdangerous.URLSafeSerializer.
 
     Args:
-        token (str): A string with base64-encoded segments separated by '.'
+        token (str): A signed token string containing a base64-encoded payload and signature.
 
     Returns:
-        bytes: Decoded first segment (e.g., JWT header or payload)
-
-    Raises:
-        ValueError: If the token is malformed or not decodable
+        str: The original value encoded in the token.
     """
-    try:
-        first_part = token.split('.', 1)[0]
-        # Pad to correct base64 length (multiple of 4)
-        padded = first_part + '=' * (-len(first_part) % 4)
-        decoded = base64.urlsafe_b64decode(padded).decode()
-        return decoded.strip('"')
-    except Exception as e:
-        raise ValueError(f'Invalid base64 prefix: {e}') from e
+    SECRET_KEY = os.getenv('SECRET_KEY', 'dev-notify-secret-key')
+    DANGEROUS_SALT = os.getenv('DANGEROUS_SALT', 'dev-notify-salt ')
+
+    serializer = URLSafeSerializer(SECRET_KEY)
+    return str(serializer.loads(token, salt=DANGEROUS_SALT))
+
+
+# TODO: temp "encrypt" until isdangerous added or proper encryption implemented
+# does not verify signature
+def encrypt(token: str) -> str:
+    """Serialize and sign a string using itsdangerous.URLSafeSerializer.
+
+    Args:
+        token (str): The string to encrypt.
+
+    Returns:
+        str: A URL-safe, signed string containing the encrypted payload.
+    """
+    SECRET_KEY = os.getenv('SECRET_KEY', 'dev-notify-secret-key')
+    DANGEROUS_SALT = os.getenv('DANGEROUS_SALT', 'dev-notify-salt ')
+
+    serializer = URLSafeSerializer(SECRET_KEY)
+    return str(serializer.dumps(token, salt=DANGEROUS_SALT))

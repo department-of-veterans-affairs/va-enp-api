@@ -1,6 +1,5 @@
 """Test module for app/legacy/v2/notifications/rest.py."""
 
-import base64
 import time
 from typing import Any, Awaitable, Callable, ClassVar
 from unittest.mock import AsyncMock, patch
@@ -13,6 +12,7 @@ from sqlalchemy import Row
 
 from app.auth import ACCESS_TOKEN_EXPIRE_SECONDS, JWTPayloadDict
 from app.constants import IdentifierType, MobileAppType
+from app.legacy.dao.api_keys_dao import encrypt
 from app.legacy.v2.notifications.resolvers import (
     DirectSmsTaskResolver,
     IdentifierSmsTaskResolver,
@@ -159,7 +159,7 @@ class TestNotificationRouter:
         service = await sample_service()
 
         secret = 'not_so_secret'
-        encrypted_secret = f'{base64.b64encode(secret.encode()).decode()}.signature'
+        encrypted_secret = encrypt(secret)
         api_key = await sample_api_key(service_id=service.id, secret=encrypted_secret)
 
         current_timestamp = int(time.time())

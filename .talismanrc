@@ -12,7 +12,7 @@ fileignoreconfig:
 - filename: app/db/__init__.py
   checksum: 66575249d84eff02f539737ad2fa9f5a59b1b8982b5a3b8ff114e309ef62303d
 - filename: app/legacy/dao/api_keys_dao.py
-  checksum: 66ecfc9dddddb016917c5d1833b3558448b41d1a5c22d312da1bec5573053d89
+  checksum: 9a4275cad153ea854aae6e36675145b225b41ffb9b62b9839069d8c5c24ee115
 - filename: app/legacy/dao/notifications_dao.py
   checksum: fceabe858d02440756f122b5ac34e2464060644cf07f731b04dcae72476bb1d2
 - filename: app/legacy/v2/notifications/process_notifications.py
@@ -43,7 +43,7 @@ fileignoreconfig:
 - filename: tests/app/legacy/dao/test_api_keys.py
   checksum: eb409a9f783b8d2f3a2cabc3f97a2d95ee3c7d8b506f4f28ad3411454ff41ec9
 - filename: tests/app/legacy/v2/notifications/test_rest.py
-  checksum: 1099b2bb6d4da368bd921caac6e910a7eb5513389c7fff767f5f81b6c62b6971
+  checksum: 6d51112f49809d8f5ae22d6183394e70b17940b558d07bad01ef93e202dd039b
 - filename: tests/app/providers/__init__.py
   checksum: 0e3ae2fd3a50245a8c143d31c4316b164b51161d2db6e660aa956b78eda1b4d8
 - filename: tests/app/providers/test_provider_aws.py
@@ -51,7 +51,7 @@ fileignoreconfig:
 - filename: tests/app/test_auth.py
   checksum: 226aa9c19f7d95cd797f454071e4ae603e521a3751b08eb26c3d2fdaaca15313
 - filename: tests/app/legacy/v2/notifications/test_auth.py
-  checksum: 226aa9c19f7d95cd797f454071e4ae603e521a3751b08eb26c3d2fdaaca15313
+  checksum: 7e30a53c04433926e73ec42d596bd57c24206348e405b6ab2a5e5c17ecc2153e
 - filename: tests/conftest.py
   checksum: 368221589cf910730d5d987d7c8cd58a071c6dc7f3ecd26095cd6c578ed96da5
 - filename: tests/app/legacy/test_samples.py

@@ -18,6 +18,7 @@ botocore = "*"
 fastapi = {extras = ["standard"], version = "*"}
 pyjwt = "*"
 gunicorn = "*"
+itsdangerous = "*"
 loguru = "*"
 phonenumbers = "*"
 psycopg = {extras = ["binary"], version = "*"}
