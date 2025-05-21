@@ -144,6 +144,11 @@ async def verify_service_token(issuer: str, token: str, request: Request) -> Non
     """
     service = await get_active_service_for_issuer(issuer)
 
+    logger.info(
+        'Attempting to Lookup service API keys for service_id: %s',
+        service.id,
+    )
+
     try:
         api_keys = await LegacyApiKeysDao.get_api_keys(service.id)
     except NoResultFound:
@@ -152,9 +157,11 @@ async def verify_service_token(issuer: str, token: str, request: Request) -> Non
     for row in api_keys:
         api_key = ApiKeyRecord.from_row(row)
         if api_key.secret is None:
+            logger.info('API key for service has no secret service_id: %s api_key_id: %s', service.id, api_key.id)
             continue
 
         if not _verify_service_token(token, api_key):
+            logger.info('API key unable to verify service token service_id: %s api_key_id: %s', service.id, api_key.id)
             continue
 
         _validate_service_api_key(api_key, service.id, service.name)
@@ -187,6 +194,11 @@ async def get_active_service_for_issuer(issuer: str) -> Row[Any]:
             - 403 if the service is not found.
             - 403 if the service is found but marked as archived (inactive).
     """
+    logger.info(
+        'Attempting to Lookup service by issuer: %s',
+        issuer,
+    )
+
     try:
         service_id = UUID4(issuer)
         service = await LegacyServiceDao.get_service(service_id)
@@ -197,6 +209,13 @@ async def get_active_service_for_issuer(issuer: str) -> Row[Any]:
 
     if not service.active:
         raise HTTPException(status_code=403, detail='Invalid token: service is archived')
+
+    logger.info(
+        'Found service_id: %s service_name: %s for issuer: %s',
+        service.id,
+        service.name,
+        issuer,
+    )
 
     return service
 
