@@ -5,7 +5,8 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import Any, Optional, Sequence
 
-from itsdangerous import URLSafeSerializer
+from itsdangerous import BadData, BadSignature, URLSafeSerializer
+from loguru import logger
 from pydantic import UUID4
 from sqlalchemy import Row, select
 
@@ -98,7 +99,7 @@ class ApiKeyRecord:
 
 # TODO: temp "decrypt" until isdangerous added or proper encryption implemented
 # does not verify signature
-def decrypt(token: str) -> str:
+def decrypt(token: str) -> str | None:
     """Verify and deserialize a token using itsdangerous.URLSafeSerializer.
 
     Args:
@@ -110,8 +111,12 @@ def decrypt(token: str) -> str:
     SECRET_KEY = os.getenv('SECRET_KEY', 'dev-notify-secret-key')
     DANGEROUS_SALT = os.getenv('DANGEROUS_SALT', 'dev-notify-salt ')
 
-    serializer = URLSafeSerializer(SECRET_KEY)
-    return str(serializer.loads(token, salt=DANGEROUS_SALT))
+    try:
+        serializer = URLSafeSerializer(SECRET_KEY)
+        return str(serializer.loads(token, salt=DANGEROUS_SALT))
+    except (BadSignature, BadData):
+        logger.exception('Failed to decode key')
+        return None
 
 
 # TODO: temp "encrypt" until isdangerous added or proper encryption implemented
