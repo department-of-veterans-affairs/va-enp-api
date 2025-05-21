@@ -1,7 +1,7 @@
 """Test legacy auth."""
 
 import time
-from datetime import UTC, datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Any, Awaitable, Callable, Type
 from unittest.mock import AsyncMock, Mock, patch
 from uuid import uuid4
@@ -329,7 +329,7 @@ def test_validate_service_api_key_logs_warning_with_expired_key() -> None:
         id=uuid4(),
         _secret_encrypted='encrypted_secret',
         service_id=service_id,
-        expiry_date=datetime.now(UTC) - timedelta(days=1),
+        expiry_date=datetime.now(timezone.utc) - timedelta(days=1),
         revoked=False,
     )
 

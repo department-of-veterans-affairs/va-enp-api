@@ -2,7 +2,7 @@
 
 import os
 import time
-from datetime import UTC, datetime
+from datetime import datetime, timezone
 from typing import Any, TypedDict, cast
 from uuid import uuid4
 
@@ -248,7 +248,7 @@ def _validate_service_api_key(api_key: ApiKeyRecord, service_id: str, service_na
     if api_key.revoked:
         raise HTTPException(status_code=403, detail='Invalid token: API key revoked')
 
-    if api_key.expiry_date is not None and api_key.expiry_date < datetime.now(UTC):
+    if api_key.expiry_date is not None and api_key.expiry_date < datetime.now(timezone.utc):
         logger.warning(
             'service {} - {} used expired api key {} expired as of {}',
             service_id,
