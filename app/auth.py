@@ -145,7 +145,7 @@ async def verify_service_token(issuer: str, token: str, request: Request) -> Non
     service = await get_active_service_for_issuer(issuer)
 
     logger.info(
-        'Attempting to Lookup service API keys for service_id: %s',
+        'Attempting to Lookup service API keys for service_id: {}',
         service.id,
     )
 
@@ -157,11 +157,11 @@ async def verify_service_token(issuer: str, token: str, request: Request) -> Non
     for row in api_keys:
         api_key = ApiKeyRecord.from_row(row)
         if api_key.secret is None:
-            logger.info('API key for service has no secret service_id: %s api_key_id: %s', service.id, api_key.id)
+            logger.info('API key for service has no secret service_id: {} api_key_id: {}', service.id, api_key.id)
             continue
 
         if not _verify_service_token(token, api_key):
-            logger.info('API key unable to verify service token service_id: %s api_key_id: %s', service.id, api_key.id)
+            logger.info('API key unable to verify service token service_id: {} api_key_id: {}', service.id, api_key.id)
             continue
 
         _validate_service_api_key(api_key, service.id, service.name)
@@ -195,7 +195,7 @@ async def get_active_service_for_issuer(issuer: str) -> Row[Any]:
             - 403 if the service is found but marked as archived (inactive).
     """
     logger.info(
-        'Attempting to Lookup service by issuer: %s',
+        'Attempting to Lookup service by issuer: {}',
         issuer,
     )
 
@@ -211,7 +211,7 @@ async def get_active_service_for_issuer(issuer: str) -> Row[Any]:
         raise HTTPException(status_code=403, detail='Invalid token: service is archived')
 
     logger.info(
-        'Found service_id: %s service_name: %s for issuer: %s',
+        'Found service_id: {} service_name: {} for issuer: {}',
         service.id,
         service.name,
         issuer,
@@ -237,7 +237,7 @@ def _validate_service_api_key(api_key: ApiKeyRecord, service_id: str, service_na
 
     if api_key.expiry_date is not None and api_key.expiry_date < datetime.now(UTC):
         logger.warning(
-            'service %s - %s used expired api key %s expired as of %s',
+            'service {} - {} used expired api key {} expired as of {}',
             service_id,
             service_name,
             api_key.id,
@@ -245,7 +245,7 @@ def _validate_service_api_key(api_key: ApiKeyRecord, service_id: str, service_na
         )
     elif api_key.expiry_date is None:
         logger.warning(
-            'service %s - %s used old-style api key %s with no expiry_date',
+            'service {} - {} used old-style api key {} with no expiry_date',
             service_id,
             service_name,
             api_key.id,

@@ -6,7 +6,7 @@ fileignoreconfig:
 - filename: .github/workflows/deploy.yml
   checksum: fc90179b23528cc9668f868361e0889635deb8ebd4b78ff738f4143a151b3e64
 - filename: app/auth.py
-  checksum: 5916e093e7aaa8245489323219e3ce2846bb68902b854863ada0ad0ac9c30828
+  checksum: 0d150806866abc2954a8d21da9942c78febfa83f8948786d58846a3b562354d1
 - filename: app/clients/va_profile.py
   checksum: 4c15663b347f4d79d8daa63e2083258a7fc7493efa699245a2d9fd0378ada694
 - filename: app/db/__init__.py
