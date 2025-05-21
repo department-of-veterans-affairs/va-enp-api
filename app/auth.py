@@ -4,6 +4,7 @@ import os
 import time
 from datetime import UTC, datetime
 from typing import Any, TypedDict, cast
+from uuid import uuid4
 
 import jwt
 from fastapi import HTTPException, Request
@@ -142,7 +143,13 @@ async def verify_service_token(issuer: str, token: str, request: Request) -> Non
             - If the token is expired beyond the allowed leeway.
             - If the matching API key is revoked.
     """
+    # Set the id here for tracking purposes - becomes notification id
+    request.state.request_id = str(uuid4())
+
     service = await get_active_service_for_issuer(issuer)
+
+    # should be at botton
+    request.state.service_id = service.id
 
     logger.info(
         'Attempting to Lookup service API keys for service_id: {}',
@@ -211,9 +218,8 @@ async def get_active_service_for_issuer(issuer: str) -> Row[Any]:
         raise HTTPException(status_code=403, detail='Invalid token: service is archived')
 
     logger.info(
-        'Found service_id: {} service_name: {} for issuer: {}',
+        'Found service_id: {} for issuer: {}',
         service.id,
-        service.name,
         issuer,
     )
 

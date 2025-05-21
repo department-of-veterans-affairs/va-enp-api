@@ -95,7 +95,7 @@ class ApiKeyRecord:
         )
 
 
-# TODO: temp "decrypt" until isdangerous added
+# TODO: temp "decrypt" until isdangerous added or proper encryption implemented
 # does not verify signature
 def decrypt(token: str) -> str:
     """Splits the token on '.' and base64-decodes the first part.
@@ -113,6 +113,7 @@ def decrypt(token: str) -> str:
         first_part = token.split('.', 1)[0]
         # Pad to correct base64 length (multiple of 4)
         padded = first_part + '=' * (-len(first_part) % 4)
-        return base64.urlsafe_b64decode(padded).decode()
+        decoded = base64.urlsafe_b64decode(padded).decode()
+        return decoded.strip('"')
     except Exception as e:
         raise ValueError(f'Invalid base64 prefix: {e}') from e
