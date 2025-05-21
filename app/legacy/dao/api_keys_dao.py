@@ -1,11 +1,12 @@
 """The data access objects for API keys."""
 
+import base64
 import os
 from dataclasses import dataclass
 from datetime import datetime
 from typing import Any, Optional, Sequence
 
-from itsdangerous import BadData, BadSignature, URLSafeSerializer
+from itsdangerous import URLSafeSerializer
 from loguru import logger
 from pydantic import UUID4
 from sqlalchemy import Row, select
@@ -99,22 +100,22 @@ class ApiKeyRecord:
 
 # TODO: temp "decrypt" until isdangerous added or proper encryption implemented
 # does not verify signature
-def decrypt(token: str) -> str | None:
-    """Verify and deserialize a token using itsdangerous.URLSafeSerializer.
+def decrypt(encoded: str) -> str | None:
+    """Base64url-decode the first segment of a token and remove surrounding quotes.
 
     Args:
-        token (str): A signed token string containing a base64-encoded payload and signature.
+        encoded (str): A string with base64url-encoded segments separated by '.'.
 
     Returns:
-        str: The original value encoded in the token.
+        str | None: The decoded first segment as a string, with quotes stripped,
+                    or None if decoding fails.
     """
-    SECRET_KEY = os.getenv('SECRET_KEY', 'dev-notify-secret-key')
-    DANGEROUS_SALT = os.getenv('DANGEROUS_SALT', 'dev-notify-salt ')
-
     try:
-        serializer = URLSafeSerializer(SECRET_KEY)
-        return str(serializer.loads(token, salt=DANGEROUS_SALT))
-    except (BadSignature, BadData):
+        first_part = encoded.split('.')[0]
+        padded = first_part + '=' * (-len(first_part) % 4)
+        decoded = base64.urlsafe_b64decode(padded).decode()
+        return decoded.strip('"')
+    except (IndexError, ValueError, UnicodeDecodeError, Exception):
         logger.exception('Failed to decode key')
         return None
 
