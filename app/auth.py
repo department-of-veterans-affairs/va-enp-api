@@ -164,7 +164,9 @@ async def verify_service_token(issuer: str, token: str, request: Request) -> Non
     for row in api_keys:
         api_key = ApiKeyRecord.from_row(row)
 
-        logger.info('Checking API key for service_id: {} api_key_id: {}', service.id, api_key.id)
+        logger.info(
+            'Checking API key for service_id: {} service_name: {} api_key_id: {}', service.id, service.name, api_key.id
+        )
 
         if api_key.secret is None:
             logger.info('API key for service has no secret service_id: {} api_key_id: {}', service.id, api_key.id)
