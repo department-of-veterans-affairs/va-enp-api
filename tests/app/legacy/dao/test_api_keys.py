@@ -13,6 +13,7 @@ from sqlalchemy.engine import Row
 from sqlalchemy.exc import (
     DataError,
     InterfaceError,
+    NoResultFound,
     OperationalError,
     SQLAlchemyError,
     TimeoutError,
@@ -112,6 +113,7 @@ class TestLegacyApiKeysDao:
     @pytest.mark.parametrize(
         ('raised_exception', 'expected_error'),
         [
+            (NoResultFound(), NonRetryableError),
             (DataError('stmt', 'params', Exception('orig')), NonRetryableError),
             (OperationalError('stmt', 'params', Exception('orig')), RetryableError),
             (InterfaceError('stmt', 'params', Exception('orig')), RetryableError),

@@ -14,6 +14,7 @@ from pydantic import UUID4
 from sqlalchemy import Row
 from sqlalchemy.exc import DataError, NoResultFound
 
+from app.exceptions import NonRetryableError, RetryableError
 from app.legacy.dao.api_keys_dao import ApiKeyRecord, LegacyApiKeysDao
 from app.legacy.dao.services_dao import LegacyServiceDao
 
@@ -164,51 +165,67 @@ async def verify_service_token(issuer: str, token: str, request: Request) -> Non
 
     try:
         api_keys = await LegacyApiKeysDao.get_api_keys(service.id)
-    except NoResultFound:
+    except (RetryableError, NonRetryableError):
+        logger.info(
+            'No API keys found for service_id: {} request_id: {}',
+            service.id,
+            request_id,
+        )
         raise HTTPException(status_code=403, detail='Invalid token: service has no API keys')
 
     for row in api_keys:
         api_key = ApiKeyRecord.from_row(row)
 
         logger.info(
-            'Checking API key for service_id: {} service_name: {} api_key_id: {}', service.id, service.name, api_key.id
+            'Checking API key for service_id: {} service_name: {} api_key_id: {} request_id: {}',
+            service.id,
+            service.name,
+            api_key.id,
+            request_id,
         )
 
         if api_key.secret is None:
-            logger.info('API key for service has no secret service_id: {} api_key_id: {}', service.id, api_key.id)
+            logger.info(
+                'API key for service has no secret service_id: {} api_key_id: {} request_id: {}',
+                service.id,
+                api_key.id,
+                request_id,
+            )
             continue
 
         if not _verify_service_token(token, api_key):
-            logger.info('API key unable to verify service token service_id: {} api_key_id: {}', service.id, api_key.id)
+            logger.info(
+                'API key unable to verify service token service_id: {} api_key_id: {} request_id: {}',
+                service.id,
+                api_key.id,
+                request_id,
+            )
             continue
 
         logger.info(
-            'Service API key verified for service_id: {} api_key_id: {} api_key.revoked: {} api_key.expiry_date {} type {}, tz {}',
+            'Service API key verified for service_id: {} api_key_id: {} request_id: {}',
             service.id,
             api_key.id,
-            api_key.revoked,
-            api_key.expiry_date,
-            type(api_key.expiry_date),
-            api_key.expiry_date.tzinfo if api_key.expiry_date else None,
+            request_id,
         )
 
         _validate_service_api_key(api_key, service.id, service.name)
 
         logger.info(
-            'Service auth token validated for request_id: {} service_id: {} api_key_id: {}',
-            request_id,
+            'Service auth token validated for service_id: {} api_key_id: {} request_id: {}',
             service.id,
             api_key.id,
+            request_id,
         )
 
         request.state.api_user = api_key
         request.state.service_id = service.id
 
         logger.info(
-            'Service auth token authenticated for request_id: {} service_id: {} api_key_id: {}',
-            request_id,
+            'Service auth token authenticated for service_id: {} api_key_id: {} request_id: {}',
             service.id,
             api_key.id,
+            request_id,
         )
 
         return
@@ -278,8 +295,6 @@ def _validate_service_api_key(api_key: ApiKeyRecord, service_id: str, service_na
     # TODO notification-api-2309 - The revoked field is added as a temporary measure until we can implement proper use of the expiry date
     if api_key.revoked:
         raise HTTPException(status_code=403, detail='Invalid token: API key revoked')
-
-    logger.info('api key not revoked')
 
     if api_key.expiry_date is not None and api_key.expiry_date < datetime.now(timezone.utc):
         logger.warning(

@@ -6,7 +6,7 @@ fileignoreconfig:
 - filename: .github/workflows/deploy.yml
   checksum: fc90179b23528cc9668f868361e0889635deb8ebd4b78ff738f4143a151b3e64
 - filename: app/auth.py
-  checksum: 54696af35e98cabb5f306c05c366fcc0b017a3db6afa9833ea24a6c908ee67fe
+  checksum: 6e85f8eb13c2a97e859dd580b34c6f3514b7d416b6a0c65dc70dc1c77f02d1d2
 - filename: app/clients/va_profile.py
   checksum: 4c15663b347f4d79d8daa63e2083258a7fc7493efa699245a2d9fd0378ada694
 - filename: app/db/__init__.py
@@ -51,7 +51,7 @@ fileignoreconfig:
 - filename: tests/app/test_auth.py
   checksum: 81670e50973a2aff2508a1dafc62639351998f14826d322069c1584b85c5fe2b
 - filename: tests/app/legacy/v2/notifications/test_auth.py
-  checksum: 81670e50973a2aff2508a1dafc62639351998f14826d322069c1584b85c5fe2b
+  checksum: f0f4bfb69d357d09bc44636b1fcaf5b964a972ce8996609689b650868788e232
 - filename: tests/conftest.py
   checksum: 368221589cf910730d5d987d7c8cd58a071c6dc7f3ecd26095cd6c578ed96da5
 - filename: tests/app/legacy/test_samples.py

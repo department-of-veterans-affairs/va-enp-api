@@ -29,6 +29,7 @@ from app.auth import (
     validate_jwt_token,
     verify_service_token,
 )
+from app.exceptions import NonRetryableError
 from app.legacy.dao.api_keys_dao import ApiKeyRecord, encode_and_sign
 from tests.conftest import generate_token, generate_token_with_partial_payload
 
@@ -99,7 +100,7 @@ async def test_verify_service_token_raises_with_no_api_keys(
 
     with (
         patch('app.auth.LegacyServiceDao.get_service', new=AsyncMock(return_value=service)),
-        patch('app.auth.LegacyApiKeysDao.get_api_keys', side_effect=NoResultFound),
+        patch('app.auth.LegacyApiKeysDao.get_api_keys', side_effect=NonRetryableError),
     ):
         with pytest.raises(HTTPException) as exc_info:
             await verify_service_token(issuer=payload['iss'], token=token, request=request)
