@@ -2,10 +2,21 @@
 
 from typing import Any
 
+from loguru import logger
 from pydantic import UUID4
 from sqlalchemy import Row, select
+from sqlalchemy.exc import (
+    DataError,
+    InterfaceError,
+    MultipleResultsFound,
+    NoResultFound,
+    OperationalError,
+    SQLAlchemyError,
+    TimeoutError,
+)
 
 from app.db.db_init import get_read_session_with_context, metadata_legacy
+from app.exceptions import NonRetryableError, RetryableError
 
 
 class LegacyServiceDao:
@@ -16,25 +27,39 @@ class LegacyServiceDao:
     """
 
     @staticmethod
-    async def get_service(id: UUID4) -> Row[Any]:
+    async def get_service(service_id: UUID4) -> Row[Any]:
         """Retrieve a single service row by its ID.
 
         Args:
-            id (UUID4): The unique identifier of the service to retrieve.
+            service_id (UUID4): The unique identifier of the service to retrieve.
 
         Returns:
             Row[Any]: A SQLAlchemy Core Row object containing the service data.
 
-        Notes:
-            - This method uses a managed read-only session.
-            - The returned row is detached and safe to inspect outside the session scope.
-            - This is a low-level data access method; it does not perform any business logic.
+        Raises:
+            RetryableError: If the failure is likely transient (e.g., connection error).
+            NonRetryableError: If the failure is deterministic (e.g., not found, bad input).
         """
         legacy_services = metadata_legacy.tables['services']
 
-        stmt = select(legacy_services).where(legacy_services.c.id == id)
+        stmt = select(legacy_services).where(legacy_services.c.id == service_id)
 
-        async with get_read_session_with_context() as session:
-            result = await session.execute(stmt)
+        try:
+            async with get_read_session_with_context() as session:
+                result = await session.execute(stmt)
 
-        return result.one()
+            return result.one()
+
+        except (NoResultFound, MultipleResultsFound, DataError) as e:
+            # These are deterministic and will likely fail again
+            logger.exception('Service lookup failed: invalid or unexpected data for service_id: {}', service_id)
+            raise NonRetryableError('Service lookup failed: invalid or unexpected data.') from e
+
+        except (OperationalError, InterfaceError, TimeoutError) as e:
+            # Transient DB issues that may succeed on retry
+            logger.warning('Service lookup failed due to a transient database error for service_id: {}', service_id)
+            raise RetryableError('Service lookup failed due to a transient database error.') from e
+
+        except SQLAlchemyError as e:
+            logger.exception('Unexpected SQLAlchemy error during service lookup for service_id: {}', service_id)
+            raise NonRetryableError('Unexpected SQLAlchemy error during service lookup.') from e

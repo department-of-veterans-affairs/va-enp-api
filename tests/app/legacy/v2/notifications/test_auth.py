@@ -29,7 +29,7 @@ from app.auth import (
     validate_jwt_token,
     verify_service_token,
 )
-from app.legacy.dao.api_keys_dao import ApiKeyRecord, encrypt
+from app.legacy.dao.api_keys_dao import ApiKeyRecord, encode_and_sign
 from tests.conftest import generate_token, generate_token_with_partial_payload
 
 
@@ -48,7 +48,7 @@ async def test_verify_service_token_with_valid_token_and_service(
     # Create a sample service and API key
     service = await sample_service()
     secret = 'not_so_secret'
-    encrypted_secret = encrypt(secret)
+    encrypted_secret = encode_and_sign(secret)
     api_key = await sample_api_key(service_id=service.id, secret=encrypted_secret)
 
     current_timestamp = int(time.time())
@@ -163,7 +163,7 @@ async def test_verify_service_token_raises_with_no_valid_api_keys(
     # Create a sample service and API key
     service = await sample_service()
     secret = 'not_so_secret'
-    encrypted_secret = encrypt(secret)
+    encrypted_secret = encode_and_sign(secret)
     api_key = await sample_api_key(service_id=service.id, secret=encrypted_secret)
 
     current_timestamp = int(time.time())
@@ -241,7 +241,7 @@ async def test_get_active_service_for_issuer_with_inactive_service(
 def test_verify_service_token_with_bad_token() -> None:
     """Should return False for an invalid JWT token."""
     secret = 'not_so_secret'
-    encrypted_secret = encrypt(secret)
+    encrypted_secret = encode_and_sign(secret)
     api_key = ApiKeyRecord(
         id=uuid4(),
         _secret_encrypted=encrypted_secret,
@@ -255,7 +255,7 @@ def test_verify_service_token_with_bad_token() -> None:
 def test_verify_service_token_with_expired_token() -> None:
     """Should raise 403 if the token is issued too far in the future."""
     secret = 'not_so_secret'
-    encrypted_secret = encrypt(secret)
+    encrypted_secret = encode_and_sign(secret)
     service_id = uuid4()
     api_key = ApiKeyRecord(
         id=uuid4(),

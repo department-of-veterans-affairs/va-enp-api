@@ -10,8 +10,16 @@ from itsdangerous import URLSafeSerializer
 from loguru import logger
 from pydantic import UUID4
 from sqlalchemy import Row, select
+from sqlalchemy.exc import (
+    DataError,
+    InterfaceError,
+    OperationalError,
+    SQLAlchemyError,
+    TimeoutError,
+)
 
 from app.db.db_init import get_read_session_with_context, metadata_legacy
+from app.exceptions import NonRetryableError, RetryableError
 
 
 class LegacyApiKeysDao:
@@ -32,17 +40,35 @@ class LegacyApiKeysDao:
             list[Row[Any]]: A list of rows from the 'api_keys' table, each representing an API key
             associated with the specified service.
 
-        Notes:
-            - This method uses a read-only session context.
-            - The returned rows are detached SQLAlchemy Core Row objects, not ORM models.
+        Raises:
+            RetryableError: If the failure is likely transient (e.g., connection error).
+            NonRetryableError: If the failure is deterministic (e.g., bad input).
         """
         legacy_api_keys = metadata_legacy.tables['api_keys']
         stmt = select(legacy_api_keys).where(legacy_api_keys.c.service_id == service_id)
 
-        async with get_read_session_with_context() as session:
-            result = await session.execute(stmt)
+        try:
+            async with get_read_session_with_context() as session:
+                result = await session.execute(stmt)
 
-        return result.fetchall()
+            return result.fetchall()
+
+        except DataError as e:
+            # Deterministic and will likely fail again
+            logger.exception(
+                'Service API keys lookup failed, invalid or unexpected data for service_id: {}', service_id
+            )
+            raise NonRetryableError('Service API keys lookup failed, invalid or unexpected data') from e
+
+        except (OperationalError, InterfaceError, TimeoutError) as e:
+            # Transient DB issues that may succeed on retry
+            fail_message = 'Service API keys lookup failed due to a transient database error.'
+            logger.warning(fail_message)
+            raise RetryableError(fail_message) from e
+
+        except SQLAlchemyError as e:
+            logger.exception('Uexpected SQLAlchemy error during service API keys lookup for service_id: {}', service_id)
+            raise NonRetryableError('Uexpected SQLAlchemy error during service API keys lookup.') from e
 
 
 @dataclass
@@ -58,25 +84,25 @@ class ApiKeyRecord:
     """
 
     id: UUID4
-    _secret_encrypted: str
+    _secret_encrypted: Optional[str]
     service_id: UUID4
     expiry_date: Optional[datetime]
     revoked: bool
 
     @property
     def secret(self) -> Optional[str]:
-        """Decrypt and return the API key's secret.
+        """Decode and return the API key's secret.
 
         Returns:
-            Optional[str]: The decrypted secret, or None if no secret is present.
-
-        Notes:
-            If the decryption fails due to an invalid format, a ValueError may be raised.
-            This is currently unhandled and should be addressed in future revisions.
+            Optional[str]: The decoded secret, or None if no secret is present.
         """
         if self._secret_encrypted is not None:
-            # TODO: catch and log ValueError
-            return decrypt(self._secret_encrypted)
+            try:
+                return decode_and_remove_signature(self._secret_encrypted)
+            except NonRetryableError:
+                logger.error(
+                    'Failed to decode API key secret for service_id: {} api_key_id: {}', self.service_id, self.id
+                )
         return None
 
     @classmethod
@@ -104,7 +130,7 @@ class ApiKeyRecord:
 
 # TODO: temp "decrypt" until isdangerous added or proper encryption implemented
 # does not verify signature
-def decrypt(encoded: str) -> str | None:
+def decode_and_remove_signature(encoded: str) -> str | None:
     """Base64url-decode the first segment of a token and remove surrounding quotes.
 
     Args:
@@ -113,29 +139,31 @@ def decrypt(encoded: str) -> str | None:
     Returns:
         str | None: The decoded first segment as a string, with quotes stripped,
                     or None if decoding fails.
+
+    Raises:
+        NonRetryableError: decoding fails
     """
     try:
+        # all included in try/catch
         first_part = encoded.split('.')[0]
         padded = first_part + '=' * (-len(first_part) % 4)
         decoded = base64.urlsafe_b64decode(padded).decode()
         value = decoded.strip('"')
-        logger.exception('Decoded API key')
-        return value
     except (IndexError, ValueError, UnicodeDecodeError, Exception):
-        logger.exception('Failed to decode API key')
-        return None
+        raise NonRetryableError('Failure decoding value')
+    return value
 
 
 # TODO: temp "encrypt" until isdangerous added or proper encryption implemented
 # does not verify signature
-def encrypt(token: str) -> str:
+def encode_and_sign(token: str) -> str:
     """Serialize and sign a string using itsdangerous.URLSafeSerializer.
 
     Args:
-        token (str): The string to encrypt.
+        token (str): The string to encode.
 
     Returns:
-        str: A URL-safe, signed string containing the encrypted payload.
+        str: A URL-safe, signed string containing the encoded and signed payload.
     """
     SECRET_KEY = os.getenv('SECRET_KEY', 'dev-notify-secret-key')
     DANGEROUS_SALT = os.getenv('DANGEROUS_SALT', 'dev-notify-salt ')

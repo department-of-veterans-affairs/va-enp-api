@@ -12,7 +12,7 @@ from sqlalchemy import Row
 
 from app.auth import ACCESS_TOKEN_EXPIRE_SECONDS, JWTPayloadDict
 from app.constants import IdentifierType, MobileAppType
-from app.legacy.dao.api_keys_dao import encrypt
+from app.legacy.dao.api_keys_dao import encode_and_sign
 from app.legacy.v2.notifications.resolvers import (
     DirectSmsTaskResolver,
     IdentifierSmsTaskResolver,
@@ -159,7 +159,7 @@ class TestNotificationRouter:
         service = await sample_service()
 
         secret = 'not_so_secret'
-        encrypted_secret = encrypt(secret)
+        encrypted_secret = encode_and_sign(secret)
         api_key = await sample_api_key(service_id=service.id, secret=encrypted_secret)
 
         current_timestamp = int(time.time())
