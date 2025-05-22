@@ -177,12 +177,13 @@ async def verify_service_token(issuer: str, token: str, request: Request) -> Non
             continue
 
         logger.info(
-            'Service API key verified for service_id: {} api_key_id: {} api_key.revoked: {} api_key.expiry_date {} type {}',
+            'Service API key verified for service_id: {} api_key_id: {} api_key.revoked: {} api_key.expiry_date {} type {}, tz {}',
             service.id,
             api_key.id,
             api_key.revoked,
             api_key.expiry_date,
             type(api_key.expiry_date),
+            api_key.expiry_date.tzinfo if api_key.expiry_date else None,
         )
 
         _validate_service_api_key(api_key, service.id, service.name)
@@ -257,24 +258,23 @@ def _validate_service_api_key(api_key: ApiKeyRecord, service_id: str, service_na
     if api_key.revoked:
         raise HTTPException(status_code=403, detail='Invalid token: API key revoked')
 
-    try:
-        if api_key.expiry_date is not None and api_key.expiry_date < datetime.now(timezone.utc):
-            logger.warning(
-                'service {} - {} used expired api key {} expired as of {}',
-                service_id,
-                service_name,
-                api_key.id,
-                api_key.expiry_date,
-            )
-        elif api_key.expiry_date is None:
-            logger.warning(
-                'service {} - {} used old-style api key {} with no expiry_date',
-                service_id,
-                service_name,
-                api_key.id,
-            )
-    except Exception:
-        logger.exception('something failed')
+    logger.info('api key not revoked')
+
+    if api_key.expiry_date is not None and api_key.expiry_date < datetime.now(timezone.utc):
+        logger.warning(
+            'service {} - {} used expired api key {} expired as of {}',
+            service_id,
+            service_name,
+            api_key.id,
+            api_key.expiry_date,
+        )
+    elif api_key.expiry_date is None:
+        logger.warning(
+            'service {} - {} used old-style api key {} with no expiry_date',
+            service_id,
+            service_name,
+            api_key.id,
+        )
 
 
 def get_token_issuer(token: str) -> str:
