@@ -11,7 +11,6 @@ from sqlalchemy import Row, select
 from sqlalchemy.exc import (
     DataError,
     InterfaceError,
-    NoResultFound,
     OperationalError,
     SQLAlchemyError,
     TimeoutError,
@@ -52,7 +51,7 @@ class LegacyApiKeysDao:
 
             return result.fetchall()
 
-        except (DataError, NoResultFound) as e:
+        except DataError as e:
             # Deterministic and will likely fail again
             logger.exception(
                 'Service API keys lookup failed, invalid or unexpected data for service_id: {}', service_id
