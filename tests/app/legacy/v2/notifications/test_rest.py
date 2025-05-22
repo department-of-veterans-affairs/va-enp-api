@@ -1,13 +1,16 @@
 """Test module for app/legacy/v2/notifications/rest.py."""
 
-from typing import ClassVar
+import time
+from typing import Any, Awaitable, Callable, ClassVar
 from unittest.mock import AsyncMock, patch
 from uuid import UUID, uuid4
 
 import pytest
 from fastapi import BackgroundTasks, status
 from fastapi.encoders import jsonable_encoder
+from sqlalchemy import Row
 
+from app.auth import ACCESS_TOKEN_EXPIRE_SECONDS, JWTPayloadDict
 from app.constants import IdentifierType, MobileAppType
 from app.legacy.v2.notifications.resolvers import (
     DirectSmsTaskResolver,
@@ -21,7 +24,8 @@ from app.legacy.v2.notifications.route_schema import (
     V2PostSmsRequestModel,
     ValidatedPhoneNumber,
 )
-from tests.conftest import ENPTestClient
+from tests.app.legacy.dao.test_api_keys import encode_and_sign
+from tests.conftest import ENPTestClient, generate_token
 
 _push_path = '/legacy/v2/notifications/push'
 
@@ -98,7 +102,7 @@ class TestNotificationRouter:
     )
 
     @pytest.mark.parametrize('route', routes)
-    async def test_happy_path(
+    async def test_happy_path_admin_auth(
         self,
         client: ENPTestClient,
         route: str,
@@ -124,6 +128,89 @@ class TestNotificationRouter:
             response = client.post(route, json=payload)
 
         assert response.status_code == status.HTTP_201_CREATED
+
+    @pytest.mark.parametrize('route', routes)
+    async def test_happy_path_service_auth(
+        self,
+        sample_api_key: Callable[..., Awaitable[Row[Any]]],
+        sample_service: Callable[..., Awaitable[Row[Any]]],
+        client_factory: Callable[[str], ENPTestClient],
+        route: str,
+    ) -> None:
+        """Should return 201 when request is authenticated with a valid service token.
+
+        Args:
+            sample_api_key (Callable): Fixture to create a sample API key.
+            sample_service (Callable): Fixture to create a sample service.
+            client_factory (Callable): Factory to create an ENPTestClient with a token.
+            route (str): Route to test.
+        """
+        template_id = uuid4()
+        sms_sender_id = uuid4()
+
+        request = V2PostSmsRequestModel(
+            reference=str(uuid4()),
+            template_id=template_id,
+            phone_number=ValidatedPhoneNumber('+18005550101'),
+            sms_sender_id=sms_sender_id,
+        )
+        request_payload = jsonable_encoder(request)
+
+        service = await sample_service()
+
+        secret = 'not_so_secret'
+        encrypted_secret = encode_and_sign(secret)
+        api_key = await sample_api_key(service_id=service.id, secret=encrypted_secret)
+
+        current_timestamp = int(time.time())
+        payload: JWTPayloadDict = {
+            'iss': str(service.id),
+            'iat': current_timestamp,
+            'exp': current_timestamp + 60,
+        }
+        token = generate_token(sig_key=secret, payload=payload)
+        client = client_factory(token)
+
+        with (
+            patch('app.auth.LegacyServiceDao.get_service', new=AsyncMock(return_value=service)),
+            patch('app.auth.LegacyApiKeysDao.get_api_keys', new=AsyncMock(return_value=[api_key])),
+            patch('app.legacy.v2.notifications.rest.validate_template', return_value=None),
+        ):
+            response = client.post(route, json=request_payload)
+
+        assert response.status_code == status.HTTP_201_CREATED
+
+    @pytest.mark.parametrize('route', routes)
+    async def test_router_returns_403_wrong_admin_secret(
+        self,
+        client_factory: Callable[[str], ENPTestClient],
+        route: str,
+    ) -> None:
+        """Test sms notification route returns 403 with wrong admin secret."""
+        payload = JWTPayloadDict(
+            iss='enp',
+            iat=int(time.time()),
+            exp=int(time.time()) + ACCESS_TOKEN_EXPIRE_SECONDS,
+        )
+        token = generate_token(sig_key='not_the_admin_secret', payload=payload)
+        client = client_factory(token)
+
+        response = client.post(route)
+
+        assert response.status_code == status.HTTP_403_FORBIDDEN
+
+    @pytest.mark.parametrize('route', routes)
+    async def test_router_returns_401_missing_credentials(
+        self,
+        client: ENPTestClient,
+        route: str,
+        mocker: AsyncMock,
+    ) -> None:
+        """Test sms notification route returns 401 with missing credentials."""
+        mocker.patch('app.auth.HTTPBearer.__call__', return_value=None)
+        response = client.post(route)
+
+        assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
     @pytest.mark.parametrize('route', routes)
     async def test_router_returns_400_with_invalid_request_data(

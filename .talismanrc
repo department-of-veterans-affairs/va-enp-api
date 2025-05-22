@@ -6,11 +6,13 @@ fileignoreconfig:
 - filename: .github/workflows/deploy.yml
   checksum: fc90179b23528cc9668f868361e0889635deb8ebd4b78ff738f4143a151b3e64
 - filename: app/auth.py
-  checksum: 06eb4b4c65191921104dc39381a937843a6ce155eeac7dc72990b5d10b5eb275
+  checksum: 6e85f8eb13c2a97e859dd580b34c6f3514b7d416b6a0c65dc70dc1c77f02d1d2
 - filename: app/clients/va_profile.py
   checksum: 4c15663b347f4d79d8daa63e2083258a7fc7493efa699245a2d9fd0378ada694
 - filename: app/db/__init__.py
   checksum: 66575249d84eff02f539737ad2fa9f5a59b1b8982b5a3b8ff114e309ef62303d
+- filename: app/legacy/dao/api_keys_dao.py
+  checksum: 9bf720f20177a4ba288bd11274a3e8e0445f58de52d939654b51ac92f18873b9
 - filename: app/legacy/dao/notifications_dao.py
   checksum: fceabe858d02440756f122b5ac34e2464060644cf07f731b04dcae72476bb1d2
 - filename: app/legacy/v2/notifications/process_notifications.py
@@ -33,21 +35,27 @@ fileignoreconfig:
   ignore_detectors:
   - filecontent
 - filename: postman/enp-api.postman_collection.json
-  checksum: 09d876de545985b9cd21e1961387f1cce2189f56cc515565b2bb3924d38e0fe3
+  checksum: a75beb668be832bdb38484e044987be0ace21a597fa1aa30ba837d3bfc94a0c7
 - filename: pyproject.toml
   checksum: c3f096a7cb18e881d609e2f0d786ed0e95466f7df20c1f2bce0ad81211e18f87
 - filename: scripts/run_tests.sh
   checksum: 80cd986074c12205493156f86b43e732777e2fae75683780006fb1baea90b82b
+- filename: tests/app/legacy/dao/conftest.py
+  checksum: c82f4eb2f484f6465fa50bb5bbbff6152c84fe4071e3724a0d91124049a2fad9
+- filename: tests/app/legacy/dao/test_api_keys.py
+  checksum: aef5985fb1111d455cee0854ac6f9cf5e91b3dbdf7a23fdba23bd1a910eed965
 - filename: tests/app/legacy/v2/notifications/test_rest.py
-  checksum: a8ea33b71cee434cc7165b29b045e325b1db809355842076abe81dc666bd924b
+  checksum: ed27544a4432fb31366788e3dfd55ac5c76fad063bd1e4388b04b2504db5565d
 - filename: tests/app/providers/__init__.py
   checksum: 0e3ae2fd3a50245a8c143d31c4316b164b51161d2db6e660aa956b78eda1b4d8
 - filename: tests/app/providers/test_provider_aws.py
   checksum: f2ed526b1a81c5c0facfd4d1e7f1a3e26194778c1909a354c98c3b042945d34d
 - filename: tests/app/test_auth.py
-  checksum: dbce38f807d54fa2776a31a3897350591569b2cfc3d73fa03f0381527c737efb
+  checksum: 81670e50973a2aff2508a1dafc62639351998f14826d322069c1584b85c5fe2b
+- filename: tests/app/legacy/v2/notifications/test_auth.py
+  checksum: f0f4bfb69d357d09bc44636b1fcaf5b964a972ce8996609689b650868788e232
 - filename: tests/conftest.py
-  checksum: 35e538d03d3a2d0b2696b9a93994b77a1a041090d160ac9518a958e640a09488
+  checksum: 368221589cf910730d5d987d7c8cd58a071c6dc7f3ecd26095cd6c578ed96da5
 - filename: tests/app/legacy/test_samples.py
   checksum: a1ba3739af869483479432aefcae8b1152e1a28f105b69b95e8fa3e02f4c8f0d
 - filename: app/legacy/dao/api_key_dao.py
