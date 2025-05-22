@@ -128,7 +128,7 @@ class ApiKeyRecord:
         )
 
 
-# TODO: temp "decrypt" until isdangerous added or proper encryption implemented
+# TODO: TEAM-1664 temp "decrypt" until isdangerous added or proper encryption implemented
 # does not verify signature
 def decode_and_remove_signature(encoded: str) -> str | None:
     """Base64url-decode the first segment of a token and remove surrounding quotes.
@@ -154,7 +154,7 @@ def decode_and_remove_signature(encoded: str) -> str | None:
     return value
 
 
-# TODO: temp "encrypt" until isdangerous added or proper encryption implemented
+# TODO: TEAM-1664 temp "encrypt" until isdangerous added or proper encryption implemented
 # does not verify signature
 def encode_and_sign(token: str) -> str:
     """Serialize and sign a string using itsdangerous.URLSafeSerializer.

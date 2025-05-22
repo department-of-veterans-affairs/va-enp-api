@@ -144,11 +144,17 @@ async def verify_service_token(issuer: str, token: str, request: Request) -> Non
             - If the matching API key is revoked.
     """
     # Set the id here for tracking purposes - becomes notification id
-    request.state.request_id = str(uuid4())
+    request_id = uuid4()
+    request.state.request_id = request_id
 
-    service = await get_active_service_for_issuer(issuer)
+    logger.info(
+        'Entering service auth token verification request_id: {}',
+        request_id,
+    )
 
-    # should be at botton
+    service = await get_active_service_for_issuer(issuer, request_id)
+
+    # TODO: remove this line once service auth working, temp to unblock parallel ticket
     request.state.service_id = service.id
 
     logger.info(
@@ -188,17 +194,29 @@ async def verify_service_token(issuer: str, token: str, request: Request) -> Non
 
         _validate_service_api_key(api_key, service.id, service.name)
 
-        logger.info('Service API key validated for service_id: {} api_key_id: {}', service.id, api_key.id)
+        logger.info(
+            'Service auth token validated for request_id: {} service_id: {} api_key_id: {}',
+            request_id,
+            service.id,
+            api_key.id,
+        )
 
         request.state.api_user = api_key
         request.state.service_id = service.id
+
+        logger.info(
+            'Service auth token authenticated for request_id: {} service_id: {} api_key_id: {}',
+            request_id,
+            service.id,
+            api_key.id,
+        )
 
         return
 
     raise HTTPException(status_code=403, detail='Invalid token: signature, api token not found')
 
 
-async def get_active_service_for_issuer(issuer: str) -> Row[Any]:
+async def get_active_service_for_issuer(issuer: str, request_id: UUID4) -> Row[Any]:
     """Validate the given issuer string as a UUID4 and return the corresponding active service.
 
     This function performs the following:
@@ -208,6 +226,7 @@ async def get_active_service_for_issuer(issuer: str) -> Row[Any]:
 
     Args:
         issuer (str): The issuer value extracted from a JWT token, expected to be a UUID4 string.
+        request_id (uuid): Current request id
 
     Returns:
         Row[Any]: A SQLAlchemy Core row representing the active service associated with the given issuer.
@@ -219,8 +238,9 @@ async def get_active_service_for_issuer(issuer: str) -> Row[Any]:
             - 403 if the service is found but marked as archived (inactive).
     """
     logger.info(
-        'Attempting to Lookup service by issuer: {}',
+        'Attempting to lookup service by issuer: {} request_id: {}',
         issuer,
+        request_id,
     )
 
     try:
@@ -235,9 +255,10 @@ async def get_active_service_for_issuer(issuer: str) -> Row[Any]:
         raise HTTPException(status_code=403, detail='Invalid token: service is archived')
 
     logger.info(
-        'Found service_id: {} for issuer: {}',
+        'Found service service_id: {} for issuer: {} request_id: {}',
         service.id,
         issuer,
+        request_id,
     )
 
     return service

@@ -192,8 +192,10 @@ async def test_verify_service_token_raises_with_no_valid_api_keys(
 
 async def test_get_active_service_for_issuer_with_invalid_issuer() -> None:
     """Should raise 403 if the issuer is not a valid UUID4 string."""
+    request_id = uuid4()
+
     with pytest.raises(HTTPException) as exc_info:
-        await get_active_service_for_issuer('not-a-uuid')
+        await get_active_service_for_issuer('not-a-uuid', request_id)
 
     exc = exc_info.value
     assert exc.status_code == 403
@@ -212,10 +214,11 @@ async def test_get_active_service_for_issuer_with_invalid_service_id(
 ) -> None:
     """Should raise 403 with correct detail if the service ID is invalid or not found."""
     issuer = str(uuid4())
+    request_id = uuid4()
 
     with patch('app.auth.LegacyServiceDao.get_service', side_effect=raises):
         with pytest.raises(HTTPException) as exc_info:
-            await get_active_service_for_issuer(issuer)
+            await get_active_service_for_issuer(issuer, request_id)
 
     exc = exc_info.value
     assert exc.status_code == 403
@@ -228,10 +231,11 @@ async def test_get_active_service_for_issuer_with_inactive_service(
     """Should raise 403 if the service is archived (inactive)."""
     service = await sample_service(active=False)
     issuer = str(service.id)
+    request_id = uuid4()
 
     with patch('app.auth.LegacyServiceDao.get_service', new=AsyncMock(return_value=service)):
         with pytest.raises(HTTPException) as exc_info:
-            await get_active_service_for_issuer(issuer)
+            await get_active_service_for_issuer(issuer, request_id)
 
     exc = exc_info.value
     assert exc.status_code == 403

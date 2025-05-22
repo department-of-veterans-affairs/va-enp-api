@@ -152,6 +152,7 @@ class TestApiKeyRecord:
         dataclass_fields = record.__dataclass_fields__.keys()
 
         # Exclude fields that required transformation, (e.g. adding timezone.utc)
+        # Excluded fields tested elsewhere
         excluded = ('expiry_date',)
 
         for column in api_key._mapping.keys():
