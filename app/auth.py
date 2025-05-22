@@ -177,11 +177,12 @@ async def verify_service_token(issuer: str, token: str, request: Request) -> Non
             continue
 
         logger.info(
-            'Service API key verified for service_id: {} api_key_id: {} api_key.revoked: {} api_key.expiry_date {}',
+            'Service API key verified for service_id: {} api_key_id: {} api_key.revoked: {} api_key.expiry_date {} type {}',
             service.id,
             api_key.id,
             api_key.revoked,
             api_key.expiry_date,
+            type(api_key.expiry_date),
         )
 
         # _validate_service_api_key(api_key, service.id, service.name)
