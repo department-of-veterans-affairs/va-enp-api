@@ -185,7 +185,7 @@ async def verify_service_token(issuer: str, token: str, request: Request) -> Non
             type(api_key.expiry_date),
         )
 
-        # _validate_service_api_key(api_key, service.id, service.name)
+        _validate_service_api_key(api_key, service.id, service.name)
 
         logger.info('Service API key validated for service_id: {} api_key_id: {}', service.id, api_key.id)
 
@@ -257,21 +257,24 @@ def _validate_service_api_key(api_key: ApiKeyRecord, service_id: str, service_na
     if api_key.revoked:
         raise HTTPException(status_code=403, detail='Invalid token: API key revoked')
 
-    if api_key.expiry_date is not None and api_key.expiry_date < datetime.now(timezone.utc):
-        logger.warning(
-            'service {} - {} used expired api key {} expired as of {}',
-            service_id,
-            service_name,
-            api_key.id,
-            api_key.expiry_date,
-        )
-    elif api_key.expiry_date is None:
-        logger.warning(
-            'service {} - {} used old-style api key {} with no expiry_date',
-            service_id,
-            service_name,
-            api_key.id,
-        )
+    try:
+        if api_key.expiry_date is not None and api_key.expiry_date < datetime.now(timezone.utc):
+            logger.warning(
+                'service {} - {} used expired api key {} expired as of {}',
+                service_id,
+                service_name,
+                api_key.id,
+                api_key.expiry_date,
+            )
+        elif api_key.expiry_date is None:
+            logger.warning(
+                'service {} - {} used old-style api key {} with no expiry_date',
+                service_id,
+                service_name,
+                api_key.id,
+            )
+    except Exception:
+        logger.exception('something failed')
 
 
 def get_token_issuer(token: str) -> str:
