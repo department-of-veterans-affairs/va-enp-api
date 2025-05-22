@@ -3,7 +3,7 @@
 import base64
 import os
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, Optional, Sequence
 
 from itsdangerous import URLSafeSerializer
@@ -89,11 +89,15 @@ class ApiKeyRecord:
         Returns:
             ApiKeyRecord: A populated instance of the ApiKeyRecord class.
         """
+        expiry = row.expiry_date
+        if expiry is not None:
+            expiry = expiry if expiry.tzinfo else expiry.replace(tzinfo=timezone.utc)
+
         return cls(
             id=row.id,
             _secret_encrypted=row.secret,
             service_id=row.service_id,
-            expiry_date=row._mapping.get('expiry_date', None),
+            expiry_date=expiry,
             revoked=row.revoked,
         )
 
