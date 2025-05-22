@@ -12,7 +12,6 @@ from sqlalchemy import Row
 
 from app.auth import ACCESS_TOKEN_EXPIRE_SECONDS, JWTPayloadDict
 from app.constants import IdentifierType, MobileAppType
-from app.legacy.dao.api_keys_dao import encode_and_sign
 from app.legacy.v2.notifications.resolvers import (
     DirectSmsTaskResolver,
     IdentifierSmsTaskResolver,
@@ -25,6 +24,7 @@ from app.legacy.v2.notifications.route_schema import (
     V2PostSmsRequestModel,
     ValidatedPhoneNumber,
 )
+from tests.app.legacy.dao.test_api_keys import encode_and_sign
 from tests.conftest import ENPTestClient, generate_token
 
 _push_path = '/legacy/v2/notifications/push'

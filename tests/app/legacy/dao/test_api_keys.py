@@ -1,14 +1,14 @@
 """Test for API keys DAO methods."""
 
-from collections.abc import AsyncGenerator
+import os
 from datetime import datetime, timezone
-from typing import Any, Awaitable, Callable, cast
+from typing import Any, Awaitable, Callable
 from unittest.mock import AsyncMock, Mock, patch
 from uuid import uuid4
 from zoneinfo import ZoneInfo
 
 import pytest
-from sqlalchemy import delete
+from itsdangerous import URLSafeSerializer
 from sqlalchemy.engine import Row
 from sqlalchemy.exc import (
     DataError,
@@ -18,61 +18,27 @@ from sqlalchemy.exc import (
     SQLAlchemyError,
     TimeoutError,
 )
-from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.db.db_init import get_write_session_with_context, metadata_legacy
 from app.exceptions import NonRetryableError, RetryableError
-from app.legacy.dao.api_keys_dao import ApiKeyRecord, LegacyApiKeysDao, encode_and_sign
+from app.legacy.dao.api_keys_dao import ApiKeyRecord, LegacyApiKeysDao
 
 
-@pytest.fixture
-async def prepared_api_key(
-    sample_service: Callable[[AsyncSession], Awaitable[Row[Any]]],
-    sample_api_key: Callable[..., Awaitable[Row[Any]]],
-) -> AsyncGenerator[Row[Any], None]:
-    """Fixture that creates and yields a committed API key along with its associated service and user.
-
-    This fixture is designed for integration tests that need a fully initialized API key record.
-    It ensures database state is appropriately committed before the test, and it performs cleanup
-    afterward by deleting the API key, service, and user rows from the legacy tables.
-
-    Setup:
-        - Creates a sample service, which implicitly creates a sample user.
-        - Creates a sample API key associated with that service.
-        - Commits the service and API key to the database.
-
-    Teardown:
-        - Deletes the API key, service, and user records from the legacy schema to maintain isolation.
+# TODO: TEAM-1664 temp "encrypt" until isdangerous added or proper encryption implemented
+# does not verify signature
+def encode_and_sign(token: str) -> str:
+    """Serialize and sign a string using itsdangerous.URLSafeSerializer.
 
     Args:
-        sample_service (Callable): A factory fixture that returns a new service row.
-        sample_api_key (Callable): A factory fixture that returns a new API key row for a given service.
+        token (str): The string to encode.
 
-    Yields:
-        Row[Any]: A SQLAlchemy Core row representing the inserted API key.
+    Returns:
+        str: A URL-safe, signed string containing the encoded and signed payload.
     """
-    # setup
-    async with get_write_session_with_context() as raw_session:
-        # cast the async_scoped_session[AsyncSession] to keep mypy happy
-        session = cast(AsyncSession, raw_session)
-        service = await sample_service(session)
-        api_key = await sample_api_key(session, service_id=service.id)
-        await session.commit()
+    SECRET_KEY = os.getenv('SECRET_KEY', 'dev-notify-secret-key')
+    DANGEROUS_SALT = os.getenv('DANGEROUS_SALT', 'dev-notify-salt ')
 
-    yield api_key
-
-    # teardown
-    legacy_users = metadata_legacy.tables['users']
-    legacy_services = metadata_legacy.tables['services']
-    legacy_api_keys = metadata_legacy.tables['api_keys']
-
-    async with get_write_session_with_context() as raw_session:
-        # cast the async_scoped_session[AsyncSession] to keep mypy happy
-        session = cast(AsyncSession, raw_session)
-        await session.execute(delete(legacy_api_keys).where(legacy_api_keys.c.id == api_key.id))
-        await session.execute(delete(legacy_services).where(legacy_services.c.id == service.id))
-        await session.execute(delete(legacy_users).where(legacy_users.c.id == service.created_by_id))
-        await session.commit()
+    serializer = URLSafeSerializer(SECRET_KEY)
+    return str(serializer.dumps(token, salt=DANGEROUS_SALT))
 
 
 class TestLegacyApiKeysDao:
@@ -104,7 +70,7 @@ class TestLegacyApiKeysDao:
             actual = api_key._mapping[column]
             assert actual == expected, f'{column} mismatch: expected {expected}, got {actual}'
 
-    async def test_get_api_keys_raises_if_not_found(self) -> None:
+    async def test_get_api_keys_should_return_empty_list(self) -> None:
         """API keys should not exist for non-existant service."""
         keys = await LegacyApiKeysDao.get_api_keys(uuid4())
 
@@ -140,7 +106,7 @@ class TestLegacyApiKeysDao:
 
 
 class TestApiKeyRecord:
-    """Test ApiKeyRecord datqaclass."""
+    """Test ApiKeyRecord dataclass."""
 
     async def test_from_row_sets_fields(
         self,
@@ -153,12 +119,9 @@ class TestApiKeyRecord:
         # Excludes @property attributes, (e.g. secret which gets decrypted)
         dataclass_fields = record.__dataclass_fields__.keys()
 
-        # Exclude fields that required transformation, (e.g. adding timezone.utc)
-        # Excluded fields tested elsewhere
-        excluded = ('expiry_date',)
-
+        # excluding expiry_date as it undergoes tranformation (timezone) and tested elsewehere
         for column in api_key._mapping.keys():
-            if column not in excluded and column in dataclass_fields:
+            if column != 'expiry_date' and column in dataclass_fields:
                 expected = api_key._mapping[column]
                 actual = getattr(record, column)
                 assert actual == expected, f"Mismatch on field '{column}': {actual!r} != {expected!r}"
@@ -167,10 +130,7 @@ class TestApiKeyRecord:
         self,
         sample_api_key: Callable[..., Awaitable[Row[Any]]],
     ) -> None:
-        """Ensure naive expiry_date is coerced to UTC.
-
-        TODO: #xxxx Database is not returning timezone aware datetime fields
-        """
+        """Ensure naive expiry_date is coerced to UTC."""
         api_key = await sample_api_key(expiry_date=datetime(2025, 1, 1, 12, 0, 0))
 
         record = ApiKeyRecord.from_row(api_key)
@@ -188,7 +148,9 @@ class TestApiKeyRecord:
         """
         aware_dt = datetime(2025, 1, 1, 12, 0, 0, tzinfo=ZoneInfo('America/New_York'))
 
-        # creating mocked Row[Any] to get around immutability
+        # Creating mocked Row[Any] to get around immutability
+        # This simulates a row returned from the database with a datetime that still has a timezone
+        # Row[Any] are otherwise read-only views
         api_key = await sample_api_key()
         row_dict = dict(api_key._mapping)
         row_dict['expiry_date'] = aware_dt

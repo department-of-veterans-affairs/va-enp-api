@@ -18,7 +18,6 @@ botocore = "*"
 fastapi = {extras = ["standard"], version = "*"}
 pyjwt = "*"
 gunicorn = "*"
-itsdangerous = "*"
 loguru = "*"
 phonenumbers = "*"
 psycopg = {extras = ["binary"], version = "*"}
@@ -37,6 +36,7 @@ pytest-cov = "*"
 pytest = "*"
 pytest-asyncio = "*"
 pytest-mock = "*"
+itsdangerous = "*"
 
 [tool.poetry.group.static_tools]
 optional = true

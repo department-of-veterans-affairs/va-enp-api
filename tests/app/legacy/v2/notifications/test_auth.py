@@ -30,7 +30,8 @@ from app.auth import (
     verify_service_token,
 )
 from app.exceptions import NonRetryableError
-from app.legacy.dao.api_keys_dao import ApiKeyRecord, encode_and_sign
+from app.legacy.dao.api_keys_dao import ApiKeyRecord
+from tests.app.legacy.dao.test_api_keys import encode_and_sign
 from tests.conftest import generate_token, generate_token_with_partial_payload
 
 

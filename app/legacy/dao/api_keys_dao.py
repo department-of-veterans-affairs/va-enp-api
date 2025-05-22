@@ -1,12 +1,10 @@
 """The data access objects for API keys."""
 
 import base64
-import os
 from dataclasses import dataclass
 from datetime import datetime, timezone
-from typing import Any, Optional, Sequence
+from typing import Any, Sequence
 
-from itsdangerous import URLSafeSerializer
 from loguru import logger
 from pydantic import UUID4
 from sqlalchemy import Row, select
@@ -38,7 +36,7 @@ class LegacyApiKeysDao:
             service_id (UUID4): The unique identifier of the service whose API keys should be fetched.
 
         Returns:
-            list[Row[Any]]: A list of rows from the 'api_keys' table, each representing an API key
+            Sequence[Row[Any]]: A sequence of rows from the 'api_keys' table, each representing an API key
             associated with the specified service.
 
         Raises:
@@ -80,22 +78,22 @@ class ApiKeyRecord:
         id (UUID4): The unique identifier of the API key.
         _secret_encrypted (str): The encrypted secret string for the API key.
         service_id (UUID4): The ID of the service this API key belongs to.
-        expiry_date (Optional[datetime]): The expiration date of the API key, if any.
+        expiry_date (datetime | None): The expiration date of the API key, if any.
         revoked (bool): Indicates whether the API key has been revoked.
     """
 
     id: UUID4
-    _secret_encrypted: Optional[str]
+    _secret_encrypted: str | None
     service_id: UUID4
-    expiry_date: Optional[datetime]
+    expiry_date: datetime | None
     revoked: bool
 
     @property
-    def secret(self) -> Optional[str]:
+    def secret(self) -> str | None:
         """Decode and return the API key's secret.
 
         Returns:
-            Optional[str]: The decoded secret, or None if no secret is present.
+            str | None: The decoded secret, or None if no secret is present.
         """
         if self._secret_encrypted is not None:
             try:
@@ -153,21 +151,3 @@ def decode_and_remove_signature(encoded: str) -> str | None:
     except (IndexError, ValueError, UnicodeDecodeError, Exception):
         raise NonRetryableError('Failure decoding value')
     return value
-
-
-# TODO: TEAM-1664 temp "encrypt" until isdangerous added or proper encryption implemented
-# does not verify signature
-def encode_and_sign(token: str) -> str:
-    """Serialize and sign a string using itsdangerous.URLSafeSerializer.
-
-    Args:
-        token (str): The string to encode.
-
-    Returns:
-        str: A URL-safe, signed string containing the encoded and signed payload.
-    """
-    SECRET_KEY = os.getenv('SECRET_KEY', 'dev-notify-secret-key')
-    DANGEROUS_SALT = os.getenv('DANGEROUS_SALT', 'dev-notify-salt ')
-
-    serializer = URLSafeSerializer(SECRET_KEY)
-    return str(serializer.dumps(token, salt=DANGEROUS_SALT))
