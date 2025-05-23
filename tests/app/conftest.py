@@ -1,9 +1,12 @@
 """Fixtures and setup to test the app."""
 
+import os
 from collections.abc import AsyncGenerator
+from typing import Any, Generator
 
 import pytest
 import pytest_asyncio
+from moto import server
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.db_init import close_db, get_db_session, init_db
@@ -41,3 +44,21 @@ async def test_db_session() -> AsyncGenerator[AsyncSession, None]:
             async with session_maker() as session:
                 yield session
         # A rollback should occur automatically because the "begin" block doesn't manually commit.
+
+@pytest.fixture
+def mock_boto() -> Generator[None, Any, None]:
+    """Set up a mock AWS server using Moto.
+
+    See this StackOverflow answer for more details:
+    https://stackoverflow.com/a/77490060
+    """
+    moto_server = server.ThreadedMotoServer(port=0)
+
+    moto_server.start()
+    port = moto_server._server.socket.getsockname()[1]
+    os.environ['AWS_ENDPOINT_URL'] = f'http://127.0.0.1:{port}'
+
+    yield
+
+    del os.environ['AWS_ENDPOINT_URL']
+    moto_server.stop()

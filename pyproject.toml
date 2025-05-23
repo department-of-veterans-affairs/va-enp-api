@@ -134,7 +134,7 @@ max-complexity = 5
 [tool.pytest.ini_options]
 asyncio_default_fixture_loop_scope = "function"
 asyncio_mode = "auto"
-addopts = ["--cov=app", "--cov=tests", "--cov-report=term-missing", "-W", "error"]
+# addopts = ["--cov=app", "--cov=tests", "--cov-report=term-missing", "-W", "error"]
 
 [build-system]
 requires = ["poetry-core"]

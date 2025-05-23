@@ -10,7 +10,7 @@ from sqlalchemy.exc import NoResultFound
 
 from app.constants import NotificationType
 from app.exceptions import NonRetryableError, RetryableError
-from app.legacy.clients.sqs import SQSClient, generate_celery_task
+from app.legacy.clients.sqs import SqsAsyncProducer
 from app.legacy.dao.templates_dao import LegacyTemplateDao
 from app.legacy.v2.notifications.route_schema import PersonalisationFileObject
 from app.logging.logging_config import logger
@@ -226,9 +226,9 @@ async def enqueue_notification_tasks(tasks: list[tuple[str, tuple[str, UUID4]]])
         tasks (list[tuple[str, tuple[str, UUID4]]]): The tasks to enqueue
 
     """
-    sqs_client = SQSClient()
+    sqs_producer = SqsAsyncProducer()
 
     for queue_name, task_args in tasks:
-        task_message = generate_celery_task(queue_name, *task_args)
+        task_message = sqs_producer.generate_celery_task(queue_name, *task_args)
 
-        await sqs_client.enqueue_message(queue_name, json.dumps(task_message))
+        await sqs_producer.enqueue_message(queue_name, json.dumps(task_message))
