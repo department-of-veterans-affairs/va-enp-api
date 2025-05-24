@@ -3,12 +3,13 @@
 import base64
 import json
 import os
-from typing import Any
+from typing import Collection
 from uuid import uuid4
 
 from aiobotocore.session import ClientCreatorContext, get_session
-from botocore.exceptions import ClientError
+from botocore.exceptions import ClientError, ParamValidationError
 from pydantic import UUID4
+from types_aiobotocore_sqs import SQSClient
 
 from app.exceptions import NonRetryableError, RetryableError
 from app.logging.logging_config import logger
@@ -22,37 +23,13 @@ AWS_SECRET_ACCESS_KEY = os.getenv('AWS_SECRET_ACCESS_KEY', 'test')
 class SqsAsyncProducer:
     """Client for AWS SQS."""
 
-    # def __new__(cls, *args, **kwargs) -> 'SQSClient':
-    #     """Create a new instance of SQSClient.
-
-    #     This method ensures that only one instance of SQSClient is created (singleton pattern).
-
-    #     Returns:
-    #         SQSClient: The singleton instance of SQSClient.
-    #     """
-    #     if not hasattr(cls, '_instance'):
-    #         cls._instance = super(SQSClient, cls).__new__(cls)
-    #         logger.debug('SQSClient instance created: {}', cls._instance)
-    #     return cls._instance
+    def __init__(self) -> None:
+        """Initialize the SQS client."""
+        self._client: ClientCreatorContext | None = None
 
     def __str__(self) -> str:
         """Return the name of the client."""
         return 'AWS SQS Producer Client'
-
-    def __init__(self) -> None:
-        """Initialize the SQS client."""
-        self._client: ClientCreatorContext = None
-    #     if hasattr(self, '_sqs_client_context'):
-    #         logger.debug('SQSClient instance already exists, not recreating sqs client context.')
-    #         return
-
-    #     Initialize the SQS client context
-    #     self._sqs_client_context = get_session().create_client(
-    #         'sqs',
-    #         region_name=AWS_REGION,
-    #         aws_access_key_id=AWS_ACCESS_KEY_ID,
-    #         aws_secret_access_key=AWS_SECRET_ACCESS_KEY,
-    #     )
 
     @property
     def sqs_client_context(self) -> ClientCreatorContext:
@@ -72,7 +49,11 @@ class SqsAsyncProducer:
 
         return self._client
 
-    async def enqueue_message(self, queue_name: str, message: str) -> dict[str, str]:
+    async def enqueue_message(
+        self,
+        queue_name: str,
+        message: str,
+    ) -> dict[str, str | dict[str, int | str | dict[str, int | str]]]:
         """Send a message to the specified SQS queue.
 
         Args:
@@ -89,20 +70,17 @@ class SqsAsyncProducer:
 
             logger.debug('SQS queue URL retrieved: {}', queue_url)
 
-            try:
-                response = await sqs_client.send_message(QueueUrl=queue_url, MessageBody=message)
-            except ClientError as e:
-                err_msg = f'Failed to send message to SQS queue "{queue_name}".'
-                self._handle_client_error(e, err_msg)
+            response = await self._send_message_to_queue(sqs_client, queue_name, queue_url, message)
 
-        logger.debug('Message sent to SQS queue {} - ID {}', queue_name, response['MessageId'])
+        logger.debug('Message sent to SQS queue {} - message ID {}', queue_name, response.get('MessageId'))
 
-        return response
+        return dict(response)
 
-    async def _get_queue_url(self, sqs_client, queue_name: str) -> str:
+    async def _get_queue_url(self, sqs_client: SQSClient, queue_name: str) -> str:
         """Get the URL of the specified SQS queue.
 
         Args:
+            sqs_client (SQSClient): The SQS client
             queue_name (str): The name of the SQS queue
 
         Returns:
@@ -127,6 +105,37 @@ class SqsAsyncProducer:
 
         return q_url
 
+    async def _send_message_to_queue(
+        self, sqs_client: SQSClient, queue_name: str, queue_url: str, message: str
+    ) -> dict[str, str]:
+        """Send a message to the specified SQS queue.
+
+        Args:
+            sqs_client (SQSClient): The SQS client
+            queue_name (str): The name of the SQS queue
+            queue_url (str): The URL of the SQS queue
+            message (str): The message to send
+
+        Returns:
+            dict[str, str]: The response from SQS
+
+        Raises:
+            NonRetryableError: If the message cannot be sent
+        """
+        try:
+            response = await sqs_client.send_message(QueueUrl=queue_url, MessageBody=message)
+
+        except ClientError as e:
+            err_msg = f'Failed to send message to SQS queue "{queue_name}".'
+            self._handle_client_error(e, err_msg)
+
+        except ParamValidationError as e:
+            err_msg = f'Invalid parameters for SQS queue "{queue_name}".'
+            logger.exception(err_msg)
+            raise NonRetryableError(err_msg) from e
+
+        return dict(response)
+
     @staticmethod
     def _handle_client_error(error: ClientError, err_msg: str) -> None:
         """Handle ClientError exceptions.
@@ -150,15 +159,10 @@ class SqsAsyncProducer:
             logger.exception(err_msg)
             raise NonRetryableError(err_msg) from error
 
-
-    # TODO: Make this more generic
     @staticmethod
-    def generate_celery_task(
-        queue_name: str, task_name: str, notification_id: UUID4
-    ) -> dict[str, str | dict[str, int | str | dict[str, int | str]]]:
-        """A celery task envelope is created.
+    def generate_celery_task(queue_name: str, task_name: str, notification_id: UUID4) -> dict[str, Collection[str]]:
+        """Create a celery task envelope.
 
-        The envelope has a generic schema that can be consumed before it routes to a celery task.
         The task is used to route the message to the proper celery method in the flask app (napi).
 
         Args:
@@ -167,7 +171,7 @@ class SqsAsyncProducer:
             notification_id (UUID4): The ID of the notification
 
         Returns:
-            dict[str, str | dict[str, int | str | dict[str, int | str]]]: The envelope containing the task body and properties
+            dict[str, Collection[str]]: The envelope containing the task body and properties
         """
         task_body = {
             'task': task_name,

@@ -26,7 +26,7 @@ fileignoreconfig:
 - filename: cd/perf.env
   checksum: 5c50afeea60016a131f94dacd3086db9cbb4c6af573be19c7de91bbb51e04db7
 - filename: ci/.env.docker
-  checksum: ff5147be5734e677fcb8bfbeaaa59e54d5b395f531ac371fb183494eaf954582
+  checksum: ac64414dcc42026b47b884bcac9562895caa350c217927d86d396a2e2750014e
 - filename: ci/docker-compose-local.yml
   checksum: c73beda98c39232441d86f6d6f6f2858274f9703f8a462eac1effacfbb9aa39d
 - filename: poetry.lock

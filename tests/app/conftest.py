@@ -45,7 +45,8 @@ async def test_db_session() -> AsyncGenerator[AsyncSession, None]:
                 yield session
         # A rollback should occur automatically because the "begin" block doesn't manually commit.
 
-@pytest.fixture
+
+@pytest.fixture(scope='session')
 def mock_boto() -> Generator[None, Any, None]:
     """Set up a mock AWS server using Moto.
 

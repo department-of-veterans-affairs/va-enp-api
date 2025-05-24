@@ -97,15 +97,18 @@ class TestNotificationRouter:
         '/v2/notifications/sms',
     )
 
+    @patch.object(BackgroundTasks, 'add_task')
     @pytest.mark.parametrize('route', routes)
     async def test_happy_path(
         self,
+        mock_background_task: AsyncMock,
         client: ENPTestClient,
         route: str,
     ) -> None:
         """Test route can return 201.
 
         Args:
+            mock_background_task (AsyncMock): Mock call to add a background task
             client (ENPTestClient): Custom FastAPI client fixture
             route (str): Route to test
 
@@ -210,8 +213,10 @@ class TestV2SMS:
         data: dict[str, object] = jsonable_encoder(request_data)
         return data
 
+    @patch.object(BackgroundTasks, 'add_task')
     async def test_v2_sms_with_phone_number_returns_201(
         self,
+        mock_background_task: AsyncMock,
         mock_validate_template: AsyncMock,
         client: ENPTestClient,
         sms_request_data: dict[str, object],
@@ -240,8 +245,10 @@ class TestV2SMS:
         assert 'from_number' in response_data['content']
         assert response_data['content']['from_number'] == '+18005550101'
 
+    @patch.object(BackgroundTasks, 'add_task')
     async def test_v2_sms_with_recipient_identifier_returns_201(
         self,
+        mock_background_task: AsyncMock,
         mock_validate_template: AsyncMock,
         client: ENPTestClient,
         sms_request_data: dict[str, object],
@@ -283,8 +290,10 @@ class TestV2SMS:
         if 'callback_url' in sms_request_data:
             assert response_data['callback_url'] == sms_request_data['callback_url']
 
+    @patch.object(BackgroundTasks, 'add_task')
     async def test_sms_task_resolver_selection(
         self,
+        mock_background_task: AsyncMock,
         mock_validate_template: AsyncMock,
     ) -> None:
         """Test the get_sms_task_resolver function selects the appropriate resolver."""

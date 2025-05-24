@@ -1,21 +1,20 @@
 """Test the SQS client found in app/legacy/clients/sqs.py."""
 
-import os
 import uuid
-from typing import Any, Generator
+from typing import Generator
+from unittest.mock import AsyncMock
 
 import botocore
-import botocore.session
 import pytest
-from moto import server
+from botocore.exceptions import ClientError
+from types_aiobotocore_sqs import SQSClient
 
-from app.exceptions import NonRetryableError
+from app.exceptions import NonRetryableError, RetryableError
 from app.legacy.clients.sqs import (
     AWS_ACCESS_KEY_ID,
     AWS_REGION,
     AWS_SECRET_ACCESS_KEY,
     SqsAsyncProducer,
-    SqsAsyncProducer0,
 )
 
 TEST_QUEUE_NAME = 'test_queue'
@@ -31,17 +30,20 @@ def setup_queue(mock_boto: Generator) -> None:
     sqs_client.create_queue(QueueName=TEST_QUEUE_NAME)
 
 
+# DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version.
+# Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+@pytest.mark.filterwarnings('ignore::DeprecationWarning')
 class TestSqsAsyncProducer:
     """Test the SQS async producer."""
 
     @staticmethod
-    def test_sqs_producer_str(mock_boto) -> None:
+    def test_sqs_producer_str(mock_boto: Generator) -> None:
         """Test the string representation of the SqsAsyncProducer."""
         client = SqsAsyncProducer()
         assert str(client) == 'AWS SQS Producer Client', 'String representation should match'
 
     @staticmethod
-    async def test_sqs_producer_send_message(setup_queue) -> None:
+    async def test_sqs_producer_send_message(setup_queue: None) -> None:
         """Test the send_message method of the SqsAsyncProducer."""
         producer = SqsAsyncProducer()
         response = await producer.enqueue_message(TEST_QUEUE_NAME, 'test_message')
@@ -49,11 +51,71 @@ class TestSqsAsyncProducer:
         assert 'MessageId' in response, 'Response should contain MessageId'
 
     @staticmethod
-    async def test_sqs_producer_send_message_invalid_queue(mock_boto) -> None:
+    async def test_sqs_producer_send_message_invalid_queue(mock_boto: Generator) -> None:
         """Test sending a message to an invalid queue."""
         producer = SqsAsyncProducer()
         with pytest.raises(NonRetryableError):
             await producer.enqueue_message('invalid_queue', 'test_message')
+
+    @staticmethod
+    async def test_sqs_producer_send_message_invalid_message(setup_queue: None) -> None:
+        """Test sending an invalid message."""
+        producer = SqsAsyncProducer()
+
+        with pytest.raises(NonRetryableError):
+            await producer.enqueue_message(TEST_QUEUE_NAME, None)
+
+    @staticmethod
+    # @pytest.mark.skip(reason='This test is not working as expected, making ')
+    async def test_send_message_to_queue_client_error(setup_queue: None) -> None:
+        """Test sending an invalid message."""
+        mock_sqs_client = AsyncMock(spec=SQSClient)
+        mock_sqs_client.send_message.side_effect = ClientError(
+            {'Error': {'Code': 'Test', 'Message': 'Invalid message'}}, 'send_message'
+        )
+
+        producer = SqsAsyncProducer()
+
+        with pytest.raises(NonRetryableError):
+            await producer._send_message_to_queue(mock_sqs_client, '', '', '')
+
+    @staticmethod
+    async def test_get_queue_url_key_error() -> None:
+        """Test the get_queue_url method raises a KeyError."""
+        mock_sqs_client = AsyncMock(spec=SQSClient)
+        mock_sqs_client.get_queue_url.return_value = {}
+
+        producer = SqsAsyncProducer()
+        with pytest.raises(NonRetryableError):
+            await producer._get_queue_url(mock_sqs_client, 'q_name')
+
+    @staticmethod
+    @pytest.mark.parametrize(
+        ('error_code', 'expected_exception'),
+        [
+            ('ThrottlingException', RetryableError),
+            ('RequestTimeout', RetryableError),
+            ('ServiceUnavailable', RetryableError),
+            ('InvalidParameterValue', NonRetryableError),
+        ],
+        ids=[
+            'ThrottlingException',
+            'RequestTimeout',
+            'ServiceUnavailable',
+            'InvalidParameterValue',
+        ],
+    )
+    async def test_handle_client_error_throws_retryable_or_nonretryable(
+        error_code: str,
+        expected_exception: NonRetryableError | RetryableError,
+    ) -> None:
+        """Test the _handle_client_error method throws a RetryableError or NonRetryableError."""
+        # Set up a ClientError with a retryable error code
+        error_response = {'Error': {'Code': error_code}}
+        client_error = ClientError(error_response, 'operation_name')
+
+        with pytest.raises(expected_exception):
+            SqsAsyncProducer._handle_client_error(client_error, 'Test error message')
 
     @staticmethod
     def test_generate_celery_task_fields() -> None:
