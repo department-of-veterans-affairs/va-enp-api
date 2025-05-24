@@ -6,7 +6,7 @@ fileignoreconfig:
 - filename: .github/workflows/deploy.yml
   checksum: fc90179b23528cc9668f868361e0889635deb8ebd4b78ff738f4143a151b3e64
 - filename: app/auth.py
-  checksum: 6e85f8eb13c2a97e859dd580b34c6f3514b7d416b6a0c65dc70dc1c77f02d1d2
+  checksum: b2501c83aab7f7654a30d195405519d011bfa99c77075dee9ca6d51f6b279de7
 - filename: app/clients/va_profile.py
   checksum: 4c15663b347f4d79d8daa63e2083258a7fc7493efa699245a2d9fd0378ada694
 - filename: app/db/__init__.py
@@ -53,9 +53,9 @@ fileignoreconfig:
 - filename: tests/app/test_auth.py
   checksum: 81670e50973a2aff2508a1dafc62639351998f14826d322069c1584b85c5fe2b
 - filename: tests/app/legacy/v2/notifications/test_auth.py
-  checksum: f0f4bfb69d357d09bc44636b1fcaf5b964a972ce8996609689b650868788e232
+  checksum: 16daebf4493f806d02f2b2f404dc97e72fe3e13d88921844f64c9d0031522baf
 - filename: tests/conftest.py
-  checksum: 368221589cf910730d5d987d7c8cd58a071c6dc7f3ecd26095cd6c578ed96da5
+  checksum: 9329b3438b869130af9a1f849c49c69f3bc1c72ee848a052fca9e2b09a9a9aef
 - filename: tests/app/legacy/test_samples.py
   checksum: a1ba3739af869483479432aefcae8b1152e1a28f105b69b95e8fa3e02f4c8f0d
 - filename: app/legacy/dao/api_key_dao.py

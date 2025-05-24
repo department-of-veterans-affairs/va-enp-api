@@ -95,20 +95,28 @@ def client_factory() -> Callable[[str], ENPTestClient]:
     return _create_client
 
 
-def generate_token(sig_key: str = ADMIN_SECRET_KEY, payload: JWTPayloadDict | None = None) -> str:
-    """Generate a JWT token.
+def generate_token(
+    sig_key: str = ADMIN_SECRET_KEY, headers: dict[str, str] | None = None, payload: JWTPayloadDict | None = None
+) -> str:
+    """Generate a signed JWT token using the specified signature key, headers, and payload.
+
+    If no headers are provided, defaults to {'typ': 'JWT', 'alg': ALGORITHM}.
+    If no payload is provided, generates a default payload with issuer 'enp',
+    current issued-at time (iat), and an expiration (exp) set to the configured duration.
 
     Args:
-        sig_key (str): The key to sign the JWT token with.
-        payload (JWTPayloadDict): The payload to include in the JWT token.
+        sig_key (str): The secret key used to sign the JWT token.
+        headers (dict[str, str] | None): Optional JWT headers. Defaults to standard 'typ' and 'alg'.
+        payload (JWTPayloadDict | None): Optional JWT payload. Defaults to a standard payload.
 
     Returns:
-        str: The signed JWT token.
+        str: The signed JWT token as a string.
     """
-    headers = {
-        'typ': 'JWT',
-        'alg': ALGORITHM,
-    }
+    if headers is None:
+        headers = {
+            'typ': 'JWT',
+            'alg': ALGORITHM,
+        }
     if payload is None:
         payload = JWTPayloadDict(
             iss='enp',
