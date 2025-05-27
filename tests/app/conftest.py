@@ -6,7 +6,7 @@ from typing import Any, Generator
 
 import pytest
 import pytest_asyncio
-from moto import server
+from moto.server import ThreadedMotoServer
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.db_init import close_db, get_db_session, init_db
@@ -47,19 +47,22 @@ async def test_db_session() -> AsyncGenerator[AsyncSession, None]:
 
 
 @pytest.fixture(scope='session')
-def mock_boto() -> Generator[None, Any, None]:
-    """Set up a mock AWS server using Moto.
+def moto_server() -> Generator[str, Any, None]:
+    """Fixture to run a mocked AWS server for testing.
 
-    See this StackOverflow answer for more details:
-    https://stackoverflow.com/a/77490060
+    See moto docs for more details:
+    https://docs.getmoto.org/en/latest/docs/server_mode.html#start-within-python
+
+    Yields:
+        str: The endpoint URL of the mocked AWS server.
     """
-    moto_server = server.ThreadedMotoServer(port=0)
+    # Note: pass `port=0` to get a random free port.
+    server = ThreadedMotoServer(port=0)
+    server.start()
+    host, port = server.get_host_and_port()
+    os.environ['AWS_ENDPOINT_URL'] = f'http://{host}:{port}'
 
-    moto_server.start()
-    port = moto_server._server.socket.getsockname()[1]
-    os.environ['AWS_ENDPOINT_URL'] = f'http://127.0.0.1:{port}'
-
-    yield
+    yield f'http://{host}:{port}'
 
     del os.environ['AWS_ENDPOINT_URL']
-    moto_server.stop()
+    server.stop()

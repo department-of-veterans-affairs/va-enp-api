@@ -1,13 +1,14 @@
 """Test the SQS client found in app/legacy/clients/sqs.py."""
 
 import uuid
-from typing import Generator
+from typing import Any, Generator, cast
 from unittest.mock import AsyncMock
 
 import botocore
 import pytest
 from botocore.exceptions import ClientError
 from types_aiobotocore_sqs import SQSClient
+from types_boto3_sqs import SQSClient as SQSClientBoto3
 
 from app.exceptions import NonRetryableError, RetryableError
 from app.legacy.clients.sqs import (
@@ -21,13 +22,28 @@ TEST_QUEUE_NAME = 'test_queue'
 
 
 @pytest.fixture
-def setup_queue(mock_boto: Generator) -> None:
-    """Set up the SQS queue for testing."""
-    # Create a mock SQS queue
-    sqs_client = botocore.session.get_session().create_client(
-        'sqs', region_name=AWS_REGION, aws_access_key_id=AWS_ACCESS_KEY_ID, aws_secret_access_key=AWS_SECRET_ACCESS_KEY
+def setup_queue(moto_server: Generator[None, Any, None]) -> Generator[Any | str, Any, None]:
+    """Set up the SQS queue for testing.
+
+    Yields:
+        str: The URL of the created SQS queue.
+    """
+    # Create a mock SQS queue, casting required by mypy
+    sqs_client = cast(
+        SQSClientBoto3,
+        botocore.session.get_session().create_client(
+            'sqs',
+            region_name=AWS_REGION,
+            aws_access_key_id=AWS_ACCESS_KEY_ID,
+            aws_secret_access_key=AWS_SECRET_ACCESS_KEY,
+        ),
     )
-    sqs_client.create_queue(QueueName=TEST_QUEUE_NAME)
+
+    test_queue = sqs_client.create_queue(QueueName=TEST_QUEUE_NAME)
+
+    yield test_queue['QueueUrl']
+
+    sqs_client.delete_queue(QueueUrl=test_queue['QueueUrl'])
 
 
 # DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version.
@@ -37,7 +53,7 @@ class TestSqsAsyncProducer:
     """Test the SQS async producer."""
 
     @staticmethod
-    def test_sqs_producer_str(mock_boto: Generator) -> None:
+    def test_sqs_producer_str(moto_server: Generator[None, Any, None]) -> None:
         """Test the string representation of the SqsAsyncProducer."""
         client = SqsAsyncProducer()
         assert str(client) == 'AWS SQS Producer Client', 'String representation should match'
@@ -51,22 +67,33 @@ class TestSqsAsyncProducer:
         assert 'MessageId' in response, 'Response should contain MessageId'
 
     @staticmethod
-    async def test_sqs_producer_send_message_invalid_queue(mock_boto: Generator) -> None:
+    async def test_sqs_producer_send_message_invalid_queue(moto_server: Generator[None, Any, None]) -> None:
         """Test sending a message to an invalid queue."""
         producer = SqsAsyncProducer()
         with pytest.raises(NonRetryableError):
             await producer.enqueue_message('invalid_queue', 'test_message')
 
     @staticmethod
-    async def test_sqs_producer_send_message_invalid_message(setup_queue: None) -> None:
-        """Test sending an invalid message."""
-        producer = SqsAsyncProducer()
+    async def test_get_queue_url_key_error() -> None:
+        """Test the get_queue_url method raises a KeyError."""
+        mock_sqs_client = AsyncMock(spec=SQSClient)
+        mock_sqs_client.get_queue_url.return_value = {}
 
+        producer = SqsAsyncProducer()
         with pytest.raises(NonRetryableError):
-            await producer.enqueue_message(TEST_QUEUE_NAME, None)
+            await producer._get_queue_url(mock_sqs_client, 'q_name')
 
     @staticmethod
-    # @pytest.mark.skip(reason='This test is not working as expected, making ')
+    async def test_get_queue_url_unexpected_error() -> None:
+        """Test the get_queue_url method raises a NonRetryableError."""
+        mock_sqs_client = AsyncMock(spec=SQSClient)
+        mock_sqs_client.get_queue_url.side_effect = Exception('Unexpected error')
+
+        producer = SqsAsyncProducer()
+        with pytest.raises(NonRetryableError):
+            await producer._get_queue_url(mock_sqs_client, 'q_name')
+
+    @staticmethod
     async def test_send_message_to_queue_client_error(setup_queue: None) -> None:
         """Test sending an invalid message."""
         mock_sqs_client = AsyncMock(spec=SQSClient)
@@ -80,14 +107,15 @@ class TestSqsAsyncProducer:
             await producer._send_message_to_queue(mock_sqs_client, '', '', '')
 
     @staticmethod
-    async def test_get_queue_url_key_error() -> None:
-        """Test the get_queue_url method raises a KeyError."""
+    async def test_send_message_to_queue_unexpected_error(setup_queue: None) -> None:
+        """Test sending a message raises a NonRetryableError."""
         mock_sqs_client = AsyncMock(spec=SQSClient)
-        mock_sqs_client.get_queue_url.return_value = {}
+        mock_sqs_client.send_message.side_effect = Exception('Unexpected error')
 
         producer = SqsAsyncProducer()
+
         with pytest.raises(NonRetryableError):
-            await producer._get_queue_url(mock_sqs_client, 'q_name')
+            await producer._send_message_to_queue(mock_sqs_client, '', '', 'test_message')
 
     @staticmethod
     @pytest.mark.parametrize(
@@ -105,14 +133,21 @@ class TestSqsAsyncProducer:
             'InvalidParameterValue',
         ],
     )
-    async def test_handle_client_error_throws_retryable_or_nonretryable(
+    async def test_handle_client_error_throws_expected_exception(
         error_code: str,
-        expected_exception: NonRetryableError | RetryableError,
+        expected_exception: type[Exception],  # NonRetryableError | RetryableError,
     ) -> None:
         """Test the _handle_client_error method throws a RetryableError or NonRetryableError."""
-        # Set up a ClientError with a retryable error code
-        error_response = {'Error': {'Code': error_code}}
-        client_error = ClientError(error_response, 'operation_name')
+        # Set up a ClientError with the given error code
+        error_response = {
+            'Error': {
+                'Code': error_code,
+                'Message': 'Test error message',
+            },
+        }
+
+        # importing _ClientErrorResponseTypeDef causes an error, so we must ignore the mypy error here
+        client_error = ClientError(error_response=error_response, operation_name='test_operation')  # type: ignore[arg-type]
 
         with pytest.raises(expected_exception):
             SqsAsyncProducer._handle_client_error(client_error, 'Test error message')

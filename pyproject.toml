@@ -43,6 +43,7 @@ mypy = "*"
 pre-commit = "*"
 ruff = "*"
 types-aiobotocore = {extras = ["essential"], version = "*"}
+types-boto3 = {extras = ["essential"], version = "*"}
 
 [tool.poetry.group.mkdocs]
 optional = true
