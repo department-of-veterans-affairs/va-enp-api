@@ -116,8 +116,8 @@ def verify_admin_token(jwtoken: str) -> bool:
         )
     except (jwt.PyJWTError, jwt.ImmatureSignatureError):
         response = False
-
-    logger.info('Admin token authenticated')
+    else:
+        logger.info('Admin token authenticated')
 
     return response
 
