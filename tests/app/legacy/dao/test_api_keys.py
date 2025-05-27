@@ -22,8 +22,7 @@ from app.exceptions import NonRetryableError, RetryableError
 from app.legacy.dao.api_keys_dao import ApiKeyRecord, LegacyApiKeysDao
 
 
-# TODO: TEAM-1664 temp "encrypt" until isdangerous added or proper encryption implemented
-# does not verify signature
+# TODO: TEAM-1664 replace with proper encryption
 def encode_and_sign(token: str) -> str:
     """Serialize and sign a string using itsdangerous.URLSafeSerializer.
 
