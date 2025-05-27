@@ -157,9 +157,6 @@ async def verify_service_token(issuer: str, token: str, request: Request) -> Non
 
     service = await get_active_service_for_issuer(issuer, request_id)
 
-    # TODO: remove this line once service auth working, temp to unblock parallel ticket
-    request.state.service_id = service.id
-
     logger.info(
         'Attempting to Lookup service API keys for service_id: {}',
         service.id,
