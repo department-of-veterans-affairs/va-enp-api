@@ -96,7 +96,9 @@ def client_factory() -> Callable[[str], ENPTestClient]:
 
 
 def generate_token(
-    sig_key: str = ADMIN_SECRET_KEY, headers: dict[str, str] | None = None, payload: JWTPayloadDict | None = None
+    sig_key: str = ADMIN_SECRET_KEY,
+    headers: dict[str, str] | None = None,
+    payload: JWTPayloadDict | None = None,
 ) -> str:
     """Generate a signed JWT token using the specified signature key, headers, and payload.
 
@@ -126,7 +128,10 @@ def generate_token(
     return jwt.encode(dict(payload), sig_key, headers=headers)
 
 
-def generate_token_with_partial_payload(sig_key: str, payload: dict[str, Any]) -> str:
+def generate_token_with_partial_payload(
+    sig_key: str,
+    payload: dict[str, Any],
+) -> str:
     """Generate a JWT token with incomplete payload for testing.
 
     Args:

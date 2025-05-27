@@ -150,14 +150,14 @@ async def verify_service_token(issuer: str, token: str, request: Request) -> Non
     request_id = uuid4()
     request.state.request_id = request_id
 
-    logger.info(
+    logger.debug(
         'Entering service auth token verification request_id: {}',
         request_id,
     )
 
     service = await get_active_service_for_issuer(issuer, request_id)
 
-    logger.info(
+    logger.debug(
         'Attempting to Lookup service API keys for service_id: {}',
         service.id,
     )
@@ -167,7 +167,7 @@ async def verify_service_token(issuer: str, token: str, request: Request) -> Non
     for row in api_keys:
         api_key = ApiKeyRecord.from_row(row)
 
-        logger.info(
+        logger.debug(
             'Checking API key for service_id: {} service_name: {} api_key_id: {} request_id: {}',
             service.id,
             service.name,
@@ -176,7 +176,7 @@ async def verify_service_token(issuer: str, token: str, request: Request) -> Non
         )
 
         if api_key.secret is None:
-            logger.info(
+            logger.debug(
                 'API key for service has no secret service_id: {} api_key_id: {} request_id: {}',
                 service.id,
                 api_key.id,
@@ -185,7 +185,7 @@ async def verify_service_token(issuer: str, token: str, request: Request) -> Non
             continue
 
         if not _verify_service_token(token, api_key):
-            logger.info(
+            logger.debug(
                 'API key unable to verify service token service_id: {} api_key_id: {} request_id: {}',
                 service.id,
                 api_key.id,
@@ -193,7 +193,7 @@ async def verify_service_token(issuer: str, token: str, request: Request) -> Non
             )
             continue
 
-        logger.info(
+        logger.debug(
             'Service API key verified for service_id: {} api_key_id: {} request_id: {}',
             service.id,
             api_key.id,
@@ -202,7 +202,7 @@ async def verify_service_token(issuer: str, token: str, request: Request) -> Non
 
         _validate_service_api_key(api_key, service.id, service.name)
 
-        logger.info(
+        logger.debug(
             'Service auth token validated for service_id: {} api_key_id: {} request_id: {}',
             service.id,
             api_key.id,
@@ -245,7 +245,7 @@ async def get_active_service_for_issuer(issuer: str, request_id: UUID4) -> Row[A
             - 403 if the service is not found.
             - 403 if the service is found but marked as archived (inactive).
     """
-    logger.info(
+    logger.debug(
         'Attempting to lookup service by issuer: {} request_id: {}',
         issuer,
         request_id,
@@ -264,7 +264,7 @@ async def get_active_service_for_issuer(issuer: str, request_id: UUID4) -> Row[A
     if not service.active:
         raise HTTPException(status_code=403, detail='Invalid token: service is archived')
 
-    logger.info(
+    logger.debug(
         'Found service service_id: {} for issuer: {} request_id: {}',
         service.id,
         issuer,
@@ -294,7 +294,7 @@ async def _get_service_api_keys(service_id: UUID4, request_id: UUID4) -> Sequenc
     try:
         api_keys = await LegacyApiKeysDao.get_api_keys(service_id)
     except (RetryableError, NonRetryableError):
-        logger.info(
+        logger.debug(
             'No API keys found for service_id: {} request_id: {}',
             service_id,
             request_id,
@@ -496,10 +496,10 @@ class JWTBearerAdmin(HTTPBearer):
         """
         credentials: HTTPAuthorizationCredentials | None = await super(JWTBearerAdmin, self).__call__(request)
         if credentials is None:
-            logger.info('No credentials provided.')
+            logger.debug('No credentials provided.')
             raise HTTPException(status_code=401, detail='Unauthorized, authentication token must be provided')
         if not verify_admin_token(str(credentials.credentials)):
-            logger.info('Invalid or expired token.')
+            logger.debug('Invalid or expired token.')
             raise HTTPException(status_code=403, detail='Invalid token: signature, api token is not valid')
         return credentials
 
@@ -526,7 +526,7 @@ class JWTBearer(HTTPBearer):
         credentials: HTTPAuthorizationCredentials | None = await super(JWTBearer, self).__call__(request)
 
         if credentials is None:
-            logger.info('No credentials provided.')
+            logger.debug('No credentials provided.')
             raise HTTPException(status_code=401, detail='Unauthorized, authentication token must be provided')
 
         token = str(credentials.credentials)
@@ -535,7 +535,7 @@ class JWTBearer(HTTPBearer):
         if issuer != ADMIN_CLIENT_USER_NAME:
             await verify_service_token(issuer, token, request)
         elif not verify_admin_token(token):
-            logger.info('Invalid or expired token.')
+            logger.debug('Invalid or expired token.')
             raise HTTPException(status_code=403, detail='Invalid token: signature, api token is not valid')
 
         return credentials
