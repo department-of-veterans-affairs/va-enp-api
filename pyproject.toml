@@ -22,6 +22,7 @@ pydantic_extra_types = "*"
 sqlalchemy = {extras = ["asyncio"], version = "*"}
 starlette_context = "*"
 tenacity = "*"
+types-aiobotocore = {extras = ["essential"], version = "*"}
 uvicorn-worker = "*"
 
 [tool.poetry.group.test]
@@ -42,7 +43,6 @@ flake8-docstrings-complete = "*"  # Needed to ensure Args are in the docstring
 mypy = "*"
 pre-commit = "*"
 ruff = "*"
-types-aiobotocore = {extras = ["essential"], version = "*"}
 types-boto3 = {extras = ["essential"], version = "*"}
 
 [tool.poetry.group.mkdocs]

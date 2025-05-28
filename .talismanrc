@@ -6,5 +6,5 @@ fileignoreconfig:
 - filename: tests/app/legacy/clients/test_sqs.py
   checksum: 76e7a459a23ccdb5a14ad7692ead54d0eb90403226b3d06b9dc1abd965f4789d
 - filename: poetry.lock
-  checksum: caf7b8ad04e11f6e7b686fb7bc96ad6724c393d0a18db860d603e009af56fa1a
+  checksum: a635b9db36a22d45395feaadc590f3589425c33996bd894beff9b11eef8b8acd
 version: "1.0"
