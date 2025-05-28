@@ -729,7 +729,7 @@ class TestValidateServiceApiKey:
         """Return valid sample api key record."""
         api_key = ApiKeyRecord(
             id=uuid4(),
-            _secret_encrypted=None,
+            _secret_encrypted='',
             service_id=uuid4(),
             expiry_date=datetime.now(timezone.utc) + timedelta(days=1),
             revoked=False,
