@@ -30,7 +30,6 @@ from tests.conftest import ENPTestClient, generate_token
 _push_path = '/legacy/v2/notifications/push'
 
 
-@patch.object(BackgroundTasks, 'add_task')
 class TestPushRouter:
     """Test the v2 push notifications router."""
 
@@ -61,7 +60,6 @@ class TestPushRouter:
         assert response.status_code == status.HTTP_400_BAD_REQUEST
 
 
-@patch.object(BackgroundTasks, 'add_task')
 class TestPush:
     """Test POST /legacy/v2/notifications/push."""
 
@@ -101,7 +99,6 @@ class TestNotificationRouter:
         '/v2/notifications/sms',
     )
 
-    @patch.object(BackgroundTasks, 'add_task')
     @pytest.mark.parametrize('route', routes)
     async def test_happy_path_admin_auth(
         self,
@@ -135,6 +132,7 @@ class TestNotificationRouter:
     @pytest.mark.parametrize('route', routes)
     async def test_happy_path_service_auth(
         self,
+        mock_background_task: AsyncMock,
         sample_api_key: Callable[..., Awaitable[Row[Any]]],
         sample_service: Callable[..., Awaitable[Row[Any]]],
         client_factory: Callable[[str], ENPTestClient],
@@ -143,6 +141,7 @@ class TestNotificationRouter:
         """Should return 201 when request is authenticated with a valid service token.
 
         Args:
+            mock_background_task (AsyncMock): Mock call to add a background task.
             sample_api_key (Callable): Fixture to create a sample API key.
             sample_service (Callable): Fixture to create a sample service.
             client_factory (Callable): Factory to create an ENPTestClient with a token.

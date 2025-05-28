@@ -17,4 +17,8 @@ fileignoreconfig:
   checksum: 817243a9f6a6eb462c930ac90873907aa91db77c00ee569405f413a62efbfd7a
 - filename: tests/app/legacy/v2/notifications/test_auth.py
   checksum: 16daebf4493f806d02f2b2f404dc97e72fe3e13d88921844f64c9d0031522baf
+- filename: .env.local
+  checksum: d3c7432f462f22fd75aaad2619858447819fd484214dabd4f1e421690d6d9b2e
+- filename: ci/.env.docker
+  checksum: ecdcca0621a82739ed39ed76cfc49016afaba7327287afa72df0146536331ab1
 version: "1.0"

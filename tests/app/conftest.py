@@ -3,9 +3,11 @@
 import os
 from collections.abc import AsyncGenerator
 from typing import Any, Generator
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 import pytest_asyncio
+from fastapi import BackgroundTasks
 from moto.server import ThreadedMotoServer
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -44,6 +46,17 @@ async def test_db_session() -> AsyncGenerator[AsyncSession, None]:
             async with session_maker() as session:
                 yield session
         # A rollback should occur automatically because the "begin" block doesn't manually commit.
+
+
+@pytest.fixture(scope='session')
+def mock_background_task() -> Generator[MagicMock | AsyncMock, Any, None]:
+    """Fixture to mock BackgroundTasks.add_task.
+
+    Yields:
+        (MagicMock | AsyncMock): A mock object for BackgroundTasks.add_task.
+    """
+    with patch.object(BackgroundTasks, 'add_task') as mock_task:
+        yield mock_task
 
 
 @pytest.fixture(scope='session')
