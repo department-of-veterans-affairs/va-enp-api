@@ -11,7 +11,7 @@ from pydantic import UUID4
 from types_aiobotocore_sqs import SQSClient
 from types_aiobotocore_sqs.type_defs import SendMessageResultTypeDef
 
-from app.constants import AWS_ACCESS_KEY_ID, AWS_REGION, AWS_SECRET_ACCESS_KEY
+from app.constants import AWS_REGION
 from app.exceptions import NonRetryableError, RetryableError
 from app.logging.logging_config import logger
 
@@ -72,8 +72,6 @@ class SqsAsyncProducer:
             self._client = get_session().create_client(
                 'sqs',
                 region_name=AWS_REGION,
-                aws_access_key_id=AWS_ACCESS_KEY_ID,
-                aws_secret_access_key=AWS_SECRET_ACCESS_KEY,
             )
 
         return self._client

@@ -3,6 +3,8 @@ fileignoreconfig:
   checksum: cbf95b276c0aeb133dc5dc3609e877b2f3a201bfcbade4c6807c473899579954
 - filename: cd/perf.env
   checksum: 63888951a826a6e8aaa3adfc45b3d73c74454b98f8dde9f9808f2e37a42dd77f
+- filename: ci/.env.docker
+  checksum: 985719319846468fed7313df4d3eb13a0aeccd2495bac066bbfc1ddd690402e6
 - filename: app/constants.py
   checksum: 8dc09263ff25346674cab59f151ecc714895cdd07586206e3ff7c56831f106dc
 - filename: app/providers/provider_aws.py

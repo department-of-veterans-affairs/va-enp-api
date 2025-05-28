@@ -10,7 +10,7 @@ from botocore.exceptions import ClientError
 from types_aiobotocore_sqs import SQSClient
 from types_boto3_sqs import SQSClient as SQSClientBoto3
 
-from app.constants import AWS_ACCESS_KEY_ID, AWS_REGION, AWS_SECRET_ACCESS_KEY
+from app.constants import AWS_REGION
 from app.exceptions import NonRetryableError, RetryableError
 from app.legacy.clients.sqs import SqsAsyncProducer
 
@@ -27,12 +27,7 @@ def setup_queue(moto_server: Generator[None, Any, None]) -> Generator[Any | str,
     # Create a mock SQS queue, casting required by mypy
     sqs_client = cast(
         SQSClientBoto3,
-        botocore.session.get_session().create_client(
-            'sqs',
-            region_name=AWS_REGION,
-            aws_access_key_id=AWS_ACCESS_KEY_ID,
-            aws_secret_access_key=AWS_SECRET_ACCESS_KEY,
-        ),
+        botocore.session.get_session().create_client('sqs', region_name=AWS_REGION),
     )
 
     test_queue = sqs_client.create_queue(QueueName=TEST_QUEUE_NAME)
