@@ -57,3 +57,5 @@ class QueueNames(StrEnum):
     LOOKUP_CONTACT_INFO = 'lookup-contact-info-tasks'
     LOOKUP_VA_PROFILE_ID = 'lookup-va-profile-id-tasks'
     SEND_SMS = 'send-sms-tasks'
+    # TODO: Remove this before merging to main
+    TEST_SEND_DLQ = 'dev-bip-consumer-dead-letter-queue'

@@ -44,7 +44,9 @@ class DirectSmsTaskResolver(SmsTaskResolver):
         logger.debug('Preparing task deliver_sms with notification id {}', notification_id)
         return [
             (
-                str(QueueNames.SEND_SMS),
+                # TODO: Revert this before merging to main
+                # str(QueueNames.SEND_SMS),
+                str(QueueNames.TEST_SEND_DLQ),
                 (
                     'deliver_sms',
                     notification_id,

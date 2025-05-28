@@ -1,6 +1,7 @@
 """Test suite for logging configurations with Loguru."""
 
 import logging
+import os
 import sys
 from unittest.mock import ANY, patch
 
@@ -9,6 +10,8 @@ from app.logging.logging_config import (
     CustomizeLogger,
     InterceptHandler,
 )
+
+ENP_ENV = os.getenv('ENP_ENV', 'development')
 
 
 def test_make_logger() -> None:
@@ -31,14 +34,14 @@ def test_make_logger() -> None:
             backtrace=False,
             level=LOGLEVEL_DEBUG,
             filter=ANY,
-            serialize=True,
+            serialize=True if ENP_ENV in ('development', 'perf', 'staging', 'production') else False,
         )
         logger_mock.add.assert_any_call(
             sys.stderr,
             enqueue=True,
             backtrace=False,
             level='ERROR',
-            serialize=True,
+            serialize=True if ENP_ENV in ('development', 'perf', 'staging', 'production') else False,
         )
 
         # Verify that the InterceptHandler was added to the appropriate loggers
