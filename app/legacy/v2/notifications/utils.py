@@ -92,6 +92,8 @@ async def validate_push_template(template_id: UUID4) -> None:
     raise NotImplementedError('validate_push_template has not been implemented.')
 
 
+# TODO - Update to cache return
+# TODO - Move personalization into a seperate method so we can allow caching
 async def validate_template(
     template_id: UUID4,
     expected_type: NotificationType,
@@ -115,6 +117,7 @@ async def validate_template(
     try:
         template = await LegacyTemplateDao.get_template(template_id)
     except NoResultFound:
+        # TODO - Update to use retryable or non-retryable
         logger.exception('Template not found with ID {}', template_id)
         raise ValueError('Template not found')
 
@@ -123,6 +126,7 @@ async def validate_template(
         _validate_template_active(template.archived, template_id)
         _validate_template_personalisation(template.content, personalisation, template_id)
     except ValueError:
+        # TODO - Update to use retryable or non-retryable
         raise
 
 
@@ -148,6 +152,7 @@ def _validate_template_type(
             expected_type,
             template_id,
         )
+        # TODO - Update to use retryable or non-retryable
         raise ValueError(f'{template_type} template is not suitable for {expected_type} notification')
 
 
@@ -197,6 +202,7 @@ def _validate_template_personalisation(
             template_id,
             missing_fields,
         )
+        # TODO - Update to use retryable or non-retryable
         raise ValueError(f'Missing personalisation: {", ".join(missing_fields)}')
 
 

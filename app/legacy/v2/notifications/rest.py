@@ -113,6 +113,9 @@ async def legacy_notification_post_handler(
     context['notification_id'] = notification_id
 
     try:
+        # TODO - await validate_personalization (?), need to move validating persoanlization to seperate function
+        #    to allow for caching in validate_template
+        # TODO - update to pass service_id and validate service
         await validate_template(request.template_id, NotificationType.SMS, request.personalisation)
     except ValueError as e:
         raise_request_validation_error(str(e))

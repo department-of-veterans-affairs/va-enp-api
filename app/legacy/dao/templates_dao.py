@@ -28,6 +28,7 @@ class LegacyTemplateDao:
         """
         logger.debug('Getting template {} from legacy database', id)
         async with get_read_session_with_context() as session:
+            # TODO - Try/Except for handling specific exception. See ServiceDao file.
             legacy_templates = metadata_legacy.tables['templates']
             stmt = select(legacy_templates).where(legacy_templates.c.id == id)
             logger.debug('Executing query: {}', stmt)
