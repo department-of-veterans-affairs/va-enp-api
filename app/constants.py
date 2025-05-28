@@ -3,9 +3,11 @@
 import os
 from enum import StrEnum
 
-# AWS SQS Configuration
+ENV = os.getenv('ENV', 'dev')
+DEPLOYMENT_ENVS = ('dev', 'perf', 'staging', 'prod')
+
+# AWS Configuration
 AWS_REGION = os.getenv('AWS_REGION', 'us-east-1')
-AWS_SECRET_ACCESS_KEY = os.getenv('AWS_SECRET_ACCESS_KEY', 'test')
 
 # This should be 2886 when deployed to retry for a full 24 hours.
 # Defaulting to 3 so local testing doesn't take too long.
@@ -55,11 +57,14 @@ class OSPlatformType(StrEnum):
     IOS = 'IOS'
 
 
+QUEUE_PREFIX = f'{ENV}-notification-'
+
+
 class QueueNames(StrEnum):
     """Celery queue names."""
 
-    LOOKUP_CONTACT_INFO = 'lookup-contact-info-tasks'
-    LOOKUP_VA_PROFILE_ID = 'lookup-va-profile-id-tasks'
-    SEND_SMS = 'send-sms-tasks'
-    # TODO: Remove this before merging to main
+    LOOKUP_CONTACT_INFO = f'{QUEUE_PREFIX}lookup-contact-info-tasks'
+    LOOKUP_VA_PROFILE_ID = f'{QUEUE_PREFIX}lookup-va-profile-id-tasks'
+    SEND_SMS = f'{QUEUE_PREFIX}send-sms-tasks'
+    # TODO: 260 - Remove this queue once notifications are persisted in the database
     TEST_SEND_DLQ = 'dev-bip-consumer-dead-letter-queue'
