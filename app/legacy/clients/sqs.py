@@ -2,7 +2,6 @@
 
 import base64
 import json
-import os
 from typing import Any, TypedDict
 from uuid import uuid4
 
@@ -12,12 +11,9 @@ from pydantic import UUID4
 from types_aiobotocore_sqs import SQSClient
 from types_aiobotocore_sqs.type_defs import SendMessageResultTypeDef
 
+from app.constants import AWS_ACCESS_KEY_ID, AWS_REGION, AWS_SECRET_ACCESS_KEY
 from app.exceptions import NonRetryableError, RetryableError
 from app.logging.logging_config import logger
-
-AWS_REGION = os.getenv('AWS_REGION_NAME', 'us-east-1')
-AWS_ACCESS_KEY_ID = os.getenv('AWS_ACCESS_KEY_ID', 'test')
-AWS_SECRET_ACCESS_KEY = os.getenv('AWS_SECRET_ACCESS_KEY', 'test')
 
 
 class DeliveryInfoDict(TypedDict):

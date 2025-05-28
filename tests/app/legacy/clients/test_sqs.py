@@ -10,13 +10,9 @@ from botocore.exceptions import ClientError
 from types_aiobotocore_sqs import SQSClient
 from types_boto3_sqs import SQSClient as SQSClientBoto3
 
+from app.constants import AWS_ACCESS_KEY_ID, AWS_REGION, AWS_SECRET_ACCESS_KEY
 from app.exceptions import NonRetryableError, RetryableError
-from app.legacy.clients.sqs import (
-    AWS_ACCESS_KEY_ID,
-    AWS_REGION,
-    AWS_SECRET_ACCESS_KEY,
-    SqsAsyncProducer,
-)
+from app.legacy.clients.sqs import SqsAsyncProducer
 
 TEST_QUEUE_NAME = 'test_queue'
 

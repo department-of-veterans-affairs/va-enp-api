@@ -10,7 +10,12 @@ import botocore
 from aiobotocore.session import get_session
 from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_full_jitter
 
-from app.constants import MAX_RETRIES
+from app.constants import (
+    AWS_ACCESS_KEY_ID,
+    AWS_REGION,
+    AWS_SECRET_ACCESS_KEY,
+    MAX_RETRIES,
+)
 from app.exceptions import NonRetryableError, RetryableError
 from app.logging.logging_config import logger
 from app.providers import sns_publish_retriable_exceptions_set
@@ -42,11 +47,10 @@ class ProviderAWS(ProviderBase):
             str: The platform application ARN
 
         """
-        region_name = os.getenv('AWS_REGION_NAME', 'us-east-1')
         account_id = os.getenv('AWS_ACCOUNT_ID', '000000000000')
         platform = os.getenv('AWS_PLATFORM', 'APNS')
 
-        return f'arn:aws:sns:{region_name}:{account_id}:app/{platform}/{platform_application_id}'
+        return f'arn:aws:sns:{AWS_REGION}:{account_id}:app/{platform}/{platform_application_id}'
 
     async def _send_push(self, push_model: PushModel) -> str:
         """Send a message to an Amazon SNS topic.
@@ -70,9 +74,9 @@ class ProviderAWS(ProviderBase):
             session = get_session()
             async with session.create_client(
                 'sns',
-                region_name=os.getenv('AWS_REGION_NAME', 'us-east-1'),
-                aws_secret_access_key=os.getenv('AWS_SECRET_ACCESS_KEY', ''),
-                aws_access_key_id=os.getenv('AWS_ACCESS_KEY_ID', ''),
+                region_name=AWS_REGION,
+                aws_secret_access_key=AWS_SECRET_ACCESS_KEY,
+                aws_access_key_id=AWS_ACCESS_KEY_ID,
             ) as client:
                 response: dict[str, str] = await client.publish(**publish_params)
         except Exception as e:
@@ -130,9 +134,9 @@ class ProviderAWS(ProviderBase):
             session = get_session()
             async with session.create_client(
                 'sns',
-                region_name=os.getenv('AWS_REGION_NAME', 'us-east-1'),
-                aws_secret_access_key=os.getenv('AWS_SECRET_ACCESS_KEY', ''),
-                aws_access_key_id=os.getenv('AWS_ACCESS_KEY_ID', ''),
+                region_name=AWS_REGION,
+                aws_secret_access_key=AWS_SECRET_ACCESS_KEY,
+                aws_access_key_id=AWS_ACCESS_KEY_ID,
             ) as client:
                 response: dict[str, str] = await client.create_platform_endpoint(
                     PlatformApplicationArn=push_registration_model.platform_application_arn,

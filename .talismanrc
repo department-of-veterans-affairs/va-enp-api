@@ -1,10 +1,16 @@
 fileignoreconfig:
-- filename: tests/app/conftest.py
-  checksum: 2033a0d1ec24125408c35961c521d7e1a2e065c5cef537f3168f763a6e75d1e8
+- filename: cd/dev.env
+  checksum: cbf95b276c0aeb133dc5dc3609e877b2f3a201bfcbade4c6807c473899579954
+- filename: cd/perf.env
+  checksum: 63888951a826a6e8aaa3adfc45b3d73c74454b98f8dde9f9808f2e37a42dd77f
+- filename: app/constants.py
+  checksum: 8dc09263ff25346674cab59f151ecc714895cdd07586206e3ff7c56831f106dc
+- filename: app/providers/provider_aws.py
+  checksum: 22317b0702c09ac0d64fd2f6047ae8f3f46de3db3cba18f0cc362b5e90ad9ed4
+- filename: tests/app/providers/test_provider_aws.py
+  checksum: 47e4ceaa7896ed7d6505763c24effc8fd934091c1193154f0a9e5b0f2cc2e40b
 - filename: app/legacy/clients/sqs.py
-  checksum: 8e2cbe8ea369a4902a7fe10709bcce8251e9fa0d8aedf0c089fc0323ef26a387
+  checksum: a42ffe69a6f5c7b604b466f45722f5ca6d14841bb95851813b566781cd5e01a5
 - filename: tests/app/legacy/clients/test_sqs.py
-  checksum: 76e7a459a23ccdb5a14ad7692ead54d0eb90403226b3d06b9dc1abd965f4789d
-- filename: poetry.lock
-  checksum: a635b9db36a22d45395feaadc590f3589425c33996bd894beff9b11eef8b8acd
+  checksum: 537ad07a14885964ef92fa47e90972cbc5af52508d902699900a30561df2b47d
 version: "1.0"

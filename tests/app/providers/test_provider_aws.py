@@ -10,7 +10,7 @@ import botocore.exceptions
 import pytest
 from tenacity import stop_after_attempt, wait_none
 
-from app.constants import MobileAppType
+from app.constants import AWS_REGION, MobileAppType
 from app.exceptions import NonRetryableError
 from app.providers import sns_publish_retriable_exceptions_set
 from app.providers.provider_aws import ProviderAWS
@@ -32,11 +32,13 @@ class TestProviderAWS:
         self, mock_get_session: AsyncMock, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """Test with various mocked environments."""
-        monkeypatch.setenv('AWS_REGION_NAME', 'us-west-1')
+        monkeypatch.setenv('AWS_REGION', AWS_REGION)
         monkeypatch.setenv('AWS_ACCOUNT_ID', '999999999999')
         monkeypatch.setenv('AWS_PLATFORM', 'APNS')
 
-        assert self.provider.get_platform_application_arn('foo') == 'arn:aws:sns:us-west-1:999999999999:app/APNS/foo'
+        assert (
+            self.provider.get_platform_application_arn('foo') == f'arn:aws:sns:{AWS_REGION}:999999999999:app/APNS/foo'
+        )
 
     @pytest.mark.parametrize(
         'data',
