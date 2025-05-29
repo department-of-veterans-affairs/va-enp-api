@@ -53,7 +53,7 @@ fileignoreconfig:
 - filename: tests/app/test_auth.py
   checksum: 81670e50973a2aff2508a1dafc62639351998f14826d322069c1584b85c5fe2b
 - filename: tests/app/legacy/v2/notifications/test_auth.py
-  checksum: 16daebf4493f806d02f2b2f404dc97e72fe3e13d88921844f64c9d0031522baf
+  checksum: 9a46795e0124515bc5960deee90d0a7531aaff989c39b4ecc93ab8c9f1969942
 - filename: tests/conftest.py
   checksum: 44a2d6e8de7940335bb84a487d3377b5339bb99219b95aca66f368dff960d537
 - filename: tests/app/legacy/test_samples.py
