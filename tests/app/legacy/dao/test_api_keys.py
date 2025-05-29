@@ -174,23 +174,7 @@ class TestApiKeyRecord:
         """Ensure NonRetryableError raised if secret not decodable."""
         record = ApiKeyRecord(
             id=uuid4(),
-<<<<<<< HEAD
-            _secret_encrypted=None,
-            service_id=uuid4(),
-            expiry_date=None,
-            revoked=False,
-            key_type='normal',
-        )
-        assert record.secret is None
-
-    def test_secret_returns_none_and_logs_error_if_decode_fails(self) -> None:
-        """Ensure ValueError is propagated if decode fails."""
-        record = ApiKeyRecord(
-            id=uuid4(),
-            _secret_encrypted='bad-data',
-=======
             _secret_encrypted='invalid-secret',
->>>>>>> main
             service_id=uuid4(),
             expiry_date=None,
             revoked=False,
