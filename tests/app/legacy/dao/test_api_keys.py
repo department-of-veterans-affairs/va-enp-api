@@ -169,29 +169,19 @@ class TestApiKeyRecord:
 
         assert record.secret == secret
 
-    def test_secret_returns_none_if_secret_is_none(self) -> None:
-        """Ensure None is returned when _secret_encrypted is None."""
+    def test_secret_raises_and_logs_error_if_secret_not_decodeable(self) -> None:
+        """Ensure NonRetryableError raised if secret not decodable."""
         record = ApiKeyRecord(
             id=uuid4(),
-            _secret_encrypted=None,
-            service_id=uuid4(),
-            expiry_date=None,
-            revoked=False,
-        )
-        assert record.secret is None
-
-    def test_secret_returns_none_and_logs_error_if_decode_fails(self) -> None:
-        """Ensure ValueError is propagated if decode fails."""
-        record = ApiKeyRecord(
-            id=uuid4(),
-            _secret_encrypted='bad-data',
+            _secret_encrypted='invalid-secret',
             service_id=uuid4(),
             expiry_date=None,
             revoked=False,
         )
 
         with patch('app.legacy.dao.api_keys_dao.logger.error') as mock_error:
-            assert record.secret is None
+            with pytest.raises(NonRetryableError):
+                assert record.secret
 
         mock_error.assert_called_once_with(
             'Failed to decode API key secret for service_id: {} api_key_id: {}', record.service_id, record.id
