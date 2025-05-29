@@ -139,8 +139,7 @@ def decode_and_remove_signature(encoded: str) -> str:
         encoded (str): A string with base64url-encoded segments separated by '.'.
 
     Returns:
-        str | None: The decoded first segment as a string, with quotes stripped,
-                    or None if decoding fails.
+        str: The decoded first segment as a string, with quotes stripped
 
     Raises:
         NonRetryableError: decoding fails
