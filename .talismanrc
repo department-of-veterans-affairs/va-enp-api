@@ -10,15 +10,27 @@ fileignoreconfig:
 - filename: tests/conftest.py
   checksum: 44a2d6e8de7940335bb84a487d3377b5339bb99219b95aca66f368dff960d537
 - filename: app/legacy/dao/api_keys_dao.py
-  checksum: 0dcdd701983714586d83e5218916126c0a7680fe8381c0b7a875ab070d806122
-- filename: tests/app/legacy/dao/test_api_keys.py
-  checksum: 346f456ab99b6e8bc2bc651806852d3f89288fd62b31128332111c876459cf48
+  checksum: 173b55053300c426cb1cd313eb6e998c8adb7c1c8d2ca42ddd75bd6772a0140f
+- filename: tests/app/legacy/v2/notifications/test_rest.py
+  checksum: ed27544a4432fb31366788e3dfd55ac5c76fad063bd1e4388b04b2504db5565d
+- filename: tests/app/providers/__init__.py
+  checksum: 0e3ae2fd3a50245a8c143d31c4316b164b51161d2db6e660aa956b78eda1b4d8
+- filename: tests/app/providers/test_provider_aws.py
+  checksum: f2ed526b1a81c5c0facfd4d1e7f1a3e26194778c1909a354c98c3b042945d34d
+- filename: tests/app/test_auth.py
+  checksum: 81670e50973a2aff2508a1dafc62639351998f14826d322069c1584b85c5fe2b
+- filename: tests/conftest.py
+  checksum: 44a2d6e8de7940335bb84a487d3377b5339bb99219b95aca66f368dff960d537
+- filename: tests/app/legacy/test_samples.py
+  checksum: a1ba3739af869483479432aefcae8b1152e1a28f105b69b95e8fa3e02f4c8f0d
+- filename: app/legacy/dao/api_key_dao.py
+  checksum: 9eb496d3ae4238193baf5c5627d8d186beeda815133e9b4e1bc6e56ce57a3802
+- filename: tests/app/legacy/conftest.py
+  checksum: 96761332527bd4f605ab0c01f01477fc9cd705c3c62350cb6e81454d932dcd33
 - filename: app/auth.py
-  checksum: 817243a9f6a6eb462c930ac90873907aa91db77c00ee569405f413a62efbfd7a
+  checksum: 7689f6cddd937c15fae3fa1a074502aafc77c8829b205c598195c60dcd350e97
+- filename: tests/app/legacy/dao/test_api_keys.py
+  checksum: 30f8d4b5117cb785cb962d93cb89c056067184e8572f0550a7223dec9507fa5e
 - filename: tests/app/legacy/v2/notifications/test_auth.py
-  checksum: 16daebf4493f806d02f2b2f404dc97e72fe3e13d88921844f64c9d0031522baf
-- filename: .env.local
-  checksum: d3c7432f462f22fd75aaad2619858447819fd484214dabd4f1e421690d6d9b2e
-- filename: ci/.env.docker
-  checksum: ecdcca0621a82739ed39ed76cfc49016afaba7327287afa72df0146536331ab1
+  checksum: 9a46795e0124515bc5960deee90d0a7531aaff989c39b4ecc93ab8c9f1969942
 version: "1.0"

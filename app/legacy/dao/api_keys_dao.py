@@ -82,26 +82,30 @@ class ApiKeyRecord:
     """
 
     id: UUID4
-    _secret_encrypted: str | None
+    _secret_encrypted: str
     service_id: UUID4
     expiry_date: datetime | None
     revoked: bool
 
     @property
-    def secret(self) -> str | None:
+    def secret(self) -> str:
         """Decode and return the API key's secret.
 
         Returns:
-            str | None: The decoded secret, or None if no secret is present.
+            str: The decoded secret
+
+        Raises:
+            NonRetryableError: If the secret cannot be decoded.
         """
-        if self._secret_encrypted is not None:
-            try:
-                return decode_and_remove_signature(self._secret_encrypted)
-            except NonRetryableError:
-                logger.error(
-                    'Failed to decode API key secret for service_id: {} api_key_id: {}', self.service_id, self.id
-                )
-        return None
+        try:
+            return decode_and_remove_signature(self._secret_encrypted)
+        except NonRetryableError:
+            logger.error(
+                'Failed to decode API key secret for service_id: {} api_key_id: {}',
+                self.service_id,
+                self.id,
+            )
+            raise
 
     @classmethod
     def from_row(cls, row: Row[Any]) -> 'ApiKeyRecord':
@@ -128,15 +132,14 @@ class ApiKeyRecord:
 
 # TODO: TEAM-1664 temp "decrypt" until isdangerous added or proper encryption implemented
 # does not verify signature
-def decode_and_remove_signature(encoded: str) -> str | None:
+def decode_and_remove_signature(encoded: str) -> str:
     """Base64url-decode the first segment of a token and remove surrounding quotes.
 
     Args:
         encoded (str): A string with base64url-encoded segments separated by '.'.
 
     Returns:
-        str | None: The decoded first segment as a string, with quotes stripped,
-                    or None if decoding fails.
+        str: The decoded first segment as a string, with quotes stripped
 
     Raises:
         NonRetryableError: decoding fails
