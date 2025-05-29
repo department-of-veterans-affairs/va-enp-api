@@ -175,15 +175,6 @@ async def verify_service_token(issuer: str, token: str, request: Request) -> Non
             request_id,
         )
 
-        if api_key.secret is None:
-            logger.debug(
-                'API key for service has no secret service_id: {} api_key_id: {} request_id: {}',
-                service.id,
-                api_key.id,
-                request_id,
-            )
-            continue
-
         if not _verify_service_token(token, api_key):
             logger.debug(
                 'API key unable to verify service token service_id: {} api_key_id: {} request_id: {}',
@@ -313,7 +304,7 @@ def _verify_service_token(token: str, api_key: ApiKeyRecord) -> bool:
         verified = decode_jwt_token(token, api_key.secret)
     except TokenExpiredError:
         raise HTTPException(status_code=403, detail='Error: Your system clock must be accurate to within 30 seconds')
-    except TokenError:
+    except (NonRetryableError, TokenError):
         verified = False
     return verified
 
@@ -385,7 +376,7 @@ def _get_token_issuer(token: str) -> str:
     return str(unverified.get('iss'))
 
 
-def decode_jwt_token(token: str, secret: str | None) -> bool:
+def decode_jwt_token(token: str, secret: str) -> bool:
     """Decode and validate a JWT token using the provided client-specific secret.
 
     This method verifies the token's signature and ensures that required claims such as
