@@ -165,6 +165,7 @@ class TestApiKeyRecord:
             service_id=uuid4(),
             expiry_date=None,
             revoked=False,
+            key_type='normal',
         )
 
         assert record.secret == secret
@@ -177,6 +178,7 @@ class TestApiKeyRecord:
             service_id=uuid4(),
             expiry_date=None,
             revoked=False,
+            key_type='normal',
         )
         assert record.secret is None
 
@@ -188,6 +190,7 @@ class TestApiKeyRecord:
             service_id=uuid4(),
             expiry_date=None,
             revoked=False,
+            key_type='normal',
         )
 
         with patch('app.legacy.dao.api_keys_dao.logger.error') as mock_error:

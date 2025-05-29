@@ -733,6 +733,7 @@ class TestValidateServiceApiKey:
             service_id=uuid4(),
             expiry_date=datetime.now(timezone.utc) + timedelta(days=1),
             revoked=False,
+            key_type='normal',
         )
         return api_key
 

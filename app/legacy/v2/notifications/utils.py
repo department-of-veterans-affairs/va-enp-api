@@ -1,14 +1,17 @@
 """Utilities to aid the REST Notification routes."""
 
 import re
-from typing import Sequence
+from typing import Any, Sequence
 
+from fastapi import HTTPException
 from fastapi.exceptions import RequestValidationError
 from pydantic import UUID4
+from sqlalchemy import Row
 from sqlalchemy.exc import NoResultFound
 
-from app.constants import NotificationType
+from app.constants import RESPONSE_500, NotificationType
 from app.exceptions import NonRetryableError, RetryableError
+from app.legacy.dao.notifications_dao import LegacyNotificationDao
 from app.legacy.dao.templates_dao import LegacyTemplateDao
 from app.legacy.v2.notifications.route_schema import PersonalisationFileObject
 from app.logging.logging_config import logger
@@ -96,7 +99,7 @@ async def validate_template(
     template_id: UUID4,
     expected_type: NotificationType,
     personalisation: dict[str, str | int | float | list[str | int | float] | PersonalisationFileObject] | None,
-) -> None:
+) -> Row[Any]:
     """Validates the template with the given ID.
 
     Checks for the template in the database, that it's the right type, and is active. Raises a ValueError if any
@@ -116,14 +119,38 @@ async def validate_template(
         template = await LegacyTemplateDao.get_template(template_id)
     except NoResultFound:
         logger.exception('Template not found with ID {}', template_id)
-        raise ValueError('Template not found')
+        raise_request_validation_error('Template not found')
 
     try:
         _validate_template_type(template.template_type, expected_type, template_id)
         _validate_template_active(template.archived, template_id)
         _validate_template_personalisation(template.content, personalisation, template_id)
-    except ValueError:
-        raise
+    except ValueError as e:
+        raise_request_validation_error(str(e))
+    return template
+
+
+async def create_notification(
+    id: UUID4,
+    notification_type: NotificationType,
+    template_version: int,
+) -> None:
+    """Utility function to help the route create a notification using LegacyNotificationDao.create_notification.
+
+    Args:
+        id (UUID4): notification id to use
+        notification_type (NotificationType): channel for the notification
+        template_version (int): template version to use for this notification
+
+    Raises:
+        HTTPException: Unexpected 5xx catch
+
+    """
+    try:
+        await LegacyNotificationDao.create_notification(id, notification_type, template_version)
+    except NonRetryableError as e:
+        logger.exception('Failed to create notification due to unexpected error: in the database', id)
+        raise HTTPException(status_code=500, detail=RESPONSE_500) from e
 
 
 def _validate_template_type(
