@@ -3,7 +3,7 @@
 import os
 from enum import StrEnum
 
-ENV = os.getenv('ENV', 'dev')
+ENV = os.getenv('ENV', 'local')
 DEPLOYMENT_ENVS = ('dev', 'perf', 'staging', 'prod')
 
 # AWS Configuration
