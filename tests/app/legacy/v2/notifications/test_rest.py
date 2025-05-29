@@ -30,7 +30,6 @@ from tests.conftest import ENPTestClient, generate_token
 _push_path = '/legacy/v2/notifications/push'
 
 
-@patch.object(BackgroundTasks, 'add_task')
 class TestPushRouter:
     """Test the v2 push notifications router."""
 
@@ -61,7 +60,6 @@ class TestPushRouter:
         assert response.status_code == status.HTTP_400_BAD_REQUEST
 
 
-@patch.object(BackgroundTasks, 'add_task')
 class TestPush:
     """Test POST /legacy/v2/notifications/push."""
 
@@ -104,12 +102,14 @@ class TestNotificationRouter:
     @pytest.mark.parametrize('route', routes)
     async def test_happy_path_admin_auth(
         self,
+        mock_background_task: AsyncMock,
         client: ENPTestClient,
         route: str,
     ) -> None:
         """Test route can return 201.
 
         Args:
+            mock_background_task (AsyncMock): Mock call to add a background task
             client (ENPTestClient): Custom FastAPI client fixture
             route (str): Route to test
 
@@ -132,6 +132,7 @@ class TestNotificationRouter:
     @pytest.mark.parametrize('route', routes)
     async def test_happy_path_service_auth(
         self,
+        mock_background_task: AsyncMock,
         sample_api_key: Callable[..., Awaitable[Row[Any]]],
         sample_service: Callable[..., Awaitable[Row[Any]]],
         client_factory: Callable[[str], ENPTestClient],
@@ -140,6 +141,7 @@ class TestNotificationRouter:
         """Should return 201 when request is authenticated with a valid service token.
 
         Args:
+            mock_background_task (AsyncMock): Mock call to add a background task.
             sample_api_key (Callable): Fixture to create a sample API key.
             sample_service (Callable): Fixture to create a sample service.
             client_factory (Callable): Factory to create an ENPTestClient with a token.
@@ -297,8 +299,10 @@ class TestV2SMS:
         data: dict[str, object] = jsonable_encoder(request_data)
         return data
 
+    @patch.object(BackgroundTasks, 'add_task')
     async def test_v2_sms_with_phone_number_returns_201(
         self,
+        mock_background_task: AsyncMock,
         mock_validate_template: AsyncMock,
         client: ENPTestClient,
         sms_request_data: dict[str, object],
@@ -327,8 +331,10 @@ class TestV2SMS:
         assert 'from_number' in response_data['content']
         assert response_data['content']['from_number'] == '+18005550101'
 
+    @patch.object(BackgroundTasks, 'add_task')
     async def test_v2_sms_with_recipient_identifier_returns_201(
         self,
+        mock_background_task: AsyncMock,
         mock_validate_template: AsyncMock,
         client: ENPTestClient,
         sms_request_data: dict[str, object],
@@ -370,8 +376,10 @@ class TestV2SMS:
         if 'callback_url' in sms_request_data:
             assert response_data['callback_url'] == sms_request_data['callback_url']
 
+    @patch.object(BackgroundTasks, 'add_task')
     async def test_sms_task_resolver_selection(
         self,
+        mock_background_task: AsyncMock,
         mock_validate_template: AsyncMock,
     ) -> None:
         """Test the get_sms_task_resolver function selects the appropriate resolver."""
