@@ -1,8 +1,9 @@
 """Utilities to aid the REST Notification routes."""
 
 import re
-from typing import Sequence
+from typing import Any, Callable, Coroutine, Sequence
 
+from fastapi import Depends, Request
 from fastapi.exceptions import RequestValidationError
 from pydantic import UUID4
 from sqlalchemy.exc import NoResultFound
@@ -14,6 +15,25 @@ from app.legacy.v2.notifications.route_schema import PersonalisationFileObject
 from app.logging.logging_config import logger
 from app.providers.provider_aws import ProviderAWS
 from app.providers.provider_schemas import PushModel
+
+
+def chained_depends(*deps: Callable[[Request], Coroutine[Any, Any, None]]) -> Depends:
+    """Compose multiple async dependency callables into one, enforcing strict execution order.
+
+    Each dependency must be an async function that accepts a Request and optionally raises.
+
+    Args:
+        *deps: A sequence of dependency callables to chain.
+
+    Returns:
+        Depends: A FastAPI Depends object wrapping a single callable that invokes each dependency in order.
+    """
+
+    async def wrapper(request: Request) -> None:
+        for dep in deps:
+            await dep(request)
+
+    return Depends(wrapper)
 
 
 def raise_request_validation_error(

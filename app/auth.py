@@ -148,6 +148,7 @@ async def verify_service_token(issuer: str, token: str, request: Request) -> Non
     """
     # Set the id here for tracking purposes - becomes notification id
     request_id = uuid4()
+    # context['request_id'] = request_id
     request.state.request_id = request_id
 
     logger.debug(
@@ -200,7 +201,9 @@ async def verify_service_token(issuer: str, token: str, request: Request) -> Non
             request_id,
         )
 
+        # context['api_user'] = api_key
         request.state.api_user = api_key
+        # context['service_id'] = service.id
         request.state.service_id = service.id
 
         logger.info(

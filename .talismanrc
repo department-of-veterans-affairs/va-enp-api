@@ -7,6 +7,8 @@ fileignoreconfig:
   checksum: fc90179b23528cc9668f868361e0889635deb8ebd4b78ff738f4143a151b3e64
 - filename: app/auth.py
   checksum: 7689f6cddd937c15fae3fa1a074502aafc77c8829b205c598195c60dcd350e97
+- filename: app/clients/redis_client.py
+  checksum: 5cee5176cd730681bc159c32de22f232ad48b89ce27b58019d858a2ce1e4ed61
 - filename: app/clients/va_profile.py
   checksum: 4c15663b347f4d79d8daa63e2083258a7fc7493efa699245a2d9fd0378ada694
 - filename: app/db/__init__.py
@@ -21,6 +23,8 @@ fileignoreconfig:
   checksum: dc4379e1c5c3759c22c2fbffd3049ca4114c66965cb9c72825d104a417dcae77
 - filename: app/legacy/v2/notifications/utils.py
   checksum: b8fe6a823967dec1b572b3823b226c2b73a33129f2b09176069b69782ab86d6e
+- filename: app/limits.py
+  checksum: 6f31120232f18c0c809c72abed0472b129dd542fae131f429419ecb7da513aa0
 - filename: app/providers/provider_aws.py
   checksum: f345ea8dea997d72c8d40a0cac2a2b1aacacef8959088ba5cc2ea9e5df57c9fd
 - filename: cd/dev.env
@@ -28,7 +32,7 @@ fileignoreconfig:
 - filename: cd/perf.env
   checksum: 5c50afeea60016a131f94dacd3086db9cbb4c6af573be19c7de91bbb51e04db7
 - filename: ci/.env.docker
-  checksum: ff5147be5734e677fcb8bfbeaaa59e54d5b395f531ac371fb183494eaf954582
+  checksum: a4c2ea2bbaca6760d9dfe8efc9d36496f589a56a7164eea36afdd90f7929a673
 - filename: ci/docker-compose-local.yml
   checksum: c73beda98c39232441d86f6d6f6f2858274f9703f8a462eac1effacfbb9aa39d
 - filename: poetry.lock
@@ -55,7 +59,7 @@ fileignoreconfig:
 - filename: tests/app/legacy/v2/notifications/test_auth.py
   checksum: 9a46795e0124515bc5960deee90d0a7531aaff989c39b4ecc93ab8c9f1969942
 - filename: tests/conftest.py
-  checksum: 44a2d6e8de7940335bb84a487d3377b5339bb99219b95aca66f368dff960d537
+  checksum: c2f74d3a4092bdb95645832277c01e8daff1c664e15ac9f4aae58f081e8ce447
 - filename: tests/app/legacy/test_samples.py
   checksum: a1ba3739af869483479432aefcae8b1152e1a28f105b69b95e8fa3e02f4c8f0d
 - filename: app/legacy/dao/api_key_dao.py

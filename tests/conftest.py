@@ -1,19 +1,23 @@
 """Fixtures and setup to test the app."""
 
 import asyncio
+import contextlib
 import os
 import time
-from typing import Any, Callable
-from unittest.mock import Mock
+from typing import Any, AsyncIterator, Awaitable, Callable
+from unittest.mock import AsyncMock, Mock, patch
 
 import jwt
 import pytest
 from fastapi.testclient import TestClient
+from sqlalchemy import Row
 
 from app.auth import JWTPayloadDict
+from app.clients.redis_client import RedisClientManager
 from app.main import CustomFastAPI, app
 from app.providers.provider_aws import ProviderAWS
 from app.state import ENPState
+from tests.app.legacy.dao.test_api_keys import encode_and_sign
 
 ADMIN_SECRET_KEY = os.getenv('ENP_ADMIN_SECRET_KEY', 'not-very-secret')
 ALGORITHM = os.getenv('ENP_ALGORITHM', 'HS256')
@@ -27,11 +31,7 @@ _TRUNCATE_ARTIFACTS = os.getenv('TRUNCATE_ARTIFACTS', 'False') == 'True'
 
 
 class ENPTestClient(TestClient):
-    """An ENP test client for the CustomFastAPI app.
-
-    Args:
-        TestClient (TestClient): FastAPI's test client.
-    """
+    """An ENP test client for the CustomFastAPI app."""
 
     app: CustomFastAPI
     token_expiry = 60
@@ -49,7 +49,6 @@ class ENPTestClient(TestClient):
         """
         if token is None:
             token = generate_token()
-
         headers = {
             'Authorization': f'Bearer {token}',
         }
@@ -58,41 +57,74 @@ class ENPTestClient(TestClient):
 
 @pytest.fixture(scope='session')
 def client() -> ENPTestClient:
-    """Return a test client.
-
-    Returns:
-        ENPTestClient: A test client to test with
-
-    """
+    """Return a test client with mocked Redis."""
     app.enp_state = ENPState()
-
     app.enp_state.providers['aws'] = Mock(spec=ProviderAWS)
+
+    redis_mock = Mock(spec=RedisClientManager)
+    redis_mock.consume_rate_limit_token = AsyncMock(return_value=True)
+    app.enp_state.redis_client = redis_mock
 
     return ENPTestClient(app)
 
 
 @pytest.fixture(scope='session')
-def client_factory() -> Callable[[str], ENPTestClient]:
-    """Returns a factory for creating ENPTestClient with a custom token.
+def client_factory() -> Callable[[str, AsyncMock | None], ENPTestClient]:
+    """Pytest fixture that provides a factory function for creating authenticated ENPTestClient instances.
 
     Returns:
-        Callable[[str], ENPTestClient]: Factory function accepting a token string.
+        Callable[[str, AsyncMock | None], ENPTestClient]: A function that accepts a JWT token and
+        an optional mocked Redis client, and returns a configured ENPTestClient instance.
     """
 
-    def _create_client(token: str) -> ENPTestClient:
-        """Create a test client with the given Bearer token.
+    def _create_client(token: str, redis_mock: AsyncMock | None = None) -> ENPTestClient:
+        """Create a test client with the given Bearer token and optional Redis mock.
 
         Args:
             token (str): The Bearer token to include in the Authorization header.
+            redis_mock (AsyncMock | None): Optional mocked Redis client. If not provided,
+                a default AsyncMock will be used with consume_rate_limit_token mocked to return True.
 
         Returns:
             ENPTestClient: A configured test client instance.
         """
         app.enp_state = ENPState()
         app.enp_state.providers['aws'] = Mock(spec=ProviderAWS)
+
+        if redis_mock is None:
+            redis_mock = Mock(spec=RedisClientManager)
+            redis_mock.consume_rate_limit_token = AsyncMock(return_value=True)
+
+        app.enp_state.redis_client = redis_mock
         return ENPTestClient(app, token=token)
 
     return _create_client
+
+
+@pytest.fixture
+async def service_authorized_client(
+    sample_api_key: Callable[..., Awaitable[Row[Any]]],
+    sample_service: Callable[..., Awaitable[Row[Any]]],
+    client_factory: Callable[[str], ENPTestClient],
+) -> AsyncIterator[tuple[ENPTestClient, Row[Any]]]:
+    """Yields an authenticated client and its associated service, with service+apikey DAO methods mocked."""
+    service = await sample_service()
+    secret = 'not_so_secret'
+    encrypted_secret = encode_and_sign(secret)
+    api_key = await sample_api_key(service_id=service.id, secret=encrypted_secret)
+
+    now = int(time.time())
+    token = generate_token(
+        sig_key=secret,
+        payload={'iss': str(service.id), 'iat': now, 'exp': now + 60},
+    )
+
+    client = client_factory(token)
+
+    with contextlib.ExitStack() as stack:
+        stack.enter_context(patch('app.auth.LegacyServiceDao.get_service', new=AsyncMock(return_value=service)))
+        stack.enter_context(patch('app.auth.LegacyApiKeysDao.get_api_keys', new=AsyncMock(return_value=[api_key])))
+        yield client
 
 
 def generate_token(
