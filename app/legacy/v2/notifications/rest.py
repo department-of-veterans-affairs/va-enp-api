@@ -4,6 +4,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, BackgroundTasks, Body, Depends, Request, status
 from pydantic import UUID4
+from starlette_context import context
 
 from app.auth import JWTBearer
 from app.constants import NotificationType
@@ -84,14 +85,13 @@ async def create_push_notification(
 @v2_notification_router.post('/sms', status_code=status.HTTP_201_CREATED)
 @v2_legacy_notification_router.post('/sms', status_code=status.HTTP_201_CREATED)
 async def legacy_notification_post_handler(
-    data: Annotated[
+    request: Annotated[
         V2PostSmsRequestModel,
         Body(
             openapi_examples=V2PostSmsRequestModel.json_schema_extra['examples'],
         ),
     ],
     sms_task_resolver: Annotated[SmsTaskResolver, Depends(get_sms_task_resolver)],
-    request: Request,
 ) -> V2PostSmsResponseModel:
     """Create an SMS notification.
 
@@ -102,13 +102,13 @@ async def legacy_notification_post_handler(
     Returns:
         V2PostSmsResponseModel: The notification response data
     """
+    notification_id: UUID4 = context.data['request_id']
     logger.debug('Creating SMS notification with request data: {}', request)
-
-    template_row = await validate_template(data.template_id, NotificationType.SMS, data.personalisation)
-    await create_notification(request.state.request_id, NotificationType.SMS, template_row.version)
+    template_row = await validate_template(request.template_id, NotificationType.SMS, request.personalisation)
+    await create_notification(notification_id, NotificationType.SMS, template_row.version)
 
     # Get tasks for the notification using the appropriate resolver
-    tasks = sms_task_resolver.get_tasks(request.state.request_id)
+    tasks = sms_task_resolver.get_tasks(notification_id)
 
     # Log tasks that would have been processed
     for queue_name, task_args in tasks:
@@ -117,16 +117,16 @@ async def legacy_notification_post_handler(
     logger.debug('Found {} tasks to process', len(tasks))
 
     return V2PostSmsResponseModel(
-        id=request.state.request_id,
-        reference=data.reference,
-        billing_code=data.billing_code,
-        callback_url=data.callback_url,
-        scheduled_for=data.scheduled_for,
+        id=notification_id,
+        reference=request.reference,
+        billing_code=request.billing_code,
+        callback_url=request.callback_url,
+        scheduled_for=request.scheduled_for,
         template=V2Template(
-            id=data.template_id,
-            uri=HttpsUrl(f'https://mock-notify.va.gov/templates/{data.template_id}'),
+            id=request.template_id,
+            uri=HttpsUrl(f'https://mock-notify.va.gov/templates/{request.template_id}'),
         ),
-        uri=HttpsUrl(f'https://mock-notify.va.gov/notifications/{request.state.request_id}'),
+        uri=HttpsUrl(f'https://mock-notify.va.gov/notifications/zzz'),
         content=V2SmsContentModel(
             body='',
             from_number=ValidatedPhoneNumber('+18005550101'),  # Would be determined from sms_sender_id

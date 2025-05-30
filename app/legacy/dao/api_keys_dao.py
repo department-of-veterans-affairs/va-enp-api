@@ -132,8 +132,7 @@ class ApiKeyRecord:
         )
 
 
-# TODO: TEAM-1664 temp "decrypt" until isdangerous added or proper encryption implemented
-# does not verify signature
+# TODO: TEAM-1664
 def decode_and_remove_signature(encoded: str) -> str:
     """Base64url-decode the first segment of a token and remove surrounding quotes.
 

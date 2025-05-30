@@ -11,6 +11,7 @@ import pytest
 from fastapi import HTTPException, Request
 from fastapi.security import HTTPAuthorizationCredentials
 from sqlalchemy import Row
+from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.datastructures import Headers
 from starlette.requests import Request as StarletteRequest
 
@@ -36,7 +37,7 @@ from app.auth import (
 from app.exceptions import NonRetryableError, RetryableError
 from app.legacy.dao.api_keys_dao import ApiKeyRecord
 from tests.app.legacy.dao.test_api_keys import encode_and_sign
-from tests.conftest import generate_token, generate_token_with_partial_payload
+from tests.conftest import generate_headers, generate_token, generate_token_with_partial_payload
 
 
 @pytest.fixture
@@ -80,9 +81,7 @@ class TestJWTBearerAdmin:
         request = StarletteRequest(scope={'type': 'http', 'headers': headers.raw})
         auth = JWTBearerAdmin()
 
-        credentials = await auth(request)
-        assert isinstance(credentials, HTTPAuthorizationCredentials)
-        assert credentials.credentials == token
+        await auth(request)
 
     async def test_raises_with_missing_bearer_header(self) -> None:
         """Test that JWTBearerAdmin raises HTTP 403 when Authorization header is missing."""
@@ -165,31 +164,22 @@ class TestJWTBearerAdmin:
         assert exc.detail == 'Invalid token: signature, api token is not valid'
 
 
+@patch('app.auth.context')
 class TestJWTBearer:
     """Unit tests for the JWTBearer authentication dependency."""
 
-    async def test_authenticates_valid_admin_token(self, admin_token_payload: JWTPayloadDict) -> None:
-        """Test that JWTBearer authenticates a valid admin token."""
-        token = generate_token(sig_key=ADMIN_SECRET_KEY, payload=admin_token_payload)
-
-        headers = Headers({'authorization': f'Bearer {token}'})
-        request = StarletteRequest(scope={'type': 'http', 'headers': headers.raw})
-        auth = JWTBearer()
-
-        credentials = await auth(request)
-        assert isinstance(credentials, HTTPAuthorizationCredentials)
-        assert credentials.credentials == token
-
     async def test_authenticates_valid_service_token(
         self,
+        mock_context: AsyncMock,
         sample_api_key: Callable[..., Awaitable[Row[Any]]],
         sample_service: Callable[..., Awaitable[Row[Any]]],
         service_token_payload: Callable[[str], JWTPayloadDict],
     ) -> None:
         """Test that JWTBearer authenticates a valid service token."""
-        service = await sample_service()
+
         secret = 'not-so-secret'
         encrypted_secret = encode_and_sign(secret)
+        service = await sample_service()
         api_key = await sample_api_key(service_id=service.id, secret=encrypted_secret)
 
         payload = service_token_payload(str(service.id))
@@ -200,15 +190,16 @@ class TestJWTBearer:
         auth = JWTBearer()
 
         with (
-            patch('app.auth.LegacyServiceDao.get_service', new=AsyncMock(return_value=service)),
-            patch('app.auth.LegacyApiKeysDao.get_api_keys', new=AsyncMock(return_value=[api_key])),
+            patch('app.auth.LegacyServiceDao.get_service', return_value=service),
+            patch('app.auth.LegacyApiKeysDao.get_api_keys', return_value=[api_key]),
         ):
-            credentials = await auth(request)
+            # Should not raise an exception
+            await auth(request)
 
-        assert isinstance(credentials, HTTPAuthorizationCredentials)
-        assert credentials.credentials == token
-
-    async def test_raises_with_missing_bearer_header(self) -> None:
+    async def test_raises_with_missing_bearer_header(
+        self,
+        mock_context: AsyncMock,
+    ) -> None:
         """Test that JWTBearer raises HTTP 403 when Authorization header is missing."""
         headers = Headers()
         request = StarletteRequest(scope={'type': 'http', 'headers': headers.raw})
@@ -221,7 +212,10 @@ class TestJWTBearer:
         assert exc.status_code == 403
         assert exc.detail == 'Not authenticated'
 
-    async def test_raises_with_invalid_token(self) -> None:
+    async def test_raises_with_invalid_token(
+        self,
+        mock_context: AsyncMock,
+    ) -> None:
         """Test that JWTBearer raises HTTP 403 for an invalid token."""
         headers = Headers({'authorization': f'Bearer {"not-a-valid-token"}'})
         request = StarletteRequest(scope={'type': 'http', 'headers': headers.raw})
@@ -234,34 +228,25 @@ class TestJWTBearer:
         assert exc.status_code == 403
         assert exc.detail == 'Invalid token: signature, api token is not valid'
 
-    async def test_raises_with_admin_expired_token(self, admin_token_payload: JWTPayloadDict) -> None:
-        """Test that JWTBearer raises HTTP 403 for an expired admin token."""
-        payload = admin_token_payload
-        current_timestamp = int(time.time())
-
-        payload['exp'] = current_timestamp - ACCESS_TOKEN_EXPIRE_SECONDS
-        token = generate_token(sig_key=ADMIN_SECRET_KEY, payload=payload)
-
-        headers = Headers({'authorization': f'Bearer {token}'})
-        request = StarletteRequest(scope={'type': 'http', 'headers': headers.raw})
-        auth = JWTBearer()
-
-        with pytest.raises(HTTPException) as exc_info:
-            await auth(request)
-
-        exc = exc_info.value
-        assert exc.status_code == 403
-        assert exc.detail == 'Invalid token: signature, api token is not valid'
-
-    async def test_raises_with_invalid_algorithm(self, admin_token_payload: JWTPayloadDict) -> None:
+    async def test_raises_with_invalid_algorithm(
+        self,
+        mock_context: AsyncMock,
+        mocker: AsyncMock,
+        sample_api_key: Callable[..., Awaitable[Row[Any]]],
+        sample_service: Callable[..., Awaitable[Row[Any]]],
+    ) -> None:
         """Test that JWTBearer raises HTTP 403 for a token with an invalid algorithm."""
-        jwt_headers = {
-            'typ': 'JWT',
-            'alg': 'HS384',
-        }
-        token = generate_token(sig_key=ADMIN_SECRET_KEY, headers=jwt_headers, payload=admin_token_payload)
 
-        headers = Headers({'authorization': f'Bearer {token}'})
+        service = await sample_service()
+        api_key = await sample_api_key(service_id=service.id)
+        mocker.patch('app.auth._get_service_api_keys', return_value=[api_key])
+        mocker.patch('app.auth.get_active_service_for_issuer', return_value=service)
+        mocker.patch('app.auth.get_token_issuer', return_value=str(service.id))
+        mock_logger = mocker.patch('app.auth.logger.warning')
+
+        auth_headers = generate_headers(api_key.secret, str(service.id), 'HS384')
+
+        headers = Headers({'authorization': auth_headers['Authorization']})
         request = StarletteRequest(scope={'type': 'http', 'headers': headers.raw})
         auth = JWTBearer()
 
@@ -270,9 +255,17 @@ class TestJWTBearer:
 
         exc = exc_info.value
         assert exc.status_code == 403
-        assert exc.detail == 'Invalid token: signature, api token is not valid'
+        assert exc.detail == 'Invalid token: signature, api token not found'
+        # The alg string is from PyJwt. Needed to ensure it was logging an algorithm failure
+        mock_logger.assert_called_once_with(
+            'Service used an invalid algorithm: {}', 'The specified alg value is not allowed'
+        )
 
-    async def test_raises_with_missing_issuer(self, admin_token_payload: JWTPayloadDict) -> None:
+    async def test_raises_with_missing_issuer(
+        self,
+        mock_context: AsyncMock,
+        admin_token_payload: JWTPayloadDict,
+    ) -> None:
         """Test that JWTBearer raises HTTP 403 when the issuer (iss) claim is missing."""
         raw_payload = dict(admin_token_payload)
         del raw_payload['iss']
@@ -292,6 +285,7 @@ class TestJWTBearer:
 
     async def test_raises_with_service_not_found(
         self,
+        mock_context: AsyncMock,
         service_token_payload: Callable[[str], JWTPayloadDict],
     ) -> None:
         """Test that JWTBearer raises HTTP 403 when the service referenced in the token is not found."""
@@ -311,6 +305,7 @@ class TestJWTBearer:
 
     async def test_raises_with_service_not_active(
         self,
+        mock_context: AsyncMock,
         sample_service: Callable[..., Awaitable[Row[Any]]],
         service_token_payload: Callable[[str], JWTPayloadDict],
     ) -> None:
@@ -344,6 +339,7 @@ class TestJWTBearer:
     )
     async def test_raises_with_any_api_key_dao_failure(
         self,
+        mock_context: AsyncMock,
         sample_service: Callable[..., Awaitable[Row[Any]]],
         service_token_payload: Callable[[str], JWTPayloadDict],
         raises: Type[Exception],
@@ -370,6 +366,7 @@ class TestJWTBearer:
 
     async def test_raises_with_no_api_keys_for_service(
         self,
+        mock_context: AsyncMock,
         sample_service: Callable[..., Awaitable[Row[Any]]],
         service_token_payload: Callable[[str], JWTPayloadDict],
     ) -> None:
@@ -406,6 +403,7 @@ class TestJWTBearer:
     )
     async def test_raises_with_no_matching_secrets(
         self,
+        mock_context: AsyncMock,
         sample_api_key: Callable[..., Awaitable[Row[Any]]],
         sample_service: Callable[..., Awaitable[Row[Any]]],
         service_token_payload: Callable[[str], JWTPayloadDict],
@@ -435,6 +433,7 @@ class TestJWTBearer:
 
     async def test_raises_with_service_expired_token(
         self,
+        mock_context: AsyncMock,
         sample_api_key: Callable[..., Awaitable[Row[Any]]],
         sample_service: Callable[..., Awaitable[Row[Any]]],
         service_token_payload: Callable[[str], JWTPayloadDict],
@@ -467,6 +466,7 @@ class TestJWTBearer:
 
     async def test_raises_with_invalid_algorithm_service_token(
         self,
+        mock_context: AsyncMock,
         sample_api_key: Callable[..., Awaitable[Row[Any]]],
         sample_service: Callable[..., Awaitable[Row[Any]]],
         service_token_payload: Callable[[str], JWTPayloadDict],
@@ -501,6 +501,7 @@ class TestJWTBearer:
 
     async def test_raises_with_missing_issued_at(
         self,
+        mock_context: AsyncMock,
         sample_api_key: Callable[..., Awaitable[Row[Any]]],
         sample_service: Callable[..., Awaitable[Row[Any]]],
         service_token_payload: Callable[[str], JWTPayloadDict],
@@ -545,6 +546,7 @@ class TestJWTBearer:
     )
     async def test_raises_with_invalid_issued_at(
         self,
+        mock_context: AsyncMock,
         sample_api_key: Callable[..., Awaitable[Row[Any]]],
         sample_service: Callable[..., Awaitable[Row[Any]]],
         service_token_payload: Callable[[str], JWTPayloadDict],
@@ -577,6 +579,7 @@ class TestJWTBearer:
 
     async def test_raises_with_api_key_revoked(
         self,
+        mock_context: AsyncMock,
         sample_api_key: Callable[..., Awaitable[Row[Any]]],
         sample_service: Callable[..., Awaitable[Row[Any]]],
         service_token_payload: Callable[[str], JWTPayloadDict],
@@ -606,11 +609,13 @@ class TestJWTBearer:
         assert exc.detail == 'Invalid token: API key revoked'
 
 
+@patch('app.auth.context')
 class TestVerifyServiceToken:
     """Test suite for verifying behavior of the verify_service_token function."""
 
-    async def test_authenticates_valid_service_token_and_sets_request_state_service_id(
+    async def test_authenticates_valid_service_token_and_sets_context_service_id(
         self,
+        mock_context: AsyncMock,
         sample_api_key: Callable[..., Awaitable[Row[Any]]],
         sample_service: Callable[..., Awaitable[Row[Any]]],
     ) -> None:
@@ -620,7 +625,7 @@ class TestVerifyServiceToken:
         - Creates a service and a matching API key
         - Mocks DAO methods to return these objects
         - Builds a JWT token signed with the API key secret
-        - Asserts that verify_service_token accepts the token and populates the request state
+        - Asserts that verify_service_token accepts the token and populates the context
         """
         # Create a sample service and API key
         service = await sample_service()
@@ -636,18 +641,15 @@ class TestVerifyServiceToken:
         }
         token = generate_token(sig_key='not_so_secret', payload=payload)
 
-        # Create a mock FastAPI request with state
-        request = Mock(spec=Request)
-        request.state = Mock()
-
         with (
             patch('app.auth.LegacyServiceDao.get_service', new=AsyncMock(return_value=service)),
             patch('app.auth.LegacyApiKeysDao.get_api_keys', new=AsyncMock(return_value=[api_key])),
         ):
-            await verify_service_token(issuer=payload['iss'], token=token, request=request)
+            await verify_service_token(issuer=payload['iss'], token=token)
 
-        # Validate request state was set
-        assert request.state.service_id == service.id
+        # Validate context was set.
+        # call.args is a tuple e.g. ('service_id', UUID('9b26869c-a62b-4eb5-bb7a-602f1276db90'))
+        assert any([call.args[1] == service.id for call in mock_context.mock_calls])
 
 
 class TestGetActiveServiceForIssuer:

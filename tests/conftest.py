@@ -4,13 +4,15 @@ import asyncio
 import os
 import time
 from typing import Any, Callable
-from unittest.mock import Mock
+from unittest.mock import AsyncMock, Mock
 
 import jwt
 import pytest
 from fastapi.testclient import TestClient
+from starlette_context import plugins
+from starlette_context.middleware import ContextMiddleware
 
-from app.auth import JWTPayloadDict
+from app.auth import JWTBearer, JWTPayloadDict
 from app.main import CustomFastAPI, app
 from app.providers.provider_aws import ProviderAWS
 from app.state import ENPState
@@ -68,6 +70,10 @@ def client() -> ENPTestClient:
 
     app.enp_state.providers['aws'] = Mock(spec=ProviderAWS)
 
+    app.add_middleware(
+        ContextMiddleware,
+        plugins=(plugins.RequestIdPlugin(force_new_uuid=False),),
+    )
     return ENPTestClient(app)
 
 
@@ -93,6 +99,43 @@ def client_factory() -> Callable[[str], ENPTestClient]:
         return ENPTestClient(app, token=token)
 
     return _create_client
+
+
+def generate_headers(
+    sig_key: str,
+    issuer: str,
+    algorithm: str = ALGORITHM,
+    iat: int = -1,
+    exp: int = -1,
+) -> dict[str, str]:
+    """Generate a signed JWT token using the specified signature key, headers, and payload.
+
+    If no headers are provided, defaults to {'typ': 'JWT', 'alg': ALGORITHM}.
+    If no payload is provided, generates a default payload with issuer 'enp',
+    current issued-at time (iat), and an expiration (exp) set to the configured duration.
+
+    Args:
+        sig_key (str): The secret key used to sign the JWT token.
+        headers (dict[str, str] | None): Optional JWT headers. Defaults to standard 'typ' and 'alg'.
+        payload (JWTPayloadDict | None): Optional JWT payload. Defaults to a standard payload.
+
+    Returns:
+        str: The signed JWT token as a string.
+    """
+    auth_headers = {
+        'typ': 'JWT',
+        'alg': algorithm,
+    }
+    payload = JWTPayloadDict(
+        iss=issuer,
+        iat=int(time.time()) if iat == -1 else iat,
+        exp=(int(time.time()) + ACCESS_TOKEN_EXPIRE_SECONDS) if exp == -1 else exp,
+    )
+    headers: dict[str, str] = {
+        'Content-Type': 'application/json',
+        'Authorization': f'Bearer {jwt.encode(dict(payload), sig_key, headers=auth_headers)}',
+    }
+    return headers
 
 
 def generate_token(

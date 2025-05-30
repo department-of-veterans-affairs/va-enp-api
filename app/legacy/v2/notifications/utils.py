@@ -149,7 +149,7 @@ async def create_notification(
     try:
         await LegacyNotificationDao.create_notification(id, notification_type, template_version)
     except NonRetryableError as e:
-        logger.exception('Failed to create notification due to unexpected error: in the database', id)
+        logger.exception('Failed to create notification due to unexpected error in the database')
         raise HTTPException(status_code=500, detail=RESPONSE_500) from e
 
 

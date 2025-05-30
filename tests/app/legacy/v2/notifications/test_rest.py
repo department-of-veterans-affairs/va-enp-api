@@ -2,7 +2,7 @@
 
 import time
 from typing import Any, Awaitable, Callable, ClassVar
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, Mock, patch
 from uuid import UUID, uuid4
 
 import pytest
@@ -10,7 +10,7 @@ from fastapi import BackgroundTasks, status
 from fastapi.encoders import jsonable_encoder
 from sqlalchemy import Row
 
-from app.auth import ACCESS_TOKEN_EXPIRE_SECONDS, JWTPayloadDict
+from app.auth import ACCESS_TOKEN_EXPIRE_SECONDS, JWTBearer, JWTPayloadDict
 from app.constants import IdentifierType, MobileAppType
 from app.legacy.v2.notifications.resolvers import (
     DirectSmsTaskResolver,
@@ -25,7 +25,7 @@ from app.legacy.v2.notifications.route_schema import (
     ValidatedPhoneNumber,
 )
 from tests.app.legacy.dao.test_api_keys import encode_and_sign
-from tests.conftest import ENPTestClient, generate_token
+from tests.conftest import ENPTestClient, generate_headers, generate_token
 
 _push_path = '/legacy/v2/notifications/push'
 
@@ -37,6 +37,7 @@ class TestPushRouter:
     async def test_router_returns_400_with_invalid_request_data(
         self,
         mock_background_task: AsyncMock,
+        mocker: AsyncMock,
         client: ENPTestClient,
     ) -> None:
         """Test route can return 400.
@@ -55,7 +56,8 @@ class TestPushRouter:
             },
             'personalisation': 'not_a_dict',
         }
-
+        # Bypass auth, this is testing request data
+        mocker.patch('app.auth.verify_service_token')
         response = client.post(_push_path, json=invalid_request)
 
         assert response.status_code == status.HTTP_400_BAD_REQUEST
@@ -68,6 +70,7 @@ class TestPush:
     async def test_post_push_returns_201(
         self,
         mock_background_task: AsyncMock,
+        mocker: AsyncMock,
         client: ENPTestClient,
     ) -> None:
         """Test route can return 201.
@@ -87,6 +90,8 @@ class TestPush:
             personalisation={'name': 'John'},
         )
 
+        # Bypass auth, this is testing request data
+        mocker.patch('app.auth.verify_service_token')
         response = client.post(_push_path, json=request.model_dump())
 
         assert response.status_code == status.HTTP_201_CREATED
@@ -102,7 +107,7 @@ class TestNotificationRouter:
     )
 
     @pytest.mark.parametrize('route', routes)
-    async def test_happy_path_admin_auth(
+    async def test_no_auth(
         self,
         client: ENPTestClient,
         route: str,
@@ -127,13 +132,14 @@ class TestNotificationRouter:
         with patch('app.legacy.v2.notifications.rest.validate_template', return_value=None):
             response = client.post(route, json=payload)
 
-        assert response.status_code == status.HTTP_201_CREATED
+        assert response.status_code == status.HTTP_403_FORBIDDEN
 
     @pytest.mark.parametrize('route', routes)
     async def test_happy_path_service_auth(
         self,
         sample_api_key: Callable[..., Awaitable[Row[Any]]],
         sample_service: Callable[..., Awaitable[Row[Any]]],
+        sample_template: Callable[..., Awaitable[Row[Any]]],
         client_factory: Callable[[str], ENPTestClient],
         route: str,
     ) -> None:
@@ -145,18 +151,19 @@ class TestNotificationRouter:
             client_factory (Callable): Factory to create an ENPTestClient with a token.
             route (str): Route to test.
         """
-        template_id = uuid4()
+
+        service = await sample_service()
+        template = await sample_template(service_id=service.id)
         sms_sender_id = uuid4()
 
         request = V2PostSmsRequestModel(
             reference=str(uuid4()),
-            template_id=template_id,
+            template_id=template.id,
             phone_number=ValidatedPhoneNumber('+18005550101'),
             sms_sender_id=sms_sender_id,
         )
         request_payload = jsonable_encoder(request)
 
-        service = await sample_service()
 
         secret = 'not_so_secret'
         encrypted_secret = encode_and_sign(secret)
@@ -174,7 +181,7 @@ class TestNotificationRouter:
         with (
             patch('app.auth.LegacyServiceDao.get_service', new=AsyncMock(return_value=service)),
             patch('app.auth.LegacyApiKeysDao.get_api_keys', new=AsyncMock(return_value=[api_key])),
-            patch('app.legacy.v2.notifications.rest.validate_template', return_value=None),
+            patch('app.legacy.v2.notifications.rest.validate_template', return_value=template),
         ):
             response = client.post(route, json=request_payload)
 
@@ -217,6 +224,7 @@ class TestNotificationRouter:
         self,
         client: ENPTestClient,
         route: str,
+        mocker: AsyncMock,
     ) -> None:
         """Test route can return 400.
 
@@ -225,6 +233,8 @@ class TestNotificationRouter:
             route (str): Route to test
 
         """
+        # Bypass auth, this is testing request data
+        mocker.patch('app.auth.verify_service_token')
         response = client.post(route)
 
         assert response.status_code == status.HTTP_400_BAD_REQUEST
@@ -266,7 +276,7 @@ class TestNotificationRouter:
         assert response.json() == error_details
 
 
-@patch('app.legacy.v2.notifications.rest.validate_template')
+@patch('app.legacy.v2.notifications.rest.validate_template', new_callable=AsyncMock)
 class TestV2SMS:
     """Test the v2 SMS notifications router."""
 
@@ -300,11 +310,26 @@ class TestV2SMS:
     async def test_v2_sms_with_phone_number_returns_201(
         self,
         mock_validate_template: AsyncMock,
+        sample_api_key: Callable[..., Awaitable[Row[Any]]],
+        sample_service: Callable[..., Awaitable[Row[Any]]],
+        sample_template: Callable[..., Awaitable[Row[Any]]],
         client: ENPTestClient,
         sms_request_data: dict[str, object],
     ) -> None:
         """Test sms notification route returns 201 with valid template."""
-        response = client.post(self.sms_route, json=sms_request_data)
+        secret = 'not-so-secret'
+        encrypted_secret = encode_and_sign(secret)
+        service = await sample_service()
+        api_key = await sample_api_key(service_id=service.id, secret=encrypted_secret)
+        template = await sample_template(service_id=service.id)
+        headers = generate_headers(secret, str(service.id))
+
+        with (
+            patch('app.auth.LegacyServiceDao.get_service', return_value=service),
+            patch('app.auth.LegacyApiKeysDao.get_api_keys', return_value=[api_key]),
+            patch('app.legacy.v2.notifications.rest.validate_template', return_value=template),
+        ):
+            response = client.post(self.sms_route, json=sms_request_data, headers=headers)
 
         assert response.status_code == status.HTTP_201_CREATED
 
@@ -330,10 +355,21 @@ class TestV2SMS:
     async def test_v2_sms_with_recipient_identifier_returns_201(
         self,
         mock_validate_template: AsyncMock,
+        mocker: AsyncMock,
+        sample_api_key: Callable[..., Awaitable[Row[Any]]],
+        sample_service: Callable[..., Awaitable[Row[Any]]],
+        sample_template: Callable[..., Awaitable[Row[Any]]],
         client: ENPTestClient,
         sms_request_data: dict[str, object],
     ) -> None:
         """Test sms notification route returns 201 with valid recipient identifier."""
+        secret = 'not-so-secret'
+        encrypted_secret = encode_and_sign(secret)
+        service = await sample_service()
+        api_key = await sample_api_key(service_id=service.id, secret=encrypted_secret)
+        template = await sample_template(service_id=service.id)
+        headers = generate_headers(secret, str(service.id))
+
         # Modify the request data to use recipient_identifier instead of phone_number
         sms_request_data.pop('phone_number', None)
         sms_request_data['recipient_identifier'] = {
@@ -341,7 +377,12 @@ class TestV2SMS:
             'id_value': '1234567890V123456',  # Valid ICN format: 10 digits + 'V' + 6 digits
         }
 
-        response = client.post(self.sms_route, json=sms_request_data)
+        with (
+            patch('app.auth.LegacyServiceDao.get_service', return_value=service),
+            patch('app.auth.LegacyApiKeysDao.get_api_keys', return_value=[api_key]),
+            patch('app.legacy.v2.notifications.rest.validate_template', return_value=template),
+        ):
+            response = client.post(self.sms_route, json=sms_request_data, headers=headers)
 
         assert response.status_code == status.HTTP_201_CREATED
 
@@ -403,48 +444,10 @@ class TestV2SMS:
         assert resolver.id_type == IdentifierType.ICN
         assert resolver.id_value == '1234567890V123456'
 
-    async def test_v2_sms_returns_400_with_invalid_template(
-        self,
-        mock_validate_template: AsyncMock,
-        client: ENPTestClient,
-        sms_request_data: dict[str, object],
-    ) -> None:
-        """Test route returns 400 with invalid template (wrong template type)."""
-        error_details = self.error_details.copy()
-        error_details['errors'][0]['message'] = 'email template is not suitable for sms notification'
-
-        # class-level patch
-        mock_validate_template.side_effect = ValueError(error_details['errors'][0]['message'])
-
-        response = client.post(self.sms_route, json=sms_request_data)
-
-        assert response.status_code == status.HTTP_400_BAD_REQUEST
-
-        assert response.json() == error_details
-
-    async def test_v2_sms_returns_400_with_invalid_personalisation(
-        self,
-        mock_validate_template: AsyncMock,
-        client: ENPTestClient,
-        sms_request_data: dict[str, object],
-    ) -> None:
-        """Test route returns 400 with invalid personalisation."""
-        error_details = self.error_details.copy()
-        error_details['errors'][0]['message'] = 'Missing personalisation: content'
-
-        # class-level patch
-        mock_validate_template.side_effect = ValueError(error_details['errors'][0]['message'])
-
-        response = client.post(self.sms_route, json=sms_request_data)
-
-        assert response.status_code == status.HTTP_400_BAD_REQUEST
-        response_json = response.json()
-        assert len(response_json['errors']) == 1
-        assert response_json['errors'][0]['message'] == 'Missing personalisation: content'
-
     async def test_v2_sms_returns_custom_uuid_message_for_invalid_uuid(
         self,
         mock_validate_template: AsyncMock,
+        mocker: AsyncMock,
         client: ENPTestClient,
         sms_request_data: dict[str, object],
     ) -> None:
@@ -461,6 +464,8 @@ class TestV2SMS:
             'status_code': 400,
         }
 
+        # Bypass auth, this is testing request data
+        mocker.patch('app.auth.verify_service_token')
         response = client.post(self.sms_route, json=sms_request_data)
 
         assert response.status_code == status.HTTP_400_BAD_REQUEST
@@ -469,6 +474,7 @@ class TestV2SMS:
     async def test_v2_sms_prevents_duplicate_validation_errors(
         self,
         mock_validate_template: AsyncMock,
+        mocker: AsyncMock,
         client: ENPTestClient,
         sms_request_data: dict[str, object],
     ) -> None:
@@ -481,6 +487,8 @@ class TestV2SMS:
         # Modify the request data to have an invalid UUID for template_id
         sms_request_data['template_id'] = 'not-a-valid-uuid'
 
+        # Bypass auth, this is testing request data
+        mocker.patch('app.auth.verify_service_token')
         # The route handler uses the model both directly and in the get_sms_task_resolver dependency
         response = client.post(self.sms_route, json=sms_request_data)
 
