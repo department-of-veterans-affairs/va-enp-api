@@ -4,6 +4,7 @@ import json
 import re
 from typing import Any, Sequence
 
+from app.legacy.dao.notifications_dao import LegacyNotificationDao
 from fastapi import HTTPException
 from fastapi.exceptions import RequestValidationError
 from pydantic import UUID4

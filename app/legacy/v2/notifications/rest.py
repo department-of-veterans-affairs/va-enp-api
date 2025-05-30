@@ -23,6 +23,7 @@ from app.legacy.v2.notifications.route_schema import (
     ValidatedPhoneNumber,
 )
 from app.legacy.v2.notifications.utils import (
+    create_notification,
     enqueue_notification_tasks,
     send_push_notification_helper,
     validate_template,
