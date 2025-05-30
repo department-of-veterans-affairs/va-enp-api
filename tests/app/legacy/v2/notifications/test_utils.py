@@ -11,10 +11,12 @@ from sqlalchemy.exc import NoResultFound
 
 from app.constants import NotificationType
 from app.exceptions import NonRetryableError
+from app.legacy.clients.sqs import SqsAsyncProducer
 from app.legacy.v2.notifications.utils import (
     _validate_template_active,
     _validate_template_personalisation,
     _validate_template_type,
+    enqueue_notification_tasks,
     get_arn_from_icn,
     send_push_notification_helper,
     validate_push_template,
@@ -162,3 +164,15 @@ class TestValidateTemplate:
         """Test validate_template raises an exception when personalisation is missing."""
         with pytest.raises(ValueError, match='Missing personalisation: content'):
             _validate_template_personalisation('before ((content)) after', {'foo': 'bar'}, uuid4())
+
+
+async def test_enqueue_notification_tasks() -> None:
+    """Test enqueue_notification_tasks."""
+    q_name = 'queue_name'
+    test_data = [(q_name, ('task_name', uuid4()))]
+
+    with patch.object(SqsAsyncProducer, 'enqueue_message') as mock_enqueue:
+        await enqueue_notification_tasks(test_data)
+
+    mock_enqueue.assert_called_once()
+    assert mock_enqueue.call_args[0][0] == q_name
