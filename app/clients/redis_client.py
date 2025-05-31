@@ -1,6 +1,6 @@
 """Redis client manager that encapsulates Redis interactions and handles retryable/non-retryable errors."""
 
-import functools
+from typing import Awaitable, Callable, TypeVar
 
 from loguru import logger
 from redis.asyncio import ConnectionPool, Redis
@@ -12,15 +12,28 @@ from app.providers.utils import log_on_retry
 
 _MAX_REDIS_RETRIES = 3  # Arbitrary
 
+F = TypeVar('F', bound=Callable[..., Awaitable[bool]])
 
-# Redis retry parameters
-redis_retry = functools.partial(
-    retry,
-    before_sleep=log_on_retry,
-    reraise=True,
-    retry=retry_if_exception_type(RetryableError),
-    stop=stop_after_attempt(_MAX_REDIS_RETRIES),
-)
+
+def redis_retry() -> Callable[[F], F]:
+    """Return a retry decorator for Redis operations with typed support.
+
+    This decorator wraps an asynchronous function and retries it if a `RetryableError` is raised.
+    It uses the `tenacity` retry strategy, logging before each retry attempt and retrying up to
+    `_MAX_REDIS_RETRIES` times before re-raising the exception.
+
+    Type Hint:
+        Returns a decorator that can be applied to any `async def` function that returns `bool`.
+
+    Returns:
+        Callable[[F], F]: A decorator that applies retry behavior to a coroutine function.
+    """
+    return retry(
+        before_sleep=log_on_retry,
+        reraise=True,
+        retry=retry_if_exception_type(RetryableError),
+        stop=stop_after_attempt(_MAX_REDIS_RETRIES),
+    )
 
 
 class RedisClientManager:

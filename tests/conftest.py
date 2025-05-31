@@ -106,7 +106,7 @@ async def service_authorized_client(
     sample_api_key: Callable[..., Awaitable[Row[Any]]],
     sample_service: Callable[..., Awaitable[Row[Any]]],
     client_factory: Callable[[str], ENPTestClient],
-) -> AsyncIterator[tuple[ENPTestClient, Row[Any]]]:
+) -> AsyncIterator[ENPTestClient]:
     """Yields an authenticated client and its associated service, with service+apikey DAO methods mocked."""
     service = await sample_service()
     secret = 'not_so_secret'

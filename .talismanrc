@@ -1,6 +1,6 @@
 fileignoreconfig:
 - filename: poetry.lock
-  checksum: 465fc442fde45194eadb3ef36f59a15e4a7658e7e4b0cea73bab6e4d05690b7d
+  checksum: c0169105c61f3b53473c867c5523f1e57ee0a01eecc0e4bad6f4462a2371aca0
 - filename: cd/dev.env
   checksum: 5922e9807bc0331dddce5414f2e445b8fd05f13667ca55f18c46af9012006bcd
 - filename: cd/perf.env
@@ -39,6 +39,10 @@ fileignoreconfig:
   checksum: 96761332527bd4f605ab0c01f01477fc9cd705c3c62350cb6e81454d932dcd33
 - filename: tests/app/legacy/clients/test_sqs.py
   checksum: 1b3e00fd559a6bcc9a1ca95103f9a8659cc48de205c3bf523db32dc7cabb5827
+- filename: tests/app/test_limits.py
+  checksum: 6d58d87164ef3a2548c4492be733c5297e19892531b97f13b2a21b93f19964eb
+- filename: tests/app/clients/test_redis_client.py
+  checksum: afb82a05c15b446943ef281dd18adeab90a7d5b62f7fabc4b23d7e32af8fa574
 - filename: app/auth.py
   checksum: 7689f6cddd937c15fae3fa1a074502aafc77c8829b205c598195c60dcd350e97
 - filename: tests/app/legacy/dao/test_api_keys.py

@@ -24,16 +24,18 @@ from app.legacy.v2.notifications.route_schema import (
     ValidatedPhoneNumber,
 )
 from app.legacy.v2.notifications.utils import (
+    ChainedDepends,
     enqueue_notification_tasks,
     raise_request_validation_error,
     send_push_notification_helper,
     validate_template,
 )
+from app.limits import ServiceRateLimiter
 from app.logging.logging_config import logger
 from app.routers import LegacyTimedAPIRoute
 
 v2_legacy_notification_router = APIRouter(
-    dependencies=[Depends(JWTBearer())],
+    dependencies=[Depends(ChainedDepends(JWTBearer(), ServiceRateLimiter()))],
     prefix='/legacy/v2/notifications',
     route_class=LegacyTimedAPIRoute,
     tags=['v2 Legacy Notification Endpoints'],
@@ -41,7 +43,7 @@ v2_legacy_notification_router = APIRouter(
 
 
 v2_notification_router = APIRouter(
-    dependencies=[Depends(JWTBearer())],
+    dependencies=[Depends(JWTBearer()), Depends(ServiceRateLimiter())],
     prefix='/v2/notifications',
     route_class=LegacyTimedAPIRoute,
     tags=['v2 Notification Endpoints'],

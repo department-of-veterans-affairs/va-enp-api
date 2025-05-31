@@ -4,6 +4,7 @@ import os
 
 from fastapi import HTTPException, Request
 from loguru import logger
+from starlette_context import context
 
 from app.clients.redis_client import RedisClientManager
 from app.exceptions import NonRetryableError, RetryableError
@@ -17,7 +18,7 @@ class ServiceRateLimiter:
 
     Uses environment variables to define a global rate limit (count) and window (seconds).
     Rate limiting is skipped if required request state values are missing.
-    If Redis is unavailable, requests are allowed (fail-open behavior).
+    If Redis is unavailable, requests are blocked (fail-closed behavior).
     """
 
     def __init__(self) -> None:
@@ -36,14 +37,23 @@ class ServiceRateLimiter:
     async def __call__(self, request: Request) -> None:
         """Enforce rate limiting based on service and API key identifiers in request state.
 
+        Context values set upon successful service token authorization
+
+        Args:
+            request (Request): The FastAPI request object. This must contain:
+                - `app.enp_state.redis_client`: An instance of RedisClientManager.
+                - Context values for 'service_id' and 'api_user' (e.g., via starlette_context),
+                where 'api_user.id' is used as the API key identifier.
+
         Raises:
-            HTTPException: 429 Too Many Requests if rate limit exceeded.
+            HTTPException: Raised with status code 429 if the rate limit is exceeded
+                        or if Redis errors occur (fail-closed behavior).
         """
         redis: RedisClientManager = request.app.enp_state.redis_client
-        # service_id = context['service_id']
-        service_id = request.state.service_id
-        # api_user = context['api_user']
-        api_user = request.state.api_user
+        service_id = context['service_id']
+        # service_id = request.state.service_id
+        api_user = context['api_user']
+        # api_user = request.state.api_user
 
         api_key_id = api_user.id
 

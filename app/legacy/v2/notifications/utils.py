@@ -2,9 +2,9 @@
 
 import json
 import re
-from typing import Any, Callable, Coroutine, Sequence
+from typing import Any, Awaitable, Callable, Sequence
 
-from fastapi import Depends, Request
+from fastapi import Request
 from fastapi.exceptions import RequestValidationError
 from pydantic import UUID4
 from sqlalchemy.exc import NoResultFound
@@ -21,23 +21,28 @@ from app.providers.provider_schemas import PushModel
 from app.providers.utils import log_last_attempt_on_failure, log_on_retry
 
 
-def chained_depends(*deps: Callable[[Request], Coroutine[Any, Any, None]]) -> Depends:
-    """Compose multiple async dependency callables into one, enforcing strict execution order.
+class ChainedDepends:
+    """Chains multiple FastAPI-compatible dependencies to enforce execution order."""
 
-    Each dependency must be an async function that accepts a Request and optionally raises.
+    def __init__(self, *dependencies: Callable[[Request], Awaitable[Any]]) -> None:
+        """Initialize the ChainedDepends with a list of async dependencies.
 
-    Args:
-        *deps: A sequence of dependency callables to chain.
+        Args:
+            *dependencies: A sequence of callables that take a Request and return an awaitable.
+        """
+        self._dependencies = dependencies
 
-    Returns:
-        Depends: A FastAPI Depends object wrapping a single callable that invokes each dependency in order.
-    """
+    async def __call__(self, request: Request) -> None:
+        """Invoke each wrapped dependency in the order they were provided.
 
-    async def wrapper(request: Request) -> None:
-        for dep in deps:
+        Each dependency must be an async callable that accepts a `Request` and returns an awaitable.
+        Exceptions raised by any dependency will interrupt the chain and propagate.
+
+        Args:
+            request (Request): The incoming FastAPI request object.
+        """
+        for dep in self._dependencies:
             await dep(request)
-
-    return Depends(wrapper)
 
 
 def raise_request_validation_error(
