@@ -24,19 +24,16 @@ from app.legacy.v2.notifications.route_schema import (
     ValidatedPhoneNumber,
 )
 from app.legacy.v2.notifications.utils import (
-    chained_depends,
+    enqueue_notification_tasks,
     raise_request_validation_error,
     send_push_notification_helper,
     validate_template,
 )
-from app.limits import ServiceRateLimiter
 from app.logging.logging_config import logger
 from app.routers import LegacyTimedAPIRoute
 
 v2_legacy_notification_router = APIRouter(
-    dependencies=[chained_depends(JWTBearer(), ServiceRateLimiter())],
-    # dependencies=[chained_depends(JWTBearer())],
-    # dependencies=[Depends(JWTBearer())],
+    dependencies=[Depends(JWTBearer())],
     prefix='/legacy/v2/notifications',
     route_class=LegacyTimedAPIRoute,
     tags=['v2 Legacy Notification Endpoints'],
@@ -44,9 +41,7 @@ v2_legacy_notification_router = APIRouter(
 
 
 v2_notification_router = APIRouter(
-    dependencies=[chained_depends(JWTBearer(), ServiceRateLimiter())],
-    # dependencies=[chained_depends(JWTBearer())],
-    # dependencies=[Depends(JWTBearer())],
+    dependencies=[Depends(JWTBearer())],
     prefix='/v2/notifications',
     route_class=LegacyTimedAPIRoute,
     tags=['v2 Notification Endpoints'],
@@ -99,12 +94,14 @@ async def legacy_notification_post_handler(
         ),
     ],
     sms_task_resolver: Annotated[SmsTaskResolver, Depends(get_sms_task_resolver)],
+    background_tasks: BackgroundTasks,
 ) -> V2PostSmsResponseModel:
     """Create an SMS notification.
 
     Args:
         request (V2PostSmsRequestModel): The SMS notification request model
         sms_task_resolver (SmsTaskResolver): Injected task resolver based on request content
+        background_tasks (BackgroundTasks): The FastAPI background tasks object
 
     Returns:
         V2PostSmsResponseModel: The notification response data
@@ -124,13 +121,13 @@ async def legacy_notification_post_handler(
         raise_request_validation_error(str(e))
 
     # Get tasks for the notification using the appropriate resolver
-    tasks = sms_task_resolver.get_tasks(notification_id)
+    task_list = sms_task_resolver.get_tasks(notification_id)
+    # currently get_tasks returns List[Tuple[str, Tuple[str, UUID]]], but this may need to be adjusted for other tasks?
 
-    # Log tasks that would have been processed
-    for queue_name, task_args in tasks:
-        logger.debug('Task would be enqueued: {} into {}', task_args, queue_name)
+    logger.debug('Found {} tasks to process, sending them to background process.', len(task_list))
 
-    logger.debug('Found {} tasks to process', len(tasks))
+    # create background task to enqueue the notification
+    background_tasks.add_task(enqueue_notification_tasks, task_list)
 
     return V2PostSmsResponseModel(
         id=notification_id,

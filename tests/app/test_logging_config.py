@@ -4,6 +4,7 @@ import logging
 import sys
 from unittest.mock import ANY, patch
 
+from app.constants import DEPLOYMENT_ENVS, ENV
 from app.logging.logging_config import (
     LOGLEVEL_DEBUG,
     CustomizeLogger,
@@ -31,14 +32,14 @@ def test_make_logger() -> None:
             backtrace=False,
             level=LOGLEVEL_DEBUG,
             filter=ANY,
-            serialize=True,
+            serialize=ENV in DEPLOYMENT_ENVS,
         )
         logger_mock.add.assert_any_call(
             sys.stderr,
             enqueue=True,
             backtrace=False,
             level='ERROR',
-            serialize=True,
+            serialize=ENV in DEPLOYMENT_ENVS,
         )
 
         # Verify that the InterceptHandler was added to the appropriate loggers

@@ -3,6 +3,12 @@
 import os
 from enum import StrEnum
 
+ENV = os.getenv('ENV', 'local')
+DEPLOYMENT_ENVS = ('dev', 'perf', 'staging', 'prod')
+
+# AWS Configuration
+AWS_REGION = os.getenv('AWS_REGION', 'us-east-1')
+
 # This should be 2886 when deployed to retry for a full 24 hours.
 # Defaulting to 3 so local testing doesn't take too long.
 MAX_RETRIES = int(os.getenv('MAX_RETRIES', 3))
@@ -51,9 +57,14 @@ class OSPlatformType(StrEnum):
     IOS = 'IOS'
 
 
+QUEUE_PREFIX = f'{ENV}-notification-'
+
+
 class QueueNames(StrEnum):
     """Celery queue names."""
 
-    LOOKUP_CONTACT_INFO = 'lookup-contact-info-tasks'
-    LOOKUP_VA_PROFILE_ID = 'lookup-va-profile-id-tasks'
-    SEND_SMS = 'send-sms-tasks'
+    LOOKUP_CONTACT_INFO = f'{QUEUE_PREFIX}lookup-contact-info-tasks'
+    LOOKUP_VA_PROFILE_ID = f'{QUEUE_PREFIX}lookup-va-profile-id-tasks'
+    SEND_SMS = f'{QUEUE_PREFIX}send-sms-tasks'
+    # TODO: 260 - Remove this queue once notifications are persisted in the database
+    TEST_SEND_DLQ = 'dev-bip-consumer-dead-letter-queue'

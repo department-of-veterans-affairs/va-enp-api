@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import logging
-import os
 import sys
 from contextlib import suppress
 from types import FrameType
@@ -12,6 +11,8 @@ from typing import Dict, Optional
 from loguru import logger as loguru_logger
 from starlette_context import context
 from starlette_context.errors import ContextDoesNotExistError
+
+from app.constants import DEPLOYMENT_ENVS, ENV
 
 LOGLEVEL_CRITICAL = 'CRITICAL'
 LOGLEVEL_ERROR = 'ERROR'
@@ -29,8 +30,8 @@ LOGLEVEL_MAPPING: Dict[int, str] = {
     0: LOGLEVEL_NOTSET,
 }
 
-# Serialize if the env variable ENP_ENV is development, perf, staging, or production
-SERIALIZE = os.getenv('ENP_ENV', 'development') in ('development', 'perf', 'staging', 'production')
+# Serialize (json logging) if the env variable ENV is dev, perf, staging, or prod
+SERIALIZE = ENV in DEPLOYMENT_ENVS
 
 
 def get_context() -> dict[str, str]:

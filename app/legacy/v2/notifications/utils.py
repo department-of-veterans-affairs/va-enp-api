@@ -1,5 +1,6 @@
 """Utilities to aid the REST Notification routes."""
 
+import json
 import re
 from typing import Any, Callable, Coroutine, Sequence
 
@@ -7,14 +8,17 @@ from fastapi import Depends, Request
 from fastapi.exceptions import RequestValidationError
 from pydantic import UUID4
 from sqlalchemy.exc import NoResultFound
+from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_full_jitter
 
 from app.constants import NotificationType
 from app.exceptions import NonRetryableError, RetryableError
+from app.legacy.clients.sqs import SqsAsyncProducer
 from app.legacy.dao.templates_dao import LegacyTemplateDao
 from app.legacy.v2.notifications.route_schema import PersonalisationFileObject
 from app.logging.logging_config import logger
 from app.providers.provider_aws import ProviderAWS
 from app.providers.provider_schemas import PushModel
+from app.providers.utils import log_last_attempt_on_failure, log_on_retry
 
 
 def chained_depends(*deps: Callable[[Request], Coroutine[Any, Any, None]]) -> Depends:
@@ -235,3 +239,29 @@ def _collect_personalisation_from_template(template_content: str) -> set[str]:
 
     matches = re.findall(pattern, template_content)
     return set(matches)
+
+
+@retry(
+    before_sleep=log_on_retry,
+    reraise=True,
+    retry_error_callback=log_last_attempt_on_failure,
+    retry=retry_if_exception_type(RetryableError),
+    stop=stop_after_attempt(10),
+    wait=wait_full_jitter(multiplier=1, max=60),
+)
+async def enqueue_notification_tasks(tasks: list[tuple[str, tuple[str, UUID4]]]) -> None:
+    """Queues a notification for processing.
+
+    This function uses the SqsAsyncProducer to enqueue tasks for processing by Celery.
+    Will attempt to retry if possible.
+
+    Args:
+        tasks (list[tuple[str, tuple[str, UUID4]]]): The tasks to enqueue
+
+    """
+    sqs_producer = SqsAsyncProducer()
+
+    for queue_name, task_args in tasks:
+        task_message = sqs_producer.generate_celery_task(queue_name, *task_args)
+
+        await sqs_producer.enqueue_message(queue_name, json.dumps(task_message))
