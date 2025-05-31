@@ -1,7 +1,6 @@
 """All endpoints for the v2/notifications route."""
 
 from typing import Annotated
-from uuid import uuid4
 
 from fastapi import APIRouter, BackgroundTasks, Body, Depends, Request, status
 from pydantic import UUID4
@@ -24,8 +23,8 @@ from app.legacy.v2.notifications.route_schema import (
     ValidatedPhoneNumber,
 )
 from app.legacy.v2.notifications.utils import (
+    create_notification,
     enqueue_notification_tasks,
-    raise_request_validation_error,
     send_push_notification_helper,
     validate_template,
 )
@@ -106,19 +105,10 @@ async def legacy_notification_post_handler(
     Returns:
         V2PostSmsResponseModel: The notification response data
     """
+    notification_id: UUID4 = context.data['request_id']
     logger.debug('Creating SMS notification with request data: {}', request)
-
-    notification_id = uuid4()
-    service_id = uuid4()
-
-    context['service_id'] = service_id
-    context['template_id'] = request.template_id
-    context['notification_id'] = notification_id
-
-    try:
-        await validate_template(request.template_id, NotificationType.SMS, request.personalisation)
-    except ValueError as e:
-        raise_request_validation_error(str(e))
+    template_row = await validate_template(request.template_id, NotificationType.SMS, request.personalisation)
+    await create_notification(notification_id, NotificationType.SMS, template_row.version)
 
     # Get tasks for the notification using the appropriate resolver
     task_list = sms_task_resolver.get_tasks(notification_id)
@@ -139,7 +129,7 @@ async def legacy_notification_post_handler(
             id=request.template_id,
             uri=HttpsUrl(f'https://mock-notify.va.gov/templates/{request.template_id}'),
         ),
-        uri=HttpsUrl(f'https://mock-notify.va.gov/notifications/{notification_id}'),
+        uri=HttpsUrl(f'https://mock-notify.va.gov/notifications/zzz'),
         content=V2SmsContentModel(
             body='',
             from_number=ValidatedPhoneNumber('+18005550101'),  # Would be determined from sms_sender_id

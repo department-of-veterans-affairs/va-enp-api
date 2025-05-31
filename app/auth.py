@@ -12,6 +12,7 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from loguru import logger
 from pydantic import UUID4
 from sqlalchemy import Row
+from starlette_context import context
 
 from app.exceptions import NonRetryableError, RetryableError
 from app.legacy.dao.api_keys_dao import ApiKeyRecord, LegacyApiKeysDao
@@ -122,7 +123,7 @@ def verify_admin_token(jwtoken: str) -> bool:
     return response
 
 
-async def verify_service_token(issuer: str, token: str, request: Request) -> None:
+async def verify_service_token(issuer: str, token: str) -> None:
     """Verify a JWT token against all active API keys for a given issuer service.
 
     This function:
@@ -148,7 +149,7 @@ async def verify_service_token(issuer: str, token: str, request: Request) -> Non
     """
     # Set the id here for tracking purposes - becomes notification id
     request_id = uuid4()
-    request.state.request_id = request_id
+    context['request_id'] = request_id
 
     logger.debug(
         'Entering service auth token verification request_id: {}',
@@ -200,8 +201,8 @@ async def verify_service_token(issuer: str, token: str, request: Request) -> Non
             request_id,
         )
 
-        request.state.api_user = api_key
-        request.state.service_id = service.id
+        context['api_user'] = api_key
+        context['service_id'] = service.id
 
         logger.info(
             'Service auth token authenticated for service_id: {} api_key_id: {} request_id: {}',
@@ -403,10 +404,12 @@ def decode_jwt_token(token: str, secret: str) -> bool:
             leeway=ACCESS_TOKEN_LEEWAY_SECONDS,
             options={'verify_signature': True},
         )
+
     except (jwt.InvalidIssuedAtError, jwt.ImmatureSignatureError, jwt.ExpiredSignatureError) as e:
         raise TokenExpiredError('Token time is invalid', decode_token(token)) from e
 
     except (jwt.InvalidAlgorithmError, NotImplementedError) as e:
+        logger.warning('Service used an invalid algorithm: {}', str(e))
         raise TokenAlgorithmError from e
 
     except (jwt.DecodeError, jwt.InvalidSignatureError, jwt.InvalidTokenError) as e:
@@ -473,14 +476,11 @@ class JWTBearerAdmin(HTTPBearer):
         """Initialize the authenticator with a shared OpenAPI scheme name for Swagger UI bearer token support."""
         super().__init__(scheme_name='BearerToken')
 
-    async def __call__(self, request: Request) -> HTTPAuthorizationCredentials | None:
+    async def __call__(self, request: Request) -> None:
         """Override the __call__ method to verify the JWT token. A JWT token is considered valid if it is not expired, and the signature is valid.
 
         Args:
             request (Request): FastAPI request object
-
-        Returns:
-            HTTPAuthorizationCredentials | None: HTTPAuthorizationCredentials object if the token is valid, None otherwise.
 
         Raises:
             HTTPException: If the token is invalid or expired
@@ -492,7 +492,6 @@ class JWTBearerAdmin(HTTPBearer):
         if not verify_admin_token(str(credentials.credentials)):
             logger.debug('Invalid or expired token.')
             raise HTTPException(status_code=403, detail='Invalid token: signature, api token is not valid')
-        return credentials
 
 
 class JWTBearer(HTTPBearer):
@@ -502,7 +501,7 @@ class JWTBearer(HTTPBearer):
         """Initialize the authenticator with a shared OpenAPI scheme name for Swagger UI bearer token support."""
         super().__init__(scheme_name='BearerToken')
 
-    async def __call__(self, request: Request) -> HTTPAuthorizationCredentials | None:
+    async def __call__(self, request: Request) -> None:
         """Override the __call__ method to verify the JWT token. A JWT token is considered valid if it is not expired, and the signature is valid.
 
         Args:
@@ -515,18 +514,10 @@ class JWTBearer(HTTPBearer):
         HTTPException: If the token is invalid or expired
         """
         credentials: HTTPAuthorizationCredentials | None = await super(JWTBearer, self).__call__(request)
-
         if credentials is None:
             logger.debug('No credentials provided.')
             raise HTTPException(status_code=401, detail='Unauthorized, authentication token must be provided')
 
         token = str(credentials.credentials)
         issuer = get_token_issuer(token)
-
-        if issuer != ADMIN_CLIENT_USER_NAME:
-            await verify_service_token(issuer, token, request)
-        elif not verify_admin_token(token):
-            logger.debug('Invalid or expired token.')
-            raise HTTPException(status_code=403, detail='Invalid token: signature, api token is not valid')
-
-        return credentials
+        await verify_service_token(issuer, token)

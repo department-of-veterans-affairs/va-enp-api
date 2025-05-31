@@ -16,7 +16,7 @@ from app.logging.logging_config import logger
 from app.providers import sns_publish_retriable_exceptions_set
 from app.providers.provider_base import ProviderBase
 from app.providers.provider_schemas import DeviceRegistrationModel, PushModel, PushRegistrationModel
-from app.providers.utils import log_last_attempt_on_failure, log_on_retry
+from app.utils import log_last_attempt_on_failure, log_on_retry
 
 
 class ProviderAWS(ProviderBase):

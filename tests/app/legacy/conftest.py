@@ -11,6 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.constants import NotificationType
 from app.db.db_init import metadata_legacy
+from tests.app.legacy.dao.test_api_keys import encode_and_sign
 
 
 @pytest.fixture
@@ -157,7 +158,7 @@ def sample_api_key(
         data = {
             'id': id,
             'name': name or f'sample-api-key-{id}',
-            'secret': secret or f'secret-{uuid4()}',
+            'secret': secret or encode_and_sign(f'secret-{uuid4()}'),
             'service_id': service_id,
             'key_type': key_type,
             'revoked': revoked,

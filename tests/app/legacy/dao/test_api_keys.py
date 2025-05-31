@@ -22,7 +22,7 @@ from app.exceptions import NonRetryableError, RetryableError
 from app.legacy.dao.api_keys_dao import ApiKeyRecord, LegacyApiKeysDao
 
 
-# TODO: TEAM-1664 replace with proper encryption
+# TODO: TEAM-1664
 def encode_and_sign(token: str) -> str:
     """Serialize and sign a string using itsdangerous.URLSafeSerializer.
 
@@ -165,6 +165,7 @@ class TestApiKeyRecord:
             service_id=uuid4(),
             expiry_date=None,
             revoked=False,
+            key_type='normal',
         )
 
         assert record.secret == secret
@@ -177,6 +178,7 @@ class TestApiKeyRecord:
             service_id=uuid4(),
             expiry_date=None,
             revoked=False,
+            key_type='normal',
         )
 
         with patch('app.legacy.dao.api_keys_dao.logger.error') as mock_error:
