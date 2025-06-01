@@ -304,11 +304,11 @@ class TestV2SMS:
         self,
         mock_background_task: AsyncMock,
         mock_validate_template: AsyncMock,
-        client: ENPTestClient,
+        service_authorized_client: ENPTestClient,
         sms_request_data: dict[str, object],
     ) -> None:
         """Test sms notification route returns 201 with valid template."""
-        response = client.post(self.sms_route, json=sms_request_data)
+        response = service_authorized_client.post(self.sms_route, json=sms_request_data)
 
         assert response.status_code == status.HTTP_201_CREATED
 

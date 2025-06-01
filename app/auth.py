@@ -12,6 +12,7 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from loguru import logger
 from pydantic import UUID4
 from sqlalchemy import Row
+from starlette_context import context
 
 from app.exceptions import NonRetryableError, RetryableError
 from app.legacy.dao.api_keys_dao import ApiKeyRecord, LegacyApiKeysDao
@@ -148,7 +149,7 @@ async def verify_service_token(issuer: str, token: str, request: Request) -> Non
     """
     # Set the id here for tracking purposes - becomes notification id
     request_id = uuid4()
-    request.state.request_id = request_id
+    context['request_id'] = request_id
 
     logger.debug(
         'Entering service auth token verification request_id: {}',
@@ -200,8 +201,8 @@ async def verify_service_token(issuer: str, token: str, request: Request) -> Non
             request_id,
         )
 
-        request.state.api_user = api_key
-        request.state.service_id = service.id
+        context['api_user'] = api_key
+        context['service_id'] = service.id
 
         logger.info(
             'Service auth token authenticated for service_id: {} api_key_id: {} request_id: {}',

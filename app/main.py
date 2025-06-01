@@ -13,6 +13,7 @@ from starlette_context import plugins
 from starlette_context.middleware import ContextMiddleware
 
 from app.auth import JWTBearerAdmin
+from app.clients.redis_client import RedisClientManager
 from app.db.db_init import (
     close_db,
     init_db,
@@ -53,6 +54,10 @@ async def lifespan(app: CustomFastAPI) -> AsyncIterator[Never]:
     """
     await init_db()
 
+    redis_url = os.getenv('REDIS_URL', 'redis://redis:6379')
+    redis_manager = RedisClientManager(redis_url)
+    app.enp_state.redis_client = redis_manager
+
     try:
         yield  # type: ignore
     except CancelledError as e:
@@ -63,6 +68,8 @@ async def lifespan(app: CustomFastAPI) -> AsyncIterator[Never]:
     finally:
         app.enp_state.clear_providers()
         await close_db()
+        await redis_manager.close()
+
         logger.info('AsyncContextManager lifespan shutdown complete')
 
 
