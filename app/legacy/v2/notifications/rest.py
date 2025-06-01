@@ -43,7 +43,7 @@ v2_legacy_notification_router = APIRouter(
 
 
 v2_notification_router = APIRouter(
-    dependencies=[Depends(JWTBearer()), Depends(ServiceRateLimiter())],
+    dependencies=[Depends(ChainedDepends(JWTBearer(), ServiceRateLimiter()))],
     prefix='/v2/notifications',
     route_class=LegacyTimedAPIRoute,
     tags=['v2 Notification Endpoints'],
