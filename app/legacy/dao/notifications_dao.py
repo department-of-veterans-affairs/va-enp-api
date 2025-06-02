@@ -16,7 +16,7 @@ from sqlalchemy.exc import (
     TimeoutError,
 )
 
-from app.constants import NotificationType
+from app.constants import NotificationStatus, NotificationType
 from app.db.db_init import get_read_session_with_context, get_write_session_with_context, metadata_legacy
 from app.exceptions import NonRetryableError, RetryableError
 from app.legacy.dao.utils import db_retry
@@ -122,6 +122,7 @@ class LegacyNotificationDao:
                     billable_units=billable_units,
                     created_at=datetime.now(),
                     key_type=key_type,
+                    notification_status=NotificationStatus.CREATED,
                 )
                 await session.execute(stmt)
                 await session.commit()

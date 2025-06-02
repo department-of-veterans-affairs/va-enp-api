@@ -51,6 +51,12 @@ class NotificationType(StrEnum):
     SMS = 'sms'
 
 
+class NotificationStatus(StrEnum):
+    """Types of Notifications that can be sent."""
+
+    CREATED = 'created'
+
+
 class OSPlatformType(StrEnum):
     """OS Platform Types available."""
 
