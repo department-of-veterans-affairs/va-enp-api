@@ -180,21 +180,7 @@ async def verify_service_token(issuer: str, token: str) -> None:
     for row in api_keys:
         api_key = ApiKeyRecord.from_row(row)
 
-        logger.debug(
-            'Checking API key for service_id: {} service_name: {} api_key_id: {} request_id: {}',
-            service.id,
-            service.name,
-            api_key.id,
-            request_id,
-        )
-
         if not _verify_service_token(token, api_key):
-            logger.debug(
-                'API key unable to verify service token service_id: {} api_key_id: {} request_id: {}',
-                service.id,
-                api_key.id,
-                request_id,
-            )
             continue
 
         logger.debug(

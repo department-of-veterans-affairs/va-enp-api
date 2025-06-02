@@ -48,9 +48,7 @@ class TestDirectSmsTaskResolver:
         # Verify a single task is returned with correct queue name and task name
         assert len(tasks) == 1
         task = tasks[0]
-        # TODO: 260 - Revert this once notifications are persisted in the database
-        # assert task == (QueueNames.SEND_SMS, ('deliver_sms', notification_id))
-        assert task == (QueueNames.TEST_SEND_DLQ, ('deliver_sms', notification_id))
+        assert task == (QueueNames.SEND_SMS, ('deliver_sms', notification_id))
 
 
 class TestIdentifierSmsTaskResolver:

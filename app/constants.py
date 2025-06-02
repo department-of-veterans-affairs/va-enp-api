@@ -67,8 +67,6 @@ class QueueNames(StrEnum):
     LOOKUP_CONTACT_INFO = f'{QUEUE_PREFIX}lookup-contact-info-tasks'
     LOOKUP_VA_PROFILE_ID = f'{QUEUE_PREFIX}lookup-va-profile-id-tasks'
     SEND_SMS = f'{QUEUE_PREFIX}send-sms-tasks'
-    # TODO: 260 - Remove this queue once notifications are persisted in the database
-    TEST_SEND_DLQ = 'dev-bip-consumer-dead-letter-queue'
 
 
 # Legacy auth responses

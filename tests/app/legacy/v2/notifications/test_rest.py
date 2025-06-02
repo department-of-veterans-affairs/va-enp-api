@@ -185,6 +185,7 @@ class TestSmsPostHandler:
         """
 
         def _wrapper(api_key_id: UUID4, service_id: UUID4) -> dict[str, str]:
+            # Based on sample_api_key's secret being secret-id
             secret_str = f'secret-{api_key_id}'
             return generate_headers(secret_str, str(service_id))
 
