@@ -36,7 +36,7 @@ fileignoreconfig:
 - filename: tests/napi_table_data.toml
   checksum: db0b29eb4c9c25867f0aa0fd4ae5bacceed1cea95c33602274bacf31f073aa0b
 - filename: tests/app/legacy/v2/notifications/test_rest.py
-  checksum: 09f3c0c9e51999aa42785f89845488bdb241b09fe99585d198dfd9389120e8b2
+  checksum: 1cb3438564a64fb4fca2873315b71863401cafb50e27163d590e1e06f2e29e0b
 - filename: tests/app/test_auth.py
   checksum: 8394b5cb4cac2d352bcc2d84988d81540a58dae7f3cbe22e881833d2eb1e9a75
 - filename: tests/app/legacy/v2/notifications/test_utils.py

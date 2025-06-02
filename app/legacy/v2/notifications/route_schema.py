@@ -367,7 +367,7 @@ class V2PostSmsRequestModel(V2PostNotificationRequestModel):
         Returns:
             str: The reply to string
         """
-        # Comes from sms_sender_id in the request or the Service. service_sms_sender.sender
+        # TODO: #272 - Comes from sms_sender_id in the request or the Service. service_sms_sender.sender
         return ''
 
     def get_direct_contact_info(self) -> str | None:
