@@ -7,7 +7,6 @@ from pydantic import UUID4
 from starlette_context import context
 
 from app.auth import JWTBearer
-from app.constants import NotificationType
 from app.legacy.v2.notifications.resolvers import (
     SmsTaskResolver,
     get_sms_task_resolver,
@@ -95,7 +94,7 @@ async def legacy_notification_post_handler(
     sms_task_resolver: Annotated[SmsTaskResolver, Depends(get_sms_task_resolver)],
     background_tasks: BackgroundTasks,
 ) -> V2PostSmsResponseModel:
-    """Create an SMS notification.
+    """Handler for an SMS notification.
 
     Args:
         request (V2PostSmsRequestModel): The SMS notification request model
@@ -105,10 +104,30 @@ async def legacy_notification_post_handler(
     Returns:
         V2PostSmsResponseModel: The notification response data
     """
-    notification_id: UUID4 = context.data['request_id']
+    # Separate the middleware from the handler/response, makes testing much simpler
+    return await _sms_post(request, sms_task_resolver, background_tasks)
+
+
+async def _sms_post(
+    request: V2PostSmsRequestModel,
+    sms_task_resolver: SmsTaskResolver,
+    background_tasks: BackgroundTasks,
+) -> V2PostSmsResponseModel:
+    """Handler for an SMS notification.
+
+    Args:
+        request (V2PostSmsRequestModel): The SMS notification request model
+        sms_task_resolver (SmsTaskResolver): Injected task resolver based on request content
+        background_tasks (BackgroundTasks): The FastAPI background tasks object
+
+    Returns:
+        V2PostSmsResponseModel: The notification response data
+    """
     logger.debug('Creating SMS notification with request data: {}', request)
-    template_row = await validate_template(request.template_id, NotificationType.SMS, request.personalisation)
-    await create_notification(notification_id, NotificationType.SMS, template_row.version)
+
+    notification_id: UUID4 = context.data['request_id']
+    template_row = await validate_template(request.template_id, request.get_channel(), request.personalisation)
+    await create_notification(notification_id, template_row, request)
 
     # Get tasks for the notification using the appropriate resolver
     task_list = sms_task_resolver.get_tasks(notification_id)
@@ -129,7 +148,7 @@ async def legacy_notification_post_handler(
             id=request.template_id,
             uri=HttpsUrl(f'https://mock-notify.va.gov/templates/{request.template_id}'),
         ),
-        uri=HttpsUrl(f'https://mock-notify.va.gov/notifications/zzz'),
+        uri=HttpsUrl(f'https://mock-notify.va.gov/notifications/{notification_id}'),
         content=V2SmsContentModel(
             body='',
             from_number=ValidatedPhoneNumber('+18005550101'),  # Would be determined from sms_sender_id

@@ -1,0 +1,329 @@
+# These values were gathered from a clean local version of the notification-api app's database (post-migrations)
+[skip_tables]
+table_names = [
+    'alembic_version',
+    'dm_datetime',          # This has over 18,000 records on a fresh database. Migration 0174 added it for some reason
+    'provider_details',     # Generated dynamically every time the app is migrated
+]
+
+
+[napi_table_data]
+[napi_table_data.auth_type]
+key = "name"
+keys = [
+    "email_auth",
+    "sms_auth",
+]
+
+[napi_table_data.branding_type]
+key = "name"
+keys = [
+    "org",
+    "both",
+    "org_banner",
+    "no_branding",
+]
+
+[napi_table_data.organisation_types]
+key = "name"
+keys = [
+    "other",
+]
+
+[napi_table_data.provider_details]
+key = "id"
+keys = [
+    "2d97fec2-a90f-4326-a4a0-5e19962e3022",
+    "fde392a2-4ea4-4d6e-8f51-4b288fae6390",
+    "43161735-a3d4-42a7-ba90-bceaa2ea043d",
+    "b24ef0c1-4046-4de5-bd34-b7c80712b34f",
+    "c6c7df53-ff30-4d83-8403-6d3ba5ae8754",
+    "03c2508a-b29e-4cce-b829-8626ba419c78",
+    "733ec06e-a10c-4b0f-b041-4f439d3a76dc",
+    "6329c856-7b2e-424b-a7c2-ab1c64395dda",
+    "1b8739c3-57fe-4f4f-9341-2785f4a0e428",
+]
+
+[napi_table_data.provider_rates]
+key = "id"
+keys = [
+    "e80863cc-038f-497b-96af-635bf72e97ab",
+    "303996ac-2c4e-49cd-864b-4b03bfe64404",
+    "ec23975b-c793-4bf7-a135-ebdec392f67a",
+    "d1353d86-ac84-4535-8ee6-b8204e93dc4d",
+    "a2e7b12b-4f9a-4f79-845a-f22d544d59a2",
+]
+
+[napi_table_data.key_types]
+key = "name"
+keys = [
+    "normal",
+    "team",
+    "test",
+]
+
+[napi_table_data.invite_status_type]
+key = "name"
+keys = [
+    "pending",
+    "accepted",
+    "cancelled",
+]
+
+[napi_table_data.job_status]
+key = "name"
+keys = [
+    "pending",
+    "in progress",
+    "finished",
+    "sending limits exceeded",
+    "scheduled",
+    "cancelled",
+    "ready to send",
+    "sent to dvla",
+    "error",
+]
+
+[napi_table_data.template_process_type]
+key = "name"
+keys = [
+    "normal",
+    "priority",
+]
+
+[napi_table_data.notification_status_types]
+key = "name"
+keys = [
+    "sending",
+    "permanent-failure",
+    "failed",
+    "created",
+    "sent",
+    "technical-failure",
+    "delivered",
+    "pending",
+    "temporary-failure",
+    "pending-virus-check",
+    "virus-scan-failed",
+    "cancelled",
+    "returned-letter",
+    "validation-failed",
+    "pii-check-failed",
+    "preferences-declined",
+]
+
+[napi_table_data.service_permission_types]
+key = "name"
+keys = [
+    "international_sms",
+    "sms",
+    "email",
+    "letter",
+    "inbound_sms",
+    "schedule_notifications",
+    "email_auth",
+    "letters_as_pdf",
+    "upload_document",
+    "edit_folder_permissions",
+    "upload_letters",
+    "push",
+]
+
+[napi_table_data.service_permissions]
+key = "service_id"
+keys = [
+    "d6aa2c68-a2d9-4437-ab19-3ae8eb202553",
+]
+
+[napi_table_data.communication_items]
+key = "id"
+keys = [
+    "2b1f0013-4f58-4822-b865-67caf56beec0",
+    "272add10-d0b7-424a-be8d-d25b94a5c294",
+    "8bb36943-e1bf-425b-b8d0-0e2f5a375b6c",
+    "4606548e-de51-4cdb-9b36-132f28875f6f",
+]
+
+[napi_table_data.service_callback_type]
+key = "name"
+keys = [
+    "delivery_status",
+    "complaint",
+    "inbound_sms",
+]
+
+[napi_table_data.provider_details_history]
+key = "id"
+keys = [
+    "2d97fec2-a90f-4326-a4a0-5e19962e3022",
+    "fde392a2-4ea4-4d6e-8f51-4b288fae6390",
+    "6329c856-7b2e-424b-a7c2-ab1c64395dda",
+    "43161735-a3d4-42a7-ba90-bceaa2ea043d",
+    "733ec06e-a10c-4b0f-b041-4f439d3a76dc",
+    "b24ef0c1-4046-4de5-bd34-b7c80712b34f",
+    "03c2508a-b29e-4cce-b829-8626ba419c78",
+    "c6c7df53-ff30-4d83-8403-6d3ba5ae8754",
+    "1b8739c3-57fe-4f4f-9341-2785f4a0e428",
+]
+
+[napi_table_data.service_callback_channel]
+key = "channel"
+keys = [
+    "webhook",
+    "queue",
+]
+
+[napi_table_data.annual_billing]
+key = "id"
+keys = [
+    "fd1482aa-0129-994f-d0dd-40a7435a5f3f",
+]
+
+[napi_table_data.letter_rates]
+key = "id"
+keys = [
+    "6adf6191-eb27-4c84-b2ac-4ed875826477",
+    "041ef935-4f3d-4456-aa78-8da621dff7ae",
+    "9e197b6b-7091-4bcf-b2d1-f596f33cbf33",
+    "945c6c59-5c44-49a6-bb91-b52e8fe00fd8",
+    "0e8203af-7143-4846-b859-73d57e44c3a6",
+    "8c42f2d2-2bb2-4041-b252-e3ef1550cb31",
+    "f4071a75-1392-4de3-874f-aa785ddf6148",
+    "827dd0b1-5f0d-402c-bf38-f66ad3346c64",
+    "8bb079a5-e76d-4821-8b5f-6e1a6c2e8c82",
+    "49ed7523-abb0-4070-916d-7c6ee9a62260",
+    "67e2bab1-9fbe-406c-b700-c693bbf2e44d",
+    "611af31c-9b80-42d4-b7dd-b312279f536f",
+    "4f821f2d-5563-43b7-b040-dd37da87f111",
+    "070e6c36-9e47-401f-8aa3-37aa21a4a0d4",
+    "4568f3af-13b8-4cd0-8832-cd348c314cd2",
+    "a7acee51-66dc-4120-a083-d7111b034769",
+    "dae7a909-5004-47af-bbba-e1610c17cb28",
+    "f5a5c23c-2372-433a-b058-9b1491e93680",
+    "66475334-1a13-417e-a8f1-171bf524b164",
+    "aa6917c6-5c03-43d4-aeeb-21dcef465099",
+    "e487ef4c-ffae-4ce6-8471-9576d09c72d4",
+    "5190f901-94d0-46ee-afb3-0aff143fd7b7",
+    "d9518db2-2c06-48e6-9a50-7a6ae5025814",
+    "07e01e9f-a594-4125-bd53-6ecb933c62ae",
+    "c1a17681-80b2-40c5-b03f-72fff2faabb0",
+    "d8ed20fb-b0b7-4bf1-93d2-6800a2facae3",
+    "d26a478f-77dd-40df-9c87-805e2f7c4cad",
+    "71047aed-6df9-4caa-aa06-3f44a0ad443f",
+    "38ba3079-37eb-4fe4-b0c4-059e96250858",
+]
+
+[napi_table_data.rates]
+key = "id"
+keys = [
+    "098a3643-0d0e-4e83-bb9b-779f032e0f50",
+    "ecd5eae6-5cf1-44f2-95dd-bd9116248fed",
+]
+
+[napi_table_data.service_sms_senders]
+key = "id"
+keys = [
+    "286d6176-adbe-7ea7-ba26-b7606ee5e2a4",
+]
+
+[napi_table_data.services]
+key = "id"
+keys = [
+    "d6aa2c68-a2d9-4437-ab19-3ae8eb202553",
+]
+
+[napi_table_data.services_history]
+key = "id"
+keys = [
+    "d6aa2c68-a2d9-4437-ab19-3ae8eb202553",
+]
+
+[napi_table_data.template_redacted]
+key = "template_id"
+keys = [
+    "064e85da-c238-47a3-b9a7-21493ea23dd3",
+    "0880fbb1-a0c6-46f0-9a8e-36c986381ceb",
+    "203566f0-d835-47c5-aa06-932439c86573",
+    "299726d2-dba6-42b8-8209-30e1d66ea164",
+    "36fb0730-6259-4da1-8a80-c8de22ad4246",
+    "3a4cab41-c47d-4d49-96ba-f4c4fa91d44b",
+    "474e9242-823b-4f99-813d-ed392e7f1201",
+    "4f46df42-f795-4cc4-83bb-65ca312f49cc",
+    "4fd2e43c-309b-4e50-8fb8-1955852d9d71",
+    "522b6657-5ca5-4368-a294-6b527703bd0b",
+    "5b39e16a-9ff8-487c-9bfb-9e06bdb70f36",
+    "618185c6-3636-49cd-b7d2-6f6f5eb3bdde",
+    "7d423d9e-e94e-4118-879d-d52f383206ae",
+    "8a31520f-4751-4789-8ea1-fe54496725eb",
+    "8ea9b7a0-a824-4dd3-a4c3-1f508ed20a69",
+    "a42f1d17-9404-46d5-a647-d013bdfca3e1",
+    "c20206d5-bf03-4002-9a90-37d5032d9e84",
+    "c73f1d71-4049-46d5-a647-d013bdeca3f0",
+    "d0e66c4c-0c50-43f0-94f5-f85b613202d4",
+    "eb4d9930-87ab-4aef-9bce-786762687884",
+    "ece42649-22a8-4d06-b87f-d52d5d3f0a27",
+]
+
+[napi_table_data.templates]
+key = "id"
+keys = [
+    "064e85da-c238-47a3-b9a7-21493ea23dd3",
+    "0880fbb1-a0c6-46f0-9a8e-36c986381ceb",
+    "203566f0-d835-47c5-aa06-932439c86573",
+    "299726d2-dba6-42b8-8209-30e1d66ea164",
+    "36fb0730-6259-4da1-8a80-c8de22ad4246",
+    "3a4cab41-c47d-4d49-96ba-f4c4fa91d44b",
+    "474e9242-823b-4f99-813d-ed392e7f1201",
+    "4f46df42-f795-4cc4-83bb-65ca312f49cc",
+    "4fd2e43c-309b-4e50-8fb8-1955852d9d71",
+    "522b6657-5ca5-4368-a294-6b527703bd0b",
+    "5b39e16a-9ff8-487c-9bfb-9e06bdb70f36",
+    "618185c6-3636-49cd-b7d2-6f6f5eb3bdde",
+    "7d423d9e-e94e-4118-879d-d52f383206ae",
+    "8a31520f-4751-4789-8ea1-fe54496725eb",
+    "8ea9b7a0-a824-4dd3-a4c3-1f508ed20a69",
+    "a42f1d17-9404-46d5-a647-d013bdfca3e1",
+    "c20206d5-bf03-4002-9a90-37d5032d9e84",
+    "c73f1d71-4049-46d5-a647-d013bdeca3f0",
+    "d0e66c4c-0c50-43f0-94f5-f85b613202d4",
+    "eb4d9930-87ab-4aef-9bce-786762687884",
+    "ece42649-22a8-4d06-b87f-d52d5d3f0a27",
+]
+
+[napi_table_data.templates_history]
+key = "id"
+keys = [
+    "064e85da-c238-47a3-b9a7-21493ea23dd3",
+    "0880fbb1-a0c6-46f0-9a8e-36c986381ceb",
+    "203566f0-d835-47c5-aa06-932439c86573",
+    "299726d2-dba6-42b8-8209-30e1d66ea164",
+    "36fb0730-6259-4da1-8a80-c8de22ad4246",
+    "3a4cab41-c47d-4d49-96ba-f4c4fa91d44b",
+    "474e9242-823b-4f99-813d-ed392e7f1201",
+    "4f46df42-f795-4cc4-83bb-65ca312f49cc",
+    "4fd2e43c-309b-4e50-8fb8-1955852d9d71",
+    "522b6657-5ca5-4368-a294-6b527703bd0b",
+    "5b39e16a-9ff8-487c-9bfb-9e06bdb70f36",
+    "618185c6-3636-49cd-b7d2-6f6f5eb3bdde",
+    "7d423d9e-e94e-4118-879d-d52f383206ae",
+    "8a31520f-4751-4789-8ea1-fe54496725eb",
+    "8ea9b7a0-a824-4dd3-a4c3-1f508ed20a69",
+    "a42f1d17-9404-46d5-a647-d013bdfca3e1",
+    "c20206d5-bf03-4002-9a90-37d5032d9e84",
+    "c73f1d71-4049-46d5-a647-d013bdeca3f0",
+    "d0e66c4c-0c50-43f0-94f5-f85b613202d4",
+    "eb4d9930-87ab-4aef-9bce-786762687884",
+    "ece42649-22a8-4d06-b87f-d52d5d3f0a27",
+]
+
+[napi_table_data.users]
+key = "id"
+keys = [
+    "6af522d0-2915-4e52-83a3-3690455a5fe6",
+]
+
+[napi_table_data.user_to_service]
+key = "user_id"
+keys = [
+    "6af522d0-2915-4e52-83a3-3690455a5fe6",
+]

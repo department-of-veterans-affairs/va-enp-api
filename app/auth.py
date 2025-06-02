@@ -7,13 +7,25 @@ from typing import Any, Sequence, TypedDict, cast
 from uuid import uuid4
 
 import jwt
-from fastapi import HTTPException, Request
+from fastapi import HTTPException, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from loguru import logger
 from pydantic import UUID4
 from sqlalchemy import Row
 from starlette_context import context
 
+from app.constants import (
+    RESPONSE_LEGACY_ERROR_SYSTEM_CLOCK,
+    RESPONSE_LEGACY_INVALID_TOKEN_ARCHIVED_SERVICE,
+    RESPONSE_LEGACY_INVALID_TOKEN_NO_ISS,
+    RESPONSE_LEGACY_INVALID_TOKEN_NO_KEYS,
+    RESPONSE_LEGACY_INVALID_TOKEN_NO_SERVICE,
+    RESPONSE_LEGACY_INVALID_TOKEN_NOT_FOUND,
+    RESPONSE_LEGACY_INVALID_TOKEN_NOT_VALID,
+    RESPONSE_LEGACY_INVALID_TOKEN_REVOKED,
+    RESPONSE_LEGACY_INVALID_TOKEN_WRONG_TYPE,
+    RESPONSE_LEGACY_NO_CREDENTIALS,
+)
 from app.exceptions import NonRetryableError, RetryableError
 from app.legacy.dao.api_keys_dao import ApiKeyRecord, LegacyApiKeysDao
 from app.legacy.dao.services_dao import LegacyServiceDao
@@ -201,19 +213,19 @@ async def verify_service_token(issuer: str, token: str) -> None:
             request_id,
         )
 
-        context['api_user'] = api_key
-        context['service_id'] = service.id
-
         logger.info(
             'Service auth token authenticated for service_id: {} api_key_id: {} request_id: {}',
             service.id,
             api_key.id,
             request_id,
         )
+        # Set context so this can be used throughout the request
+        context['api_user'] = api_key
+        context['service_id'] = service.id
 
         return
 
-    raise HTTPException(status_code=403, detail='Invalid token: signature, api token not found')
+    raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=RESPONSE_LEGACY_INVALID_TOKEN_NOT_FOUND)
 
 
 async def get_active_service_for_issuer(issuer: str, request_id: UUID4) -> Row[Any]:
@@ -246,15 +258,17 @@ async def get_active_service_for_issuer(issuer: str, request_id: UUID4) -> Row[A
     try:
         service_id = UUID4(issuer)
     except ValueError:
-        raise HTTPException(status_code=403, detail='Invalid token: service id is not the right data type')
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=RESPONSE_LEGACY_INVALID_TOKEN_WRONG_TYPE)
 
     try:
         service = await LegacyServiceDao.get_service(service_id)
     except (NonRetryableError, RetryableError):
-        raise HTTPException(status_code=403, detail='Invalid token: service not found')
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=RESPONSE_LEGACY_INVALID_TOKEN_NO_SERVICE)
 
     if not service.active:
-        raise HTTPException(status_code=403, detail='Invalid token: service is archived')
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail=RESPONSE_LEGACY_INVALID_TOKEN_ARCHIVED_SERVICE
+        )
 
     logger.debug(
         'Found service service_id: {} for issuer: {} request_id: {}',
@@ -284,18 +298,14 @@ async def _get_service_api_keys(service_id: UUID4, request_id: UUID4) -> Sequenc
         HTTPException: If no API keys exist or the DAO raises any error, a 403 is returned.
     """
     try:
-        api_keys = await LegacyApiKeysDao.get_api_keys(service_id)
+        api_keys = list(await LegacyApiKeysDao.get_api_keys(service_id))
     except (RetryableError, NonRetryableError):
         logger.debug(
             'No API keys found for service_id: {} request_id: {}',
             service_id,
             request_id,
         )
-        raise HTTPException(status_code=403, detail='Invalid token: service has no API keys')
-
-    if not any(api_keys):
-        # included here for parity with notification-api behavior
-        raise HTTPException(status_code=403, detail='Invalid token: service has no API keys')
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=RESPONSE_LEGACY_INVALID_TOKEN_NO_KEYS)
 
     return api_keys
 
@@ -304,7 +314,7 @@ def _verify_service_token(token: str, api_key: ApiKeyRecord) -> bool:
     try:
         verified = decode_jwt_token(token, api_key.secret)
     except TokenExpiredError:
-        raise HTTPException(status_code=403, detail='Error: Your system clock must be accurate to within 30 seconds')
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=RESPONSE_LEGACY_ERROR_SYSTEM_CLOCK)
     except (NonRetryableError, TokenError):
         verified = False
     return verified
@@ -313,7 +323,7 @@ def _verify_service_token(token: str, api_key: ApiKeyRecord) -> bool:
 def _validate_service_api_key(api_key: ApiKeyRecord, service_id: str, service_name: str) -> None:
     # TODO notification-api-2309 - The revoked field is added as a temporary measure until we can implement proper use of the expiry date
     if api_key.revoked:
-        raise HTTPException(status_code=403, detail='Invalid token: API key revoked')
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=RESPONSE_LEGACY_INVALID_TOKEN_REVOKED)
 
     if api_key.expiry_date is not None and api_key.expiry_date < datetime.now(timezone.utc):
         logger.warning(
@@ -347,9 +357,9 @@ def get_token_issuer(token: str) -> str:
     try:
         issuer = _get_token_issuer(token)
     except TokenIssuerError:
-        raise HTTPException(status_code=403, detail='Invalid token: iss field not provided')
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=RESPONSE_LEGACY_INVALID_TOKEN_NO_ISS)
     except TokenDecodeError:
-        raise HTTPException(status_code=403, detail='Invalid token: signature, api token is not valid')
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=RESPONSE_LEGACY_INVALID_TOKEN_NOT_VALID)
     return issuer
 
 
@@ -404,17 +414,13 @@ def decode_jwt_token(token: str, secret: str) -> bool:
             leeway=ACCESS_TOKEN_LEEWAY_SECONDS,
             options={'verify_signature': True},
         )
-
     except (jwt.InvalidIssuedAtError, jwt.ImmatureSignatureError, jwt.ExpiredSignatureError) as e:
         raise TokenExpiredError('Token time is invalid', decode_token(token)) from e
-
     except (jwt.InvalidAlgorithmError, NotImplementedError) as e:
         logger.warning('Service used an invalid algorithm: {}', str(e))
         raise TokenAlgorithmError from e
-
     except (jwt.DecodeError, jwt.InvalidSignatureError, jwt.InvalidTokenError) as e:
         raise TokenDecodeError from e
-
     return validate_jwt_token(decoded_token)
 
 
@@ -488,10 +494,10 @@ class JWTBearerAdmin(HTTPBearer):
         credentials: HTTPAuthorizationCredentials | None = await super(JWTBearerAdmin, self).__call__(request)
         if credentials is None:
             logger.debug('No credentials provided.')
-            raise HTTPException(status_code=401, detail='Unauthorized, authentication token must be provided')
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=RESPONSE_LEGACY_NO_CREDENTIALS)
         if not verify_admin_token(str(credentials.credentials)):
             logger.debug('Invalid or expired token.')
-            raise HTTPException(status_code=403, detail='Invalid token: signature, api token is not valid')
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=RESPONSE_LEGACY_INVALID_TOKEN_NOT_VALID)
 
 
 class JWTBearer(HTTPBearer):
@@ -507,17 +513,13 @@ class JWTBearer(HTTPBearer):
         Args:
         request (Request): FastAPI request object
 
-        Returns:
-        HTTPAuthorizationCredentials | None: HTTPAuthorizationCredentials object if the token is valid, None otherwise.
-
         Raises:
         HTTPException: If the token is invalid or expired
         """
         credentials: HTTPAuthorizationCredentials | None = await super(JWTBearer, self).__call__(request)
         if credentials is None:
             logger.debug('No credentials provided.')
-            raise HTTPException(status_code=401, detail='Unauthorized, authentication token must be provided')
-
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=RESPONSE_LEGACY_NO_CREDENTIALS)
         token = str(credentials.credentials)
         issuer = get_token_issuer(token)
         await verify_service_token(issuer, token)

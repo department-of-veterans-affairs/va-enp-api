@@ -13,7 +13,7 @@ from app.db.db_init import (
 )
 
 READ_QUERY = text("SELECT 'Hello world!'")
-WRITE_QUERY = text('TRUNCATE branding_type CASCADE;')
+WRITE_QUERY = text('CREATE TABLE foo (id INT); DROP TABLE foo;')
 
 
 def test_init_db() -> None:

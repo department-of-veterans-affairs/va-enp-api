@@ -14,6 +14,7 @@ AWS_REGION = os.getenv('AWS_REGION', 'us-east-1')
 MAX_RETRIES = int(os.getenv('MAX_RETRIES', 3))
 
 RESPONSE_400 = 'Bad request'
+RESPONSE_403 = 'Not authenticated'
 RESPONSE_404 = 'Not found'
 RESPONSE_500 = 'Server error'
 
@@ -68,3 +69,16 @@ class QueueNames(StrEnum):
     SEND_SMS = f'{QUEUE_PREFIX}send-sms-tasks'
     # TODO: 260 - Remove this queue once notifications are persisted in the database
     TEST_SEND_DLQ = 'dev-bip-consumer-dead-letter-queue'
+
+
+# Legacy auth responses
+RESPONSE_LEGACY_INVALID_TOKEN_WRONG_TYPE = 'Invalid token: service id is not the right data type'  # nosec
+RESPONSE_LEGACY_INVALID_TOKEN_NO_SERVICE = 'Invalid token: service not found'  # nosec
+RESPONSE_LEGACY_INVALID_TOKEN_ARCHIVED_SERVICE = 'Invalid token: service is archived'  # nosec
+RESPONSE_LEGACY_INVALID_TOKEN_NOT_FOUND = 'Invalid token: signature, api token not found'  # nosec
+RESPONSE_LEGACY_INVALID_TOKEN_NOT_VALID = 'Invalid token: signature, api token is not valid'  # nosec
+RESPONSE_LEGACY_INVALID_TOKEN_NO_ISS = 'Invalid token: iss field not provided'  # nosec
+RESPONSE_LEGACY_INVALID_TOKEN_NO_KEYS = 'Invalid token: service has no API keys'  # nosec
+RESPONSE_LEGACY_INVALID_TOKEN_REVOKED = 'Invalid token: API key revoked'  # nosec
+RESPONSE_LEGACY_ERROR_SYSTEM_CLOCK = 'Error: Your system clock must be accurate to within 30 seconds'
+RESPONSE_LEGACY_NO_CREDENTIALS = 'Unauthorized, authentication token must be provided'

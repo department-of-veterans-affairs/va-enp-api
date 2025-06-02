@@ -21,6 +21,7 @@ from pydantic_extra_types.phone_numbers import PhoneNumberValidator
 from typing_extensions import Self
 
 from app.constants import IdentifierType, MobileAppType, NotificationType
+from app.legacy.dao.templates_dao import LegacyTemplateDao
 from app.legacy.v2.notifications.validators import is_valid_recipient_id_value
 
 
@@ -219,6 +220,39 @@ class V2PostNotificationRequestModel(StrictBaseModel):
     template_id: Annotated[UUID4, Field(strict=False)]
     scheduled_for: Annotated[AwareDatetime, Field(strict=False)] | None = None
 
+    async def get_reply_to_text(self) -> str:
+        """Get the reply_to_text field for this request.
+
+        Raises:
+            NotImplementedError: Base class does not implement this method
+
+        Returns:
+            str: The reply to string
+        """
+        raise NotImplementedError
+
+    def get_direct_contact_info(self) -> str | None:
+        """Get the direct contact info from the request.
+
+        Raises:
+            NotImplementedError: Base class does not implement this method
+
+        Returns:
+            str | None: The contact information
+        """
+        raise NotImplementedError
+
+    def get_channel(self) -> NotificationType:
+        """Get the channel.
+
+        Raises:
+            NotImplementedError: Base class does not implement this method
+
+        Returns:
+            NotificationType: The channel for this type of request
+        """
+        raise NotImplementedError
+
 
 class V2PostEmailRequestModel(V2PostNotificationRequestModel):
     """Attributes specific to requests to send e-mail notifications."""
@@ -241,6 +275,30 @@ class V2PostEmailRequestModel(V2PostNotificationRequestModel):
         ):
             raise ValueError('You must specify one of "email_address" or "recipient identifier".')
         return self
+
+    async def get_reply_to_text(self) -> str:
+        """Get the reply_to_text field for this request.
+
+        Returns:
+            str: The reply to string
+        """
+        return str((await LegacyTemplateDao.get_template(self.template_id)).reply_to_text)
+
+    def get_direct_contact_info(self) -> str | None:
+        """Get the direct contact info from the request.
+
+        Returns:
+            str | None: The contact information
+        """
+        return self.email_address
+
+    def get_channel(self) -> NotificationType:
+        """Get the channel.
+
+        Returns:
+            NotificationType: The channel for this type of request
+        """
+        return NotificationType.EMAIL
 
 
 class V2PostSmsRequestModel(V2PostNotificationRequestModel):
@@ -302,6 +360,31 @@ class V2PostSmsRequestModel(V2PostNotificationRequestModel):
         if self.phone_number is None and self.recipient_identifier is None:
             raise ValueError('You must specify at least one of phone_number or recipient identifier.')
         return self
+
+    async def get_reply_to_text(self) -> str:
+        """Get the reply_to_text field for this request.
+
+        Returns:
+            str: The reply to string
+        """
+        # Comes from sms_sender_id in the request or the Service. service_sms_sender.sender
+        return ''
+
+    def get_direct_contact_info(self) -> str | None:
+        """Get the direct contact info from the request.
+
+        Returns:
+            str | None: The contact information
+        """
+        return self.phone_number
+
+    def get_channel(self) -> NotificationType:
+        """Get the channel.
+
+        Returns:
+            NotificationType: The channel for this type of request
+        """
+        return NotificationType.SMS
 
 
 ##################################################

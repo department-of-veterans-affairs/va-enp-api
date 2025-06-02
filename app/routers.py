@@ -73,9 +73,8 @@ class LegacyTimedAPIRoute(APIRoute):
         for error in e.errors():
             error_location = error.get('loc', ())
             error_message = error.get('msg')
-
             if error.get('type', '').startswith('uuid'):
-                # special case to override Pydantic UUID type/format message
+                # special case to override Pydantic UUID type/format message to match notification-api responses
                 error_message = 'Input should be a valid UUID version 4'
 
             if len(error_location) > 1:

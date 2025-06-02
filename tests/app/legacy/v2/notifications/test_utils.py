@@ -4,18 +4,21 @@ from typing import Any, Awaitable, Callable
 from unittest.mock import AsyncMock, patch
 from uuid import uuid4
 
-from fastapi.exceptions import RequestValidationError
 import pytest
+from fastapi import HTTPException, status
+from fastapi.exceptions import RequestValidationError
 from sqlalchemy import Row
 from sqlalchemy.exc import NoResultFound
 
-from app.constants import NotificationType
+from app.constants import RESPONSE_500, NotificationType
 from app.exceptions import NonRetryableError
 from app.legacy.clients.sqs import SqsAsyncProducer
+from app.legacy.v2.notifications.route_schema import V2PostSmsRequestModel
 from app.legacy.v2.notifications.utils import (
     _validate_template_active,
     _validate_template_personalisation,
     _validate_template_type,
+    create_notification,
     enqueue_notification_tasks,
     get_arn_from_icn,
     send_push_notification_helper,
@@ -176,3 +179,30 @@ async def test_enqueue_notification_tasks() -> None:
 
     mock_enqueue.assert_called_once()
     assert mock_enqueue.call_args[0][0] == q_name
+
+
+async def test_create_notification_happy_path(mocker: AsyncMock) -> None:
+    """Validate functionality of create_notification.
+
+    Args:
+        mocker (AsyncMock): Mock object
+    """
+    request = V2PostSmsRequestModel(phone_number='+18005550101', template_id=uuid4())
+    mocker.patch('app.legacy.v2.notifications.utils.LegacyNotificationDao.create_notification')
+    await create_notification(uuid4(), mocker.AsyncMock(), request)
+
+
+async def test_create_notification_failure(mocker: AsyncMock) -> None:
+    """Fail to create notification due to a NonRetryableError.
+
+    Args:
+        mocker (AsyncMock): Mock object
+    """
+    request = V2PostSmsRequestModel(phone_number='+18005550101', template_id=uuid4())
+    mocker.patch(
+        'app.legacy.v2.notifications.utils.LegacyNotificationDao.create_notification', side_effect=NonRetryableError
+    )
+    with pytest.raises(HTTPException) as exc_info:
+        await create_notification(uuid4(), mocker.AsyncMock(), request)
+    assert exc_info.value.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
+    assert exc_info.value.detail == RESPONSE_500

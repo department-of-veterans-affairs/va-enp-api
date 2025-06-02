@@ -2,25 +2,21 @@
 
 import time
 from datetime import datetime, timedelta, timezone
-from typing import Any, Awaitable, Callable, Type, cast
-from unittest.mock import AsyncMock, Mock, patch
+from typing import Any, Awaitable, Callable, Type
+from unittest.mock import patch
 from uuid import uuid4
 
 import jwt
 import pytest
-from fastapi import HTTPException, Request
-from fastapi.security import HTTPAuthorizationCredentials
+from fastapi import HTTPException, status
 from sqlalchemy import Row
-from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.datastructures import Headers
 from starlette.requests import Request as StarletteRequest
 
 from app.auth import (
     ACCESS_TOKEN_EXPIRE_SECONDS,
-    ACCESS_TOKEN_LEEWAY_SECONDS,
     ADMIN_CLIENT_USER_NAME,
     ADMIN_SECRET_KEY,
-    JWTBearer,
     JWTBearerAdmin,
     JWTPayloadDict,
     TokenAlgorithmError,
@@ -32,12 +28,12 @@ from app.auth import (
     get_active_service_for_issuer,
     get_token_issuer,
     validate_jwt_token,
-    verify_service_token,
 )
+from app.constants import RESPONSE_LEGACY_INVALID_TOKEN_WRONG_TYPE
 from app.exceptions import NonRetryableError, RetryableError
 from app.legacy.dao.api_keys_dao import ApiKeyRecord
 from tests.app.legacy.dao.test_api_keys import encode_and_sign
-from tests.conftest import generate_headers, generate_token, generate_token_with_partial_payload
+from tests.conftest import generate_token, generate_token_with_partial_payload
 
 
 @pytest.fixture
@@ -51,23 +47,6 @@ def admin_token_payload() -> JWTPayloadDict:
         'exp': current_timestamp + ACCESS_TOKEN_EXPIRE_SECONDS,
     }
     return payload
-
-
-@pytest.fixture
-def service_token_payload() -> Callable[[str], JWTPayloadDict]:
-    """Return valid admin JWT token payload."""
-
-    def _service_token_payload(issuer: str) -> JWTPayloadDict:
-        current_timestamp = int(time.time())
-
-        payload: JWTPayloadDict = {
-            'iss': issuer,
-            'iat': current_timestamp,
-            'exp': current_timestamp + ACCESS_TOKEN_EXPIRE_SECONDS,
-        }
-        return payload
-
-    return _service_token_payload
 
 
 class TestJWTBearerAdmin:
@@ -93,7 +72,7 @@ class TestJWTBearerAdmin:
             await auth(request)
 
         exc = exc_info.value
-        assert exc.status_code == 403
+        assert exc.status_code == status.HTTP_403_FORBIDDEN
         assert exc.detail == 'Not authenticated'
 
     async def test_raises_with_invalid_token(self) -> None:
@@ -108,7 +87,7 @@ class TestJWTBearerAdmin:
             await auth(request)
 
         exc = exc_info.value
-        assert exc.status_code == 403
+        assert exc.status_code == status.HTTP_403_FORBIDDEN
         assert exc.detail == 'Invalid token: signature, api token is not valid'
 
     async def test_raises_with_invalid_token_signature(self, admin_token_payload: JWTPayloadDict) -> None:
@@ -123,7 +102,7 @@ class TestJWTBearerAdmin:
             await auth(request)
 
         exc = exc_info.value
-        assert exc.status_code == 403
+        assert exc.status_code == status.HTTP_403_FORBIDDEN
         assert exc.detail == 'Invalid token: signature, api token is not valid'
 
     async def test_raises_with_expired_token(self, admin_token_payload: JWTPayloadDict) -> None:
@@ -141,7 +120,7 @@ class TestJWTBearerAdmin:
             await auth(request)
 
         exc = exc_info.value
-        assert exc.status_code == 403
+        assert exc.status_code == status.HTTP_403_FORBIDDEN
         assert exc.detail == 'Invalid token: signature, api token is not valid'
 
     async def test_raises_with_invalid_algorithm(self, admin_token_payload: JWTPayloadDict) -> None:
@@ -160,496 +139,8 @@ class TestJWTBearerAdmin:
             await auth(request)
 
         exc = exc_info.value
-        assert exc.status_code == 403
+        assert exc.status_code == status.HTTP_403_FORBIDDEN
         assert exc.detail == 'Invalid token: signature, api token is not valid'
-
-
-@patch('app.auth.context')
-class TestJWTBearer:
-    """Unit tests for the JWTBearer authentication dependency."""
-
-    async def test_authenticates_valid_service_token(
-        self,
-        mock_context: AsyncMock,
-        sample_api_key: Callable[..., Awaitable[Row[Any]]],
-        sample_service: Callable[..., Awaitable[Row[Any]]],
-        service_token_payload: Callable[[str], JWTPayloadDict],
-    ) -> None:
-        """Test that JWTBearer authenticates a valid service token."""
-
-        secret = 'not-so-secret'
-        encrypted_secret = encode_and_sign(secret)
-        service = await sample_service()
-        api_key = await sample_api_key(service_id=service.id, secret=encrypted_secret)
-
-        payload = service_token_payload(str(service.id))
-        token = generate_token(sig_key=secret, payload=payload)
-
-        headers = Headers({'authorization': f'Bearer {token}'})
-        request = StarletteRequest(scope={'type': 'http', 'headers': headers.raw})
-        auth = JWTBearer()
-
-        with (
-            patch('app.auth.LegacyServiceDao.get_service', return_value=service),
-            patch('app.auth.LegacyApiKeysDao.get_api_keys', return_value=[api_key]),
-        ):
-            # Should not raise an exception
-            await auth(request)
-
-    async def test_raises_with_missing_bearer_header(
-        self,
-        mock_context: AsyncMock,
-    ) -> None:
-        """Test that JWTBearer raises HTTP 403 when Authorization header is missing."""
-        headers = Headers()
-        request = StarletteRequest(scope={'type': 'http', 'headers': headers.raw})
-        auth = JWTBearer()
-
-        with pytest.raises(HTTPException) as exc_info:
-            await auth(request)
-
-        exc = exc_info.value
-        assert exc.status_code == 403
-        assert exc.detail == 'Not authenticated'
-
-    async def test_raises_with_invalid_token(
-        self,
-        mock_context: AsyncMock,
-    ) -> None:
-        """Test that JWTBearer raises HTTP 403 for an invalid token."""
-        headers = Headers({'authorization': f'Bearer {"not-a-valid-token"}'})
-        request = StarletteRequest(scope={'type': 'http', 'headers': headers.raw})
-        auth = JWTBearer()
-
-        with pytest.raises(HTTPException) as exc_info:
-            await auth(request)
-
-        exc = exc_info.value
-        assert exc.status_code == 403
-        assert exc.detail == 'Invalid token: signature, api token is not valid'
-
-    async def test_raises_with_invalid_algorithm(
-        self,
-        mock_context: AsyncMock,
-        mocker: AsyncMock,
-        sample_api_key: Callable[..., Awaitable[Row[Any]]],
-        sample_service: Callable[..., Awaitable[Row[Any]]],
-    ) -> None:
-        """Test that JWTBearer raises HTTP 403 for a token with an invalid algorithm."""
-
-        service = await sample_service()
-        api_key = await sample_api_key(service_id=service.id)
-        mocker.patch('app.auth._get_service_api_keys', return_value=[api_key])
-        mocker.patch('app.auth.get_active_service_for_issuer', return_value=service)
-        mocker.patch('app.auth.get_token_issuer', return_value=str(service.id))
-        mock_logger = mocker.patch('app.auth.logger.warning')
-
-        auth_headers = generate_headers(api_key.secret, str(service.id), 'HS384')
-
-        headers = Headers({'authorization': auth_headers['Authorization']})
-        request = StarletteRequest(scope={'type': 'http', 'headers': headers.raw})
-        auth = JWTBearer()
-
-        with pytest.raises(HTTPException) as exc_info:
-            await auth(request)
-
-        exc = exc_info.value
-        assert exc.status_code == 403
-        assert exc.detail == 'Invalid token: signature, api token not found'
-        # The alg string is from PyJwt. Needed to ensure it was logging an algorithm failure
-        mock_logger.assert_called_once_with(
-            'Service used an invalid algorithm: {}', 'The specified alg value is not allowed'
-        )
-
-    async def test_raises_with_missing_issuer(
-        self,
-        mock_context: AsyncMock,
-        admin_token_payload: JWTPayloadDict,
-    ) -> None:
-        """Test that JWTBearer raises HTTP 403 when the issuer (iss) claim is missing."""
-        raw_payload = dict(admin_token_payload)
-        del raw_payload['iss']
-        payload = cast(JWTPayloadDict, raw_payload)
-        token = generate_token(sig_key=ADMIN_SECRET_KEY, payload=payload)
-
-        headers = Headers({'authorization': f'Bearer {token}'})
-        request = StarletteRequest(scope={'type': 'http', 'headers': headers.raw})
-        auth = JWTBearer()
-
-        with pytest.raises(HTTPException) as exc_info:
-            await auth(request)
-
-        exc = exc_info.value
-        assert exc.status_code == 403
-        assert exc.detail == 'Invalid token: iss field not provided'
-
-    async def test_raises_with_service_not_found(
-        self,
-        mock_context: AsyncMock,
-        service_token_payload: Callable[[str], JWTPayloadDict],
-    ) -> None:
-        """Test that JWTBearer raises HTTP 403 when the service referenced in the token is not found."""
-        payload = service_token_payload(str(uuid4()))
-        token = generate_token(sig_key='not-so-secret', payload=payload)
-
-        headers = Headers({'authorization': f'Bearer {token}'})
-        request = StarletteRequest(scope={'type': 'http', 'headers': headers.raw})
-        auth = JWTBearer()
-
-        with pytest.raises(HTTPException) as exc_info:
-            await auth(request)
-
-        exc = exc_info.value
-        assert exc.status_code == 403
-        assert exc.detail == 'Invalid token: service not found'
-
-    async def test_raises_with_service_not_active(
-        self,
-        mock_context: AsyncMock,
-        sample_service: Callable[..., Awaitable[Row[Any]]],
-        service_token_payload: Callable[[str], JWTPayloadDict],
-    ) -> None:
-        """Test that JWTBearer raises HTTP 403 when the service is not active (archived)."""
-        service = await sample_service(active=False)
-        payload = service_token_payload(str(service.id))
-        token = generate_token(sig_key='not-so-secret', payload=payload)
-
-        headers = Headers({'authorization': f'Bearer {token}'})
-        request = StarletteRequest(scope={'type': 'http', 'headers': headers.raw})
-        auth = JWTBearer()
-
-        with patch('app.auth.LegacyServiceDao.get_service', new=AsyncMock(return_value=service)):
-            with pytest.raises(HTTPException) as exc_info:
-                await auth(request)
-
-        exc = exc_info.value
-        assert exc.status_code == 403
-        assert exc.detail == 'Invalid token: service is archived'
-
-    @pytest.mark.parametrize(
-        'raises',
-        [
-            NonRetryableError,
-            RetryableError,
-        ],
-        ids=[
-            'NonRetryableError from DAO',
-            'RetryableError from DAO',
-        ],
-    )
-    async def test_raises_with_any_api_key_dao_failure(
-        self,
-        mock_context: AsyncMock,
-        sample_service: Callable[..., Awaitable[Row[Any]]],
-        service_token_payload: Callable[[str], JWTPayloadDict],
-        raises: Type[Exception],
-    ) -> None:
-        """Test that JWTBearer raises HTTP 403 when API key lookup fails with retryable or non-retryable error."""
-        service = await sample_service()
-        payload = service_token_payload(str(service.id))
-        token = generate_token(sig_key='not-so-secret', payload=payload)
-
-        headers = Headers({'authorization': f'Bearer {token}'})
-        request = StarletteRequest(scope={'type': 'http', 'headers': headers.raw})
-        auth = JWTBearer()
-
-        with (
-            patch('app.auth.LegacyServiceDao.get_service', new=AsyncMock(return_value=service)),
-            patch('app.auth.LegacyApiKeysDao.get_api_keys', new=AsyncMock(side_effect=raises)),
-        ):
-            with pytest.raises(HTTPException) as exc_info:
-                await auth(request)
-
-        exc = exc_info.value
-        assert exc.status_code == 403
-        assert exc.detail == 'Invalid token: service has no API keys'
-
-    async def test_raises_with_no_api_keys_for_service(
-        self,
-        mock_context: AsyncMock,
-        sample_service: Callable[..., Awaitable[Row[Any]]],
-        service_token_payload: Callable[[str], JWTPayloadDict],
-    ) -> None:
-        """Test that JWTBearer raises HTTP 403 when the service has no associated API keys."""
-        service = await sample_service()
-        payload = service_token_payload(str(service.id))
-        token = generate_token(sig_key='not-so-secret', payload=payload)
-
-        headers = Headers({'authorization': f'Bearer {token}'})
-        request = StarletteRequest(scope={'type': 'http', 'headers': headers.raw})
-        auth = JWTBearer()
-
-        with (
-            patch('app.auth.LegacyServiceDao.get_service', new=AsyncMock(return_value=service)),
-            patch('app.auth.LegacyApiKeysDao.get_api_keys', new=AsyncMock(return_value=[])),
-        ):
-            with pytest.raises(HTTPException) as exc_info:
-                await auth(request)
-
-        exc = exc_info.value
-        assert exc.status_code == 403
-        assert exc.detail == 'Invalid token: service has no API keys'
-
-    @pytest.mark.parametrize(
-        'encrypted_secret',
-        [
-            None,
-            encode_and_sign('not-so-secret'),
-        ],
-        ids=[
-            'API key has no secret (None)',
-            'API key has a different secret than provided service token',
-        ],
-    )
-    async def test_raises_with_no_matching_secrets(
-        self,
-        mock_context: AsyncMock,
-        sample_api_key: Callable[..., Awaitable[Row[Any]]],
-        sample_service: Callable[..., Awaitable[Row[Any]]],
-        service_token_payload: Callable[[str], JWTPayloadDict],
-        encrypted_secret: str | None,
-    ) -> None:
-        """Test that JWTBearer raises HTTP 403 when no API key secret matches the token signature."""
-        service = await sample_service()
-        api_key = await sample_api_key(service_id=service.id, secret=encrypted_secret)
-
-        payload = service_token_payload(str(service.id))
-        token = generate_token(sig_key='not-the-matching-secret', payload=payload)
-
-        headers = Headers({'authorization': f'Bearer {token}'})
-        request = StarletteRequest(scope={'type': 'http', 'headers': headers.raw})
-        auth = JWTBearer()
-
-        with (
-            patch('app.auth.LegacyServiceDao.get_service', new=AsyncMock(return_value=service)),
-            patch('app.auth.LegacyApiKeysDao.get_api_keys', new=AsyncMock(return_value=[api_key])),
-        ):
-            with pytest.raises(HTTPException) as exc_info:
-                await auth(request)
-
-        exc = exc_info.value
-        assert exc.status_code == 403
-        assert exc.detail == 'Invalid token: signature, api token not found'
-
-    async def test_raises_with_service_expired_token(
-        self,
-        mock_context: AsyncMock,
-        sample_api_key: Callable[..., Awaitable[Row[Any]]],
-        sample_service: Callable[..., Awaitable[Row[Any]]],
-        service_token_payload: Callable[[str], JWTPayloadDict],
-    ) -> None:
-        """Test that JWTBearer raises HTTP 403 when the service token is expired."""
-        service = await sample_service()
-        secret = 'not-so-secret'
-        encrypted_secret = encode_and_sign(secret)
-        api_key = await sample_api_key(service_id=service.id, secret=encrypted_secret)
-
-        payload = service_token_payload(str(service.id))
-        current_timestamp = int(time.time())
-        payload['exp'] = current_timestamp - ACCESS_TOKEN_EXPIRE_SECONDS
-        token = generate_token(sig_key=secret, payload=payload)
-
-        headers = Headers({'authorization': f'Bearer {token}'})
-        request = StarletteRequest(scope={'type': 'http', 'headers': headers.raw})
-        auth = JWTBearer()
-
-        with (
-            patch('app.auth.LegacyServiceDao.get_service', new=AsyncMock(return_value=service)),
-            patch('app.auth.LegacyApiKeysDao.get_api_keys', new=AsyncMock(return_value=[api_key])),
-        ):
-            with pytest.raises(HTTPException) as exc_info:
-                await auth(request)
-
-        exc = exc_info.value
-        assert exc.status_code == 403
-        assert exc.detail == 'Error: Your system clock must be accurate to within 30 seconds'
-
-    async def test_raises_with_invalid_algorithm_service_token(
-        self,
-        mock_context: AsyncMock,
-        sample_api_key: Callable[..., Awaitable[Row[Any]]],
-        sample_service: Callable[..., Awaitable[Row[Any]]],
-        service_token_payload: Callable[[str], JWTPayloadDict],
-    ) -> None:
-        """Test that JWTBearer raises HTTP 403 for a service token with an invalid algorithm."""
-        service = await sample_service()
-        secret = 'not-so-secret'
-        encrypted_secret = encode_and_sign(secret)
-        api_key = await sample_api_key(service_id=service.id, secret=encrypted_secret)
-
-        payload = service_token_payload(str(service.id))
-        jwt_headers = {
-            'typ': 'JWT',
-            'alg': 'HS384',
-        }
-        token = generate_token(sig_key=secret, headers=jwt_headers, payload=payload)
-
-        headers = Headers({'authorization': f'Bearer {token}'})
-        request = StarletteRequest(scope={'type': 'http', 'headers': headers.raw})
-        auth = JWTBearer()
-
-        with (
-            patch('app.auth.LegacyServiceDao.get_service', new=AsyncMock(return_value=service)),
-            patch('app.auth.LegacyApiKeysDao.get_api_keys', new=AsyncMock(return_value=[api_key])),
-        ):
-            with pytest.raises(HTTPException) as exc_info:
-                await auth(request)
-
-        exc = exc_info.value
-        assert exc.status_code == 403
-        assert exc.detail == 'Invalid token: signature, api token not found'
-
-    async def test_raises_with_missing_issued_at(
-        self,
-        mock_context: AsyncMock,
-        sample_api_key: Callable[..., Awaitable[Row[Any]]],
-        sample_service: Callable[..., Awaitable[Row[Any]]],
-        service_token_payload: Callable[[str], JWTPayloadDict],
-    ) -> None:
-        """Test that JWTBearer raises HTTP 403 when the issued-at (iat) claim is missing from the service token."""
-        service = await sample_service()
-        secret = 'not-so-secret'
-        encrypted_secret = encode_and_sign(secret)
-        api_key = await sample_api_key(service_id=service.id, secret=encrypted_secret)
-
-        raw_payload = dict(service_token_payload(str(service.id)))
-        del raw_payload['iat']
-        # casting a raw dictionary to JWTPayloadDict to keep mypy happy
-        payload = cast(JWTPayloadDict, raw_payload)
-        token = generate_token(sig_key=secret, payload=payload)
-
-        headers = Headers({'authorization': f'Bearer {token}'})
-        request = StarletteRequest(scope={'type': 'http', 'headers': headers.raw})
-        auth = JWTBearer()
-
-        with (
-            patch('app.auth.LegacyServiceDao.get_service', new=AsyncMock(return_value=service)),
-            patch('app.auth.LegacyApiKeysDao.get_api_keys', new=AsyncMock(return_value=[api_key])),
-        ):
-            with pytest.raises(HTTPException) as exc_info:
-                await auth(request)
-
-        exc = exc_info.value
-        assert exc.status_code == 403
-        assert exc.detail == 'Invalid token: signature, api token not found'
-
-    @pytest.mark.parametrize(
-        'issued_at_offset_seconds',
-        [
-            -ACCESS_TOKEN_EXPIRE_SECONDS - ACCESS_TOKEN_LEEWAY_SECONDS,
-            ACCESS_TOKEN_EXPIRE_SECONDS + ACCESS_TOKEN_LEEWAY_SECONDS,
-        ],
-        ids=[
-            'JWT iat field (issued_at) is offset too far into the past',
-            'JWT iat field (issued_at) is offset into the future',
-        ],
-    )
-    async def test_raises_with_invalid_issued_at(
-        self,
-        mock_context: AsyncMock,
-        sample_api_key: Callable[..., Awaitable[Row[Any]]],
-        sample_service: Callable[..., Awaitable[Row[Any]]],
-        service_token_payload: Callable[[str], JWTPayloadDict],
-        issued_at_offset_seconds: int,
-    ) -> None:
-        """Test that JWTBearer raises HTTP 403 when the issued-at (iat) claim is outside the allowed time window."""
-        service = await sample_service()
-        secret = 'not-so-secret'
-        encrypted_secret = encode_and_sign(secret)
-        api_key = await sample_api_key(service_id=service.id, secret=encrypted_secret)
-
-        payload = service_token_payload(str(service.id))
-        payload['iat'] += issued_at_offset_seconds
-        token = generate_token(sig_key=secret, payload=payload)
-
-        headers = Headers({'authorization': f'Bearer {token}'})
-        request = StarletteRequest(scope={'type': 'http', 'headers': headers.raw})
-        auth = JWTBearer()
-
-        with (
-            patch('app.auth.LegacyServiceDao.get_service', new=AsyncMock(return_value=service)),
-            patch('app.auth.LegacyApiKeysDao.get_api_keys', new=AsyncMock(return_value=[api_key])),
-        ):
-            with pytest.raises(HTTPException) as exc_info:
-                await auth(request)
-
-        exc = exc_info.value
-        assert exc.status_code == 403
-        assert exc.detail == 'Error: Your system clock must be accurate to within 30 seconds'
-
-    async def test_raises_with_api_key_revoked(
-        self,
-        mock_context: AsyncMock,
-        sample_api_key: Callable[..., Awaitable[Row[Any]]],
-        sample_service: Callable[..., Awaitable[Row[Any]]],
-        service_token_payload: Callable[[str], JWTPayloadDict],
-    ) -> None:
-        """Test that JWTBearer raises HTTP 403 when the API key used in the token is revoked."""
-        service = await sample_service()
-        secret = 'not-so-secret'
-        encrypted_secret = encode_and_sign(secret)
-        api_key = await sample_api_key(service_id=service.id, secret=encrypted_secret, revoked=True)
-
-        payload = service_token_payload(str(service.id))
-        token = generate_token(sig_key=secret, payload=payload)
-
-        headers = Headers({'authorization': f'Bearer {token}'})
-        request = StarletteRequest(scope={'type': 'http', 'headers': headers.raw})
-        auth = JWTBearer()
-
-        with (
-            patch('app.auth.LegacyServiceDao.get_service', new=AsyncMock(return_value=service)),
-            patch('app.auth.LegacyApiKeysDao.get_api_keys', new=AsyncMock(return_value=[api_key])),
-        ):
-            with pytest.raises(HTTPException) as exc_info:
-                await auth(request)
-
-        exc = exc_info.value
-        assert exc.status_code == 403
-        assert exc.detail == 'Invalid token: API key revoked'
-
-
-@patch('app.auth.context')
-class TestVerifyServiceToken:
-    """Test suite for verifying behavior of the verify_service_token function."""
-
-    async def test_authenticates_valid_service_token_and_sets_context_service_id(
-        self,
-        mock_context: AsyncMock,
-        sample_api_key: Callable[..., Awaitable[Row[Any]]],
-        sample_service: Callable[..., Awaitable[Row[Any]]],
-    ) -> None:
-        """Verify that a valid service token is accepted by verify_service_token.
-
-        This test:
-        - Creates a service and a matching API key
-        - Mocks DAO methods to return these objects
-        - Builds a JWT token signed with the API key secret
-        - Asserts that verify_service_token accepts the token and populates the context
-        """
-        # Create a sample service and API key
-        service = await sample_service()
-        secret = 'not_so_secret'
-        encrypted_secret = encode_and_sign(secret)
-        api_key = await sample_api_key(service_id=service.id, secret=encrypted_secret)
-
-        current_timestamp = int(time.time())
-        payload: JWTPayloadDict = {
-            'iss': str(service.id),
-            'iat': current_timestamp,
-            'exp': current_timestamp + ACCESS_TOKEN_EXPIRE_SECONDS,
-        }
-        token = generate_token(sig_key='not_so_secret', payload=payload)
-
-        with (
-            patch('app.auth.LegacyServiceDao.get_service', new=AsyncMock(return_value=service)),
-            patch('app.auth.LegacyApiKeysDao.get_api_keys', new=AsyncMock(return_value=[api_key])),
-        ):
-            await verify_service_token(issuer=payload['iss'], token=token)
-
-        # Validate context was set.
-        # call.args is a tuple e.g. ('service_id', UUID('9b26869c-a62b-4eb5-bb7a-602f1276db90'))
-        assert any([call.args[1] == service.id for call in mock_context.mock_calls])
 
 
 class TestGetActiveServiceForIssuer:
@@ -663,7 +154,7 @@ class TestGetActiveServiceForIssuer:
         service = await sample_service()
         request_id = uuid4()
 
-        with patch('app.auth.LegacyServiceDao.get_service', new=AsyncMock(return_value=service)):
+        with patch('app.auth.LegacyServiceDao.get_service', return_value=service):
             service_by_issuer = await get_active_service_for_issuer(str(service.id), request_id)
 
         # just checking if returned service id matches
@@ -678,8 +169,8 @@ class TestGetActiveServiceForIssuer:
             await get_active_service_for_issuer(issuer, request_id)
 
         exc = exc_info.value
-        assert exc.status_code == 403
-        assert exc.detail == 'Invalid token: service id is not the right data type'
+        assert exc.status_code == status.HTTP_403_FORBIDDEN
+        assert exc.detail == RESPONSE_LEGACY_INVALID_TOKEN_WRONG_TYPE
 
     @pytest.mark.parametrize(
         ('raises', 'expected_detail'),
@@ -702,7 +193,7 @@ class TestGetActiveServiceForIssuer:
                 await get_active_service_for_issuer(issuer, request_id)
 
         exc = exc_info.value
-        assert exc.status_code == 403
+        assert exc.status_code == status.HTTP_403_FORBIDDEN
         assert exc.detail == expected_detail
 
     async def test_raises_with_inactive_service(
@@ -714,12 +205,12 @@ class TestGetActiveServiceForIssuer:
         issuer = str(service.id)
         request_id = uuid4()
 
-        with patch('app.auth.LegacyServiceDao.get_service', new=AsyncMock(return_value=service)):
+        with patch('app.auth.LegacyServiceDao.get_service', return_value=service):
             with pytest.raises(HTTPException) as exc_info:
                 await get_active_service_for_issuer(issuer, request_id)
 
         exc = exc_info.value
-        assert exc.status_code == 403
+        assert exc.status_code == status.HTTP_403_FORBIDDEN
         assert exc.detail == 'Invalid token: service is archived'
 
 
@@ -757,7 +248,7 @@ class TestValidateServiceApiKey:
             _validate_service_api_key(api_key, str(api_key.service_id), service_name)
 
         exc = exc_info.value
-        assert exc.status_code == 403
+        assert exc.status_code == status.HTTP_403_FORBIDDEN
         assert exc.detail == 'Invalid token: API key revoked'
 
     def test_logs_warning_with_no_expiry(self, sample_api_key_record: ApiKeyRecord) -> None:
@@ -822,7 +313,7 @@ class TestGetTokenIssuer:
             get_token_issuer('not a valid token')
 
         exc = exc_info.value
-        assert exc.status_code == 403
+        assert exc.status_code == status.HTTP_403_FORBIDDEN
         assert exc.detail == 'Invalid token: signature, api token is not valid'
 
     def test_raises_with_missing_issuer(self) -> None:
@@ -837,7 +328,7 @@ class TestGetTokenIssuer:
             get_token_issuer(token)
 
         exc = exc_info.value
-        assert exc.status_code == 403
+        assert exc.status_code == status.HTTP_403_FORBIDDEN
         assert exc.detail == 'Invalid token: iss field not provided'
 
 

@@ -158,7 +158,7 @@ def sample_api_key(
         data = {
             'id': id,
             'name': name or f'sample-api-key-{id}',
-            'secret': secret or encode_and_sign(f'secret-{uuid4()}'),
+            'secret': encode_and_sign(secret) if secret else encode_and_sign(f'secret-{uuid4()}'),
             'service_id': service_id,
             'key_type': key_type,
             'revoked': revoked,

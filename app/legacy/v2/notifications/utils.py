@@ -4,8 +4,7 @@ import json
 import re
 from typing import Any, Sequence
 
-from app.legacy.dao.notifications_dao import LegacyNotificationDao
-from fastapi import HTTPException
+from fastapi import HTTPException, status
 from fastapi.exceptions import RequestValidationError
 from pydantic import UUID4
 from sqlalchemy import Row
@@ -15,8 +14,13 @@ from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_fu
 from app.constants import RESPONSE_500, NotificationType
 from app.exceptions import NonRetryableError, RetryableError
 from app.legacy.clients.sqs import SqsAsyncProducer
+from app.legacy.dao.notifications_dao import LegacyNotificationDao
 from app.legacy.dao.templates_dao import LegacyTemplateDao
-from app.legacy.v2.notifications.route_schema import PersonalisationFileObject
+from app.legacy.v2.notifications.route_schema import (
+    PersonalisationFileObject,
+    V2PostEmailRequestModel,
+    V2PostSmsRequestModel,
+)
 from app.logging.logging_config import logger
 from app.providers.provider_aws import ProviderAWS
 from app.providers.provider_schemas import PushModel
@@ -115,9 +119,8 @@ async def validate_template(
         personalisation (dict[str, str | int | float | list[str | int | float] | PersonalisationFileObject] | None):
             The personalisation data to validate
 
-    Raises:
-        ValueError: If the template is not found, or is invalid based on the expected type,
-            personalisation is missing, or is archived.
+    Returns:
+        Row[Any]: A template row
     """
     try:
         template = await LegacyTemplateDao.get_template(template_id)
@@ -136,25 +139,32 @@ async def validate_template(
 
 async def create_notification(
     id: UUID4,
-    notification_type: NotificationType,
-    template_version: int,
+    template_row: Row[Any],
+    request: V2PostSmsRequestModel | V2PostEmailRequestModel,
 ) -> None:
     """Utility function to help the route create a notification using LegacyNotificationDao.create_notification.
 
     Args:
         id (UUID4): notification id to use
-        notification_type (NotificationType): channel for the notification
-        template_version (int): template version to use for this notification
+        template_row (Row[Any]): Row of template data
+        request (V2PostSmsRequestModel | V2PostEmailRequestModel): The request data
 
     Raises:
         HTTPException: Unexpected 5xx catch
 
     """
     try:
-        await LegacyNotificationDao.create_notification(id, notification_type, template_version)
+        await LegacyNotificationDao.create_notification(
+            id,
+            request.get_channel(),
+            request.get_direct_contact_info(),
+            await request.get_reply_to_text(),
+            template_row.id,
+            template_row.version,
+        )
     except NonRetryableError as e:
         logger.exception('Failed to create notification due to unexpected error in the database')
-        raise HTTPException(status_code=500, detail=RESPONSE_500) from e
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=RESPONSE_500) from e
 
 
 def _validate_template_type(

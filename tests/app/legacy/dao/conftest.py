@@ -1,18 +1,18 @@
 """Fixtures and setup and teardown prepared/committed sample objects."""
 
 from collections.abc import AsyncGenerator
-from typing import Any, Awaitable, Callable, cast
+from typing import Any, Awaitable, Callable
 
 import pytest
 from sqlalchemy import Row, delete
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.ext.asyncio import AsyncSession, async_scoped_session
 
 from app.db.db_init import get_write_session_with_context, metadata_legacy
 
 
 @pytest.fixture
 async def prepared_service(
-    sample_service: Callable[[AsyncSession], Awaitable[Row[Any]]],
+    sample_service: Callable[[async_scoped_session[AsyncSession]], Awaitable[Row[Any]]],
 ) -> AsyncGenerator[Row[Any], None]:
     """Fixture that creates, commits, and yields a sample service row for integration tests.
 
@@ -34,9 +34,7 @@ async def prepared_service(
         Row[Any]: A SQLAlchemy Core row representing the inserted service.
     """
     # setup
-    async with get_write_session_with_context() as raw_session:
-        # cast the async_scoped_session[AsyncSession] to keep mypy happy
-        session = cast(AsyncSession, raw_session)
+    async with get_write_session_with_context() as session:
         service = await sample_service(session)
         await session.commit()
 
@@ -46,9 +44,7 @@ async def prepared_service(
     legacy_users = metadata_legacy.tables['users']
     legacy_services = metadata_legacy.tables['services']
 
-    async with get_write_session_with_context() as raw_session:
-        # cast the async_scoped_session[AsyncSession] to keep mypy happy
-        session = cast(AsyncSession, raw_session)
+    async with get_write_session_with_context() as session:
         await session.execute(delete(legacy_services).where(legacy_services.c.id == service.id))
         await session.execute(delete(legacy_users).where(legacy_users.c.id == service.created_by_id))
         await session.commit()
@@ -56,7 +52,7 @@ async def prepared_service(
 
 @pytest.fixture
 async def prepared_api_key(
-    sample_service: Callable[[AsyncSession], Awaitable[Row[Any]]],
+    sample_service: Callable[[async_scoped_session[AsyncSession]], Awaitable[Row[Any]]],
     sample_api_key: Callable[..., Awaitable[Row[Any]]],
 ) -> AsyncGenerator[Row[Any], None]:
     """Fixture that creates and yields a committed API key along with its associated service and user.
@@ -81,9 +77,7 @@ async def prepared_api_key(
         Row[Any]: A SQLAlchemy Core row representing the inserted API key.
     """
     # setup
-    async with get_write_session_with_context() as raw_session:
-        # cast the async_scoped_session[AsyncSession] to keep mypy happy
-        session = cast(AsyncSession, raw_session)
+    async with get_write_session_with_context() as session:
         service = await sample_service(session)
         api_key = await sample_api_key(session, service_id=service.id)
         await session.commit()
@@ -95,9 +89,7 @@ async def prepared_api_key(
     legacy_services = metadata_legacy.tables['services']
     legacy_api_keys = metadata_legacy.tables['api_keys']
 
-    async with get_write_session_with_context() as raw_session:
-        # cast the async_scoped_session[AsyncSession] to keep mypy happy
-        session = cast(AsyncSession, raw_session)
+    async with get_write_session_with_context() as session:
         await session.execute(delete(legacy_api_keys).where(legacy_api_keys.c.id == api_key.id))
         await session.execute(delete(legacy_services).where(legacy_services.c.id == service.id))
         await session.execute(delete(legacy_users).where(legacy_users.c.id == service.created_by_id))

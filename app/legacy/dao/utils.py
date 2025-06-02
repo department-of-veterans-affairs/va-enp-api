@@ -1,3 +1,5 @@
+"""Legacy dao utility helpers."""
+
 import functools
 
 from tenacity import retry, retry_if_exception_type, stop_after_attempt
