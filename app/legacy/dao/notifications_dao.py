@@ -42,20 +42,35 @@ class LegacyNotificationDao:
         Returns:
             Row[Any]: notification table row
         """
-        legacy_notifications = metadata_legacy.tables['notifications']
-        stmt = select(legacy_notifications).where(legacy_notifications.c.id == id)
-
-        @db_retry
-        async def _get() -> Row[Any]:
-            async with get_read_session_with_context() as session:
-                return (await session.execute(stmt)).one()
-
         try:
-            row: Row[Any] = await _get()
+            row: Row[Any] = await LegacyNotificationDao._get(id)
         except (RetryableError, NonRetryableError) as e:
             # Exceeded retries or was never retryable. Downstream methods logged this
             raise NonRetryableError from e
         return row
+
+    @db_retry
+    @staticmethod
+    async def _get(id: UUID4) -> Row[Any]:
+        legacy_notifications = metadata_legacy.tables['notifications']
+        try:
+            stmt = select(legacy_notifications).where(legacy_notifications.c.id == id)
+            async with get_read_session_with_context() as session:
+                return (await session.execute(stmt)).one()
+
+        except (IntegrityError, DataError) as e:
+            # These are deterministic and will likely fail again
+            logger.exception('Notification lookup failed: invalid or unexpected data for id: {}', id)
+            raise NonRetryableError('Notification lookup failed: invalid or unexpected data.') from e
+
+        except (OperationalError, InterfaceError, TimeoutError) as e:
+            # Transient DB issues that may succeed on retry
+            logger.warning('Notification lookup failed due to a transient database error for id: {}', id)
+            raise RetryableError('Notification lookup failed due to a transient database error.') from e
+
+        except SQLAlchemyError as e:
+            logger.exception('Unexpected SQLAlchemy error during notification lookup for id: {}', id)
+            raise NonRetryableError('Unexpected SQLAlchemy error during notification lookup.') from e
 
     @staticmethod
     async def create_notification(
@@ -156,17 +171,32 @@ class LegacyNotificationDao:
         Raises:
             NonRetryableError: If unable to delete the notification
         """
-
-        @db_retry
-        async def _delete() -> None:
-            async with get_write_session_with_context() as session:
-                legacy_notifications = metadata_legacy.tables['notifications']
-                stmt = delete(legacy_notifications).where(legacy_notifications.c.id == id)
-                await session.execute(stmt)
-                await session.commit()
-
         try:
-            await _delete()
+            await LegacyNotificationDao._delete(id)
         except (RetryableError, NonRetryableError) as e:
             # Exceeded retries or was never retryable. Downstream methods logged this
             raise NonRetryableError from e
+
+    @db_retry
+    @staticmethod
+    async def _delete(id: UUID4) -> None:
+        legacy_notifications = metadata_legacy.tables['notifications']
+        try:
+            stmt = delete(legacy_notifications).where(legacy_notifications.c.id == id)
+            async with get_write_session_with_context() as session:
+                await session.execute(stmt)
+                await session.commit()
+
+        except (IntegrityError, DataError) as e:
+            # These are deterministic and will likely fail again
+            logger.exception('Notification delete failed: invalid or unexpected data for id: {}', id)
+            raise NonRetryableError('Notification delete failed: invalid or unexpected data.') from e
+
+        except (OperationalError, InterfaceError, TimeoutError) as e:
+            # Transient DB issues that may succeed on retry
+            logger.warning('Notification delete failed due to a transient database error for id: {}', id)
+            raise RetryableError('Notification delete failed due to a transient database error.') from e
+
+        except SQLAlchemyError as e:
+            logger.exception('Unexpected SQLAlchemy error during notification delete for id: {}', id)
+            raise NonRetryableError('Unexpected SQLAlchemy error during notification delete.') from e
