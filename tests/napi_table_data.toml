@@ -2,8 +2,9 @@
 [skip_tables]
 table_names = [
     'alembic_version',
-    'dm_datetime',          # This has over 18,000 records on a fresh database. Migration 0174 added it for some reason
-    'provider_details',     # Generated dynamically every time the app is migrated
+    'dm_datetime',                  # This has over 18,000 records on a fresh database. Migration 0174 added it for some reason
+    'provider_details',             # Generated dynamically every time the app is migrated
+    'provider_details_history'      # Generated dynamically every time the app is migrated
 ]
 
 
@@ -28,20 +29,6 @@ keys = [
 key = "name"
 keys = [
     "other",
-]
-
-[napi_table_data.provider_details]
-key = "id"
-keys = [
-    "2d97fec2-a90f-4326-a4a0-5e19962e3022",
-    "fde392a2-4ea4-4d6e-8f51-4b288fae6390",
-    "43161735-a3d4-42a7-ba90-bceaa2ea043d",
-    "b24ef0c1-4046-4de5-bd34-b7c80712b34f",
-    "c6c7df53-ff30-4d83-8403-6d3ba5ae8754",
-    "03c2508a-b29e-4cce-b829-8626ba419c78",
-    "733ec06e-a10c-4b0f-b041-4f439d3a76dc",
-    "6329c856-7b2e-424b-a7c2-ab1c64395dda",
-    "1b8739c3-57fe-4f4f-9341-2785f4a0e428",
 ]
 
 [napi_table_data.provider_rates]
@@ -150,20 +137,6 @@ keys = [
     "delivery_status",
     "complaint",
     "inbound_sms",
-]
-
-[napi_table_data.provider_details_history]
-key = "id"
-keys = [
-    "2d97fec2-a90f-4326-a4a0-5e19962e3022",
-    "fde392a2-4ea4-4d6e-8f51-4b288fae6390",
-    "6329c856-7b2e-424b-a7c2-ab1c64395dda",
-    "43161735-a3d4-42a7-ba90-bceaa2ea043d",
-    "733ec06e-a10c-4b0f-b041-4f439d3a76dc",
-    "b24ef0c1-4046-4de5-bd34-b7c80712b34f",
-    "03c2508a-b29e-4cce-b829-8626ba419c78",
-    "c6c7df53-ff30-4d83-8403-6d3ba5ae8754",
-    "1b8739c3-57fe-4f4f-9341-2785f4a0e428",
 ]
 
 [napi_table_data.service_callback_channel]

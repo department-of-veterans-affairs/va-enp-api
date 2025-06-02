@@ -9,7 +9,7 @@ import pytest
 from fastapi import BackgroundTasks, status
 from fastapi.encoders import jsonable_encoder
 from pydantic import UUID4
-from sqlalchemy import Row, delete
+from sqlalchemy import Row, delete, select
 
 from app.constants import IdentifierType, MobileAppType
 from app.db.db_init import get_write_session_with_context, metadata_legacy
@@ -126,23 +126,35 @@ class TestSmsPostHandler:
 
         async def _wrapper(secret: str | None = None) -> dict[str, str]:
             secret_str = secret or f'secret-{uuid4()}'
-            # VA Notify seeded service
-            service_id = UUID('d6aa2c68-a2d9-4437-ab19-3ae8eb202553')
             async with get_write_session_with_context() as session:
-                key_ids.append((await sample_api_key(session, service_id=service_id, secret=secret_str)).id)
+                api_key = await sample_api_key(session, secret=secret_str)
                 await session.commit()
-            return generate_headers(secret_str, str(service_id))
+            key_ids.append(api_key.id)
+            return generate_headers(secret_str, str(api_key.service_id))
 
         yield _wrapper
 
         # Teardown
-        legacy_notifications = metadata_legacy.tables['notifications']
         legacy_api_keys = metadata_legacy.tables['api_keys']
-        notification_stmt = delete(legacy_notifications).where(legacy_notifications.c.api_key_id == key_ids[0])
-        key_stmt = delete(legacy_api_keys).where(legacy_api_keys.c.id == key_ids[0])
+        legacy_services = metadata_legacy.tables['services']
+        legacy_users = metadata_legacy.tables['users']
+
         async with get_write_session_with_context() as session:
-            await session.execute(notification_stmt)
-            await session.execute(key_stmt)
+            # select service id from api keys
+            service_id_stmt = select(legacy_api_keys.c.service_id).where(legacy_api_keys.c.id == key_ids[0])
+            service_id = (await session.execute(service_id_stmt)).scalar()
+            # select the user that created the service
+            user_id_stmt = select(legacy_services.c.created_by_id).where(legacy_services.c.id == service_id)
+            user_id = (await session.execute(user_id_stmt)).scalar()
+            # delete the api key
+            key_delete_stmt = delete(legacy_api_keys).where(legacy_api_keys.c.id == key_ids[0])
+            await session.execute(key_delete_stmt)
+            # delte the service
+            service_delete_stmt = delete(legacy_services).where(legacy_services.c.id == service_id)
+            await session.execute(service_delete_stmt)
+            # delete the user
+            user_delete_stmt = delete(legacy_users).where(legacy_users.c.id == user_id)
+            await session.execute(user_delete_stmt)
             await session.commit()
 
     @pytest.fixture

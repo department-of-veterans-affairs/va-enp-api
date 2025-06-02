@@ -31,7 +31,7 @@ ACCESS_TOKEN_EXPIRE_SECONDS = int(os.getenv('ENP_ACCESS_TOKEN_EXPIRE_SECONDS', 6
 _COLOR_GREEN = '\033[32m'
 _COLOR_RED = '\033[91m'
 _COLOR_RESET = '\033[0m'
-_DELETE_DB_ARTIFACTS = True  # os.getenv('DELETE_DB_ARTIFACTS', 'False') == 'True'
+_DELETE_DB_ARTIFACTS = os.getenv('DELETE_DB_ARTIFACTS', 'False') == 'True'
 
 router = APIRouter(prefix='/test', route_class=LegacyTimedAPIRoute)
 
@@ -272,7 +272,7 @@ def _get_table_delete_statement(table: str, where_item: str, ids: list[str | UUI
         stmt = text(f"""DELETE FROM {table};""")
     elif len(ids) == 1:
         # The ORM does not handle (<uuid>,). The extra comma breaks the query, so do a direct delete
-        stmt = text(f"""DELETE FROM {table} WHERE  {where_item} != {ids[0]};""")
+        stmt = text(f"""DELETE FROM {table} WHERE  {where_item} != '{ids[0]}';""")
     else:
         # Postgres doesn't accept ['<uuid>'], has to be in the form, ('<uuid>')
         stmt = text(f"""DELETE FROM {table} WHERE {where_item} not in {tuple(ids)};""")
