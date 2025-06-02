@@ -3,6 +3,7 @@
 import re
 from typing import Sequence
 
+from cachetools import TTLCache, cached
 from fastapi.exceptions import RequestValidationError
 from pydantic import UUID4
 from sqlalchemy.exc import NoResultFound
@@ -92,41 +93,36 @@ async def validate_push_template(template_id: UUID4) -> None:
     raise NotImplementedError('validate_push_template has not been implemented.')
 
 
-# TODO - Update to cache return
-# TODO - Move personalization into a seperate method so we can allow caching
+@cached(cache=TTLCache(maxsize=1024, ttl=600))
 async def validate_template(
     template_id: UUID4,
     expected_type: NotificationType,
-    personalisation: dict[str, str | int | float | list[str | int | float] | PersonalisationFileObject] | None,
+    service_id: UUID4,
 ) -> None:
     """Validates the template with the given ID.
 
-    Checks for the template in the database, that it's the right type, and is active. Raises a ValueError if any
-    of these conditions are not met.
+    Checks for the template in the database, that it's the right type, is active, and belongs to the correct service.
 
     Args:
         template_id (UUID4): The template_id to validate
         expected_type (NotificationType): The expected type of the template
-        personalisation (dict[str, str | int | float | list[str | int | float] | PersonalisationFileObject] | None):
-            The personalisation data to validate
+        service_id (UUID4) : The service ID to validate against the template
 
     Raises:
-        ValueError: If the template is not found, or is invalid based on the expected type,
-            personalisation is missing, or is archived.
+        NonRetryableError: If the template is not found, or is invalid based on the expected type,
+            or is archived, or doesn't belong to the correct service.
     """
     try:
         template = await LegacyTemplateDao.get_template(template_id)
     except NoResultFound:
-        # TODO - Update to use retryable or non-retryable
         logger.exception('Template not found with ID {}', template_id)
-        raise ValueError('Template not found')
+        raise NonRetryableError(log_msg='Template not found')
 
     try:
         _validate_template_type(template.template_type, expected_type, template_id)
         _validate_template_active(template.archived, template_id)
-        _validate_template_personalisation(template.content, personalisation, template_id)
-    except ValueError:
-        # TODO - Update to use retryable or non-retryable
+        _validate_template_service(template.service_id, service_id, template_id)
+    except NonRetryableError:
         raise
 
 
@@ -143,7 +139,7 @@ def _validate_template_type(
         template_id (UUID4): The ID of the template
 
     Raises:
-        ValueError: If the template is not of the expected type
+        NonRetryableError: If the template is not of the expected type
     """
     if template_type != expected_type:
         logger.warning(
@@ -152,8 +148,32 @@ def _validate_template_type(
             expected_type,
             template_id,
         )
-        # TODO - Update to use retryable or non-retryable
-        raise ValueError(f'{template_type} template is not suitable for {expected_type} notification')
+        raise NonRetryableError(log_msg=f'{template_type} template is not suitable for {expected_type} notification')
+
+
+def _validate_template_service(
+    template_service_id: UUID4,
+    expected_service_id: UUID4,
+    template_id: UUID4,
+) -> None:
+    """Validates that the template belongs to the expected service.
+
+    Args:
+        template_service_id (UUID4): The service ID of the template
+        expected_service_id (UUID4): The expected service ID
+        template_id (UUID4): The ID of the template
+
+    Raises:
+        NonRetryableError: If the template doesn't belong to the expected service
+    """
+    if template_service_id != expected_service_id:
+        logger.warning(
+            'Attempted to use template {} from service {} for service {}',
+            template_id,
+            template_service_id,
+            expected_service_id,
+        )
+        raise NonRetryableError(log_msg='Template does not belong to the specified service')
 
 
 def _validate_template_active(archived: bool, template_id: UUID4) -> None:
@@ -164,15 +184,15 @@ def _validate_template_active(archived: bool, template_id: UUID4) -> None:
         template_id (UUID4): The ID of the template
 
     Raises:
-        ValueError: If the template is archived (not active)
+        NonRetryableError: If the template is archived (not active)
 
     """
     if archived:
         logger.warning('Attempted to send using an archived template. Template {}', template_id)
-        raise ValueError('Template is not active')
+        raise NonRetryableError(log_msg='Template is not active')
 
 
-def _validate_template_personalisation(
+def validate_template_personalisation(
     template_content: str,
     personalisation: dict[str, str | int | float | list[str | int | float] | PersonalisationFileObject] | None,
     template_id: UUID4,
@@ -185,7 +205,7 @@ def _validate_template_personalisation(
         template_id (UUID4): The ID of the template
 
     Raises:
-        ValueError: If there are missing personalisation fields required by the template.
+        NonRetryableError: If there are missing personalisation fields required by the template.
 
     """
     template_personalisation_fields = _collect_personalisation_from_template(template_content)
@@ -202,8 +222,7 @@ def _validate_template_personalisation(
             template_id,
             missing_fields,
         )
-        # TODO - Update to use retryable or non-retryable
-        raise ValueError(f'Missing personalisation: {", ".join(missing_fields)}')
+        raise NonRetryableError(log_msg=f'Missing personalisation: {", ".join(missing_fields)}')
 
 
 def _collect_personalisation_from_template(template_content: str) -> set[str]:
