@@ -363,8 +363,8 @@ class TestSmsPost:
         mock_context.data = {'request_id': uuid4(), 'service_id': uuid4()}
         mocker.patch('app.legacy.v2.notifications.rest.create_notification')
         request = V2PostSmsRequestModel(phone_number='+18005550101', template_id=mock_template_get_id)
-        mock_resolveer = mocker.AsyncMock(spec=DirectSmsTaskResolver)
-        await _sms_post(request, mock_resolveer, mock_background_task)
+        mock_resolver = mocker.AsyncMock(spec=DirectSmsTaskResolver)
+        await _sms_post(request, mock_resolver, mock_background_task)
 
     async def test_happy_path_recipient(
         self,
@@ -383,7 +383,7 @@ class TestSmsPost:
         """
         mock_context.data = {'request_id': uuid4(), 'service_id': uuid4()}
         mocker.patch('app.legacy.v2.notifications.rest.create_notification')
-        mock_resolveer = mocker.AsyncMock(spec=IdentifierSmsTaskResolver)
+        mock_resolver = mocker.AsyncMock(spec=IdentifierSmsTaskResolver)
         recipient = RecipientIdentifierModel(id_type=IdentifierType.VA_PROFILE_ID, id_value='12345')
         request = V2PostSmsRequestModel(recipient_identifier=recipient, template_id=mock_template_get_id)
-        await _sms_post(request, mock_resolveer, mock_background_task)
+        await _sms_post(request, mock_resolver, mock_background_task)

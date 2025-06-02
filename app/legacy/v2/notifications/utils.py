@@ -160,8 +160,8 @@ async def create_notification(
             request.get_channel(),
             request.get_direct_contact_info(),
             await request.get_reply_to_text(),
-            context.data['service_id'],
-            context.data['api_key_id'],
+            context['service_id'],
+            context['api_key_id'],
             template_row.id,
             template_row.version,
         )
