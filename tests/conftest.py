@@ -235,9 +235,7 @@ async def _validate_and_clean_tables(pt_session: pytest.Session) -> None:  # pra
                 print(f'Table is not in the config and is leaving artifacts: {table.name} - Ensure proper teardown')
                 pt_session.exitstatus = 1
                 # Add this to table data so we can keep the code simple in the cleanup
-                _napi_table_data[table.name] = {}
-                _napi_table_data[table.name]['key'] = ''
-                _napi_table_data[table.name]['keys'] = []
+                _napi_table_data[table.name] = {'key': '', 'keys': []}
 
     await _clean_tables(artifact_counts, tables_with_artifacts)
 
