@@ -9,7 +9,7 @@ import pytest
 from fastapi import BackgroundTasks, status
 from fastapi.encoders import jsonable_encoder
 from pydantic import UUID4
-from sqlalchemy import Row, delete, select
+from sqlalchemy import Row, delete
 
 from app.constants import IdentifierType, MobileAppType
 from app.db.db_init import get_write_session_with_context, metadata_legacy
@@ -85,7 +85,7 @@ class TestPush:
         """
         request = V2PostPushRequestModel(
             mobile_app=MobileAppType.VA_FLAGSHIP_APP,
-            template_id='d5b6e67c-8e2a-11ee-8b8e-0242ac120002',
+            template_id='36fb0730-6259-4da1-8a80-c8de22ad4246',
             recipient_identifier=V2PostPushRequestModel.ICNRecipientIdentifierModel(
                 id_type=IdentifierType.ICN,
                 id_value='12345',
@@ -108,10 +108,71 @@ class TestSmsPostHandler:
     sms_route = '/legacy/v2/notifications/sms'
 
     @pytest.fixture
-    async def build_headers(
+    async def prepare_database(
         self,
         sample_api_key: Callable[..., Awaitable[Row[Any]]],
-    ) -> AsyncGenerator[Callable[[str | None], Coroutine[Any, Any, dict[str, str]]], None]:
+        sample_service: Callable[..., Awaitable[Row[Any]]],
+        sample_template: Callable[..., Awaitable[Row[Any]]],
+        sample_user: Callable[..., Awaitable[Row[Any]]],
+    ) -> AsyncGenerator[Callable[[], Coroutine[Any, Any, dict[str, Row[Any]]]], None]:
+        """Prepare the database for SMS requests and tear down.
+
+        Args:
+            sample_api_key (Callable[..., Awaitable[Row[Any]]]): ApiKey
+            sample_service (Callable[..., Awaitable[Row[Any]]]): Service
+            sample_template (Callable[..., Awaitable[Row[Any]]]): Template
+            sample_user (Callable[..., Awaitable[Row[Any]]]): User
+
+        Yields:
+            Iterator[AsyncGenerator[Callable[[], Coroutine[Any, Any, dict[str, Row[Any]]]], None]]: Callable for rows
+        """
+        # Needs to be persisted in a collection
+        ids = {}
+
+        async def _wrapper() -> dict[str, Row[Any]]:
+            async with get_write_session_with_context() as session:
+                user = await sample_user(session)
+                service = await sample_service(session, created_by_id=user.id)
+                template = await sample_template(session, service_id=service.id, created_by_id=user.id)
+                api_key = await sample_api_key(session, service_id=service.id)
+                await session.commit()
+            ids['user'] = user.id
+            ids['service'] = service.id
+            ids['template'] = template.id
+            ids['api_key'] = api_key.id
+            return {'user': user, 'service': service, 'template': template, 'api_key': api_key}
+
+        yield _wrapper
+
+        # Teardown
+        legacy_api_keys = metadata_legacy.tables['api_keys']
+        legacy_services = metadata_legacy.tables['services']
+        legacy_templates = metadata_legacy.tables['templates']
+        legacy_templates_hist = metadata_legacy.tables['templates_history']
+        legacy_users = metadata_legacy.tables['users']
+
+        async with get_write_session_with_context() as session:
+            # delete the template history
+            th_delete_stmt = delete(legacy_templates_hist).where(legacy_templates_hist.c.id == ids['template'])
+            await session.execute(th_delete_stmt)
+            # delete the template
+            template_delete_stmt = delete(legacy_templates).where(legacy_templates.c.id == ids['template'])
+            await session.execute(template_delete_stmt)
+            # delete the api key
+            key_delete_stmt = delete(legacy_api_keys).where(legacy_api_keys.c.id == ids['api_key'])
+            await session.execute(key_delete_stmt)
+            # delte the service
+            service_delete_stmt = delete(legacy_services).where(legacy_services.c.id == ids['service'])
+            await session.execute(service_delete_stmt)
+            # delete the user
+            user_delete_stmt = delete(legacy_users).where(legacy_users.c.id == ids['user'])
+            await session.execute(user_delete_stmt)
+            await session.commit()
+
+    @pytest.fixture
+    def build_headers(
+        self,
+    ) -> Generator[Callable[[UUID, UUID], dict[str, str]], None]:
         """Generator to build headers.
 
         Use of this fixture is associated with notifications added to the database.
@@ -120,42 +181,15 @@ class TestSmsPostHandler:
             sample_api_key (Callable[..., Awaitable[Row[Any]]]): Sample key generator
 
         Yields:
-            Iterator[AsyncGenerator[Callable[[str | None], Coroutine[Any, Any, dict[str, str]]], None]]: Generator that builds header data and tears down any created notifications
+            Iterator[Generator[Callable[[str | None], Coroutine[Any, Any, dict[str, str]]], None]]: Generator that builds header data and tears down any created notifications
         """
-        key_ids: list[UUID4] = []
 
-        async def _wrapper(secret: str | None = None) -> dict[str, str]:
-            secret_str = secret or f'secret-{uuid4()}'
-            async with get_write_session_with_context() as session:
-                api_key = await sample_api_key(session, secret=secret_str)
-                await session.commit()
-            key_ids.append(api_key.id)
-            return generate_headers(secret_str, str(api_key.service_id))
+        def _wrapper(api_key_id: UUID4, service_id: UUID4) -> dict[str, str]:
+            secret_str = f'secret-{api_key_id}'
+            return generate_headers(secret_str, str(service_id))
 
         yield _wrapper
-
-        # Teardown
-        legacy_api_keys = metadata_legacy.tables['api_keys']
-        legacy_services = metadata_legacy.tables['services']
-        legacy_users = metadata_legacy.tables['users']
-
-        async with get_write_session_with_context() as session:
-            # select service id from api keys
-            service_id_stmt = select(legacy_api_keys.c.service_id).where(legacy_api_keys.c.id == key_ids[0])
-            service_id = (await session.execute(service_id_stmt)).scalar()
-            # select the user that created the service
-            user_id_stmt = select(legacy_services.c.created_by_id).where(legacy_services.c.id == service_id)
-            user_id = (await session.execute(user_id_stmt)).scalar()
-            # delete the api key
-            key_delete_stmt = delete(legacy_api_keys).where(legacy_api_keys.c.id == key_ids[0])
-            await session.execute(key_delete_stmt)
-            # delte the service
-            service_delete_stmt = delete(legacy_services).where(legacy_services.c.id == service_id)
-            await session.execute(service_delete_stmt)
-            # delete the user
-            user_delete_stmt = delete(legacy_users).where(legacy_users.c.id == user_id)
-            await session.execute(user_delete_stmt)
-            await session.commit()
+        ...
 
     @pytest.fixture
     def path_request(
@@ -163,15 +197,15 @@ class TestSmsPostHandler:
     ) -> Generator[
         Callable[
             [
+                UUID,
                 str | None,
-                UUID4 | None,
+                UUID | None,
                 str | None,
                 RecipientIdentifierModel | None,
                 dict[str, str | int | float | list[str | int | float] | PersonalisationFileObject] | None,
             ],
             dict[str, object],
-        ],
-        None,
+        ]
     ]:
         """Generator to build request data.
 
@@ -180,6 +214,7 @@ class TestSmsPostHandler:
         """
 
         def _wrapper(
+            template_id: UUID4,
             reference: str | None = None,
             sms_sender_id: UUID4 | None = None,
             phone_number: str | None = None,
@@ -192,13 +227,13 @@ class TestSmsPostHandler:
             if phone_number:
                 request_data = V2PostSmsRequestModel(
                     phone_number=ValidatedPhoneNumber(phone_number),
-                    template_id=UUID('36fb0730-6259-4da1-8a80-c8de22ad4246'),  # Seeded in migration 0025
+                    template_id=template_id,
                     personalisation=personalization or {'verify_code': '12345'},
                 )
             else:
                 request_data = V2PostNotificationRequestModel(
                     recipient_identifier=recipient_identifier,
-                    template_id=UUID('36fb0730-6259-4da1-8a80-c8de22ad4246'),  # Seeded in migration 0025
+                    template_id=template_id,
                     personalisation=personalization or {'verify_code': '12345'},
                 )
             # TODO: KWM Implement tests that use these before up for PR
@@ -217,15 +252,19 @@ class TestSmsPostHandler:
         self,
         mock_background_task: AsyncMock,
         client: ENPTestClient,
+        prepare_database: Callable[[], Coroutine[Any, Any, dict[str, Row[Any]]]],
         path_request: Callable[..., dict[str, object]],
-        build_headers: Callable[..., Coroutine[Any, Any, dict[str, str]]],
+        build_headers: Callable[[UUID, UUID], dict[str, str]],
     ) -> None:
         """Test sms notification route returns 201 with valid template."""
+        db_data = await prepare_database()
+        request = path_request(db_data['template'].id, phone_number='+18005550101')
+        headers = build_headers(db_data['api_key'].id, db_data['service'].id)
         try:
             response = client.post(
                 self.sms_route,
-                json=path_request(phone_number='+18005550101'),
-                headers=await build_headers(),
+                json=request,
+                headers=headers,
             )
             assert response.status_code == status.HTTP_201_CREATED
         finally:
@@ -235,16 +274,20 @@ class TestSmsPostHandler:
         self,
         mock_background_task: AsyncMock,
         client: ENPTestClient,
+        prepare_database: Callable[[], Coroutine[Any, Any, dict[str, Row[Any]]]],
         path_request: Callable[..., dict[str, object]],
-        build_headers: Callable[..., Coroutine[Any, Any, dict[str, str]]],
+        build_headers: Callable[[UUID, UUID], dict[str, str]],
     ) -> None:
         """Test sms notification route returns 201 with valid template."""
         recipient = RecipientIdentifierModel(id_type=IdentifierType.VA_PROFILE_ID, id_value='12345')
+        db_data = await prepare_database()
+        request = path_request(db_data['template'].id, recipient_identifier=recipient)
+        headers = build_headers(db_data['api_key'].id, db_data['service'].id)
         try:
             response = client.post(
                 self.sms_route,
-                json=path_request(recipient_identifier=recipient),
-                headers=await build_headers(),
+                json=request,
+                headers=headers,
             )
             assert response.status_code == status.HTTP_201_CREATED
         finally:
