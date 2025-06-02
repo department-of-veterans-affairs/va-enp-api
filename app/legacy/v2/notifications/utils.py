@@ -162,6 +162,7 @@ async def create_notification(
             await request.get_reply_to_text(),
             context['service_id'],
             context['api_key_id'],
+            request.reference,
             template_row.id,
             template_row.version,
         )
