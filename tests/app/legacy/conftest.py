@@ -11,6 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.constants import NotificationType
 from app.db.db_init import metadata_legacy
+from tests.app.legacy.dao.test_api_keys import encode_and_sign
 
 
 @pytest.fixture
@@ -157,7 +158,7 @@ def sample_api_key(
         data = {
             'id': id,
             'name': name or f'sample-api-key-{id}',
-            'secret': secret or f'secret-{uuid4()}',
+            'secret': encode_and_sign(secret) if secret else encode_and_sign(f'secret-{id}'),
             'service_id': service_id,
             'key_type': key_type,
             'revoked': revoked,
@@ -223,6 +224,7 @@ def sample_template(
     ) -> Row[Any]:
         id = id or uuid4()
         legacy_templates = metadata_legacy.tables['templates']
+        legacy_templates_hist = metadata_legacy.tables['templates_history']
         legacy_process_type = metadata_legacy.tables['template_process_type']
         data = {
             'id': id,
@@ -256,8 +258,10 @@ def sample_template(
         data['process_type'] = (await session.execute(select_process_stmt)).one().name
 
         # Insert without commit
-        insert_stmt = insert(legacy_templates).values(**data)
-        await session.execute(insert_stmt)
+        insert_template_stmt = insert(legacy_templates).values(**data)
+        await session.execute(insert_template_stmt)
+        insert_template_hist_stmt = insert(legacy_templates_hist).values(**data)
+        await session.execute(insert_template_hist_stmt)
 
         # Get the new object
         select_stmt = select(legacy_templates).where(legacy_templates.c.id == id)

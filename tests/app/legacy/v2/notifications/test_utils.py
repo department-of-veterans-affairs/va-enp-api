@@ -5,16 +5,20 @@ from unittest.mock import AsyncMock, patch
 from uuid import uuid4
 
 import pytest
+from fastapi import HTTPException, status
+from fastapi.exceptions import RequestValidationError
 from sqlalchemy import Row
 from sqlalchemy.exc import NoResultFound
 
-from app.constants import NotificationType
+from app.constants import RESPONSE_500, NotificationType
 from app.exceptions import NonRetryableError
 from app.legacy.clients.sqs import SqsAsyncProducer
+from app.legacy.v2.notifications.route_schema import V2PostSmsRequestModel
 from app.legacy.v2.notifications.utils import (
     _validate_template_active,
     _validate_template_personalisation,
     _validate_template_type,
+    create_notification,
     enqueue_notification_tasks,
     get_arn_from_icn,
     send_push_notification_helper,
@@ -104,8 +108,9 @@ class TestValidateTemplate:
     async def test_validate_template_raises_exception_when_template_not_found(self) -> None:
         """Test validate_template raises an exception when the template is not found."""
         with patch('app.legacy.v2.notifications.utils.LegacyTemplateDao.get_template', side_effect=NoResultFound):
-            with pytest.raises(ValueError, match='Template not found'):
+            with pytest.raises(RequestValidationError) as exc_info:
                 await validate_template(uuid4(), NotificationType.SMS, None)
+            assert exc_info.value.errors()[0]['msg'] == 'Template not found'
 
     async def test_validate_template_raises_exception_when_template_not_expected_type(
         self,
@@ -115,11 +120,11 @@ class TestValidateTemplate:
         template = await sample_template(template_type=NotificationType.EMAIL)
 
         with patch('app.legacy.v2.notifications.utils.LegacyTemplateDao.get_template', return_value=template):
-            with pytest.raises(
-                ValueError,
-                match=f'{NotificationType.EMAIL} template is not suitable for {NotificationType.SMS} notification',
-            ):
+            with pytest.raises(RequestValidationError) as exc_info:
                 await validate_template(template.id, NotificationType.SMS, None)
+            assert exc_info.value.errors()[0]['msg'] == (
+                f'{NotificationType.EMAIL} template is not suitable for {NotificationType.SMS} notification'
+            )
 
     async def test_validate_template_type_raises_exception_when_template_not_expected_type(self) -> None:
         """Test validate_template raises an exception when the template is not found."""
@@ -137,8 +142,9 @@ class TestValidateTemplate:
         template = await sample_template(archived=True)
 
         with patch('app.legacy.v2.notifications.utils.LegacyTemplateDao.get_template', return_value=template):
-            with pytest.raises(ValueError, match='Template is not active'):
+            with pytest.raises(RequestValidationError) as exc_info:
                 await validate_template(template.id, NotificationType.SMS, None)
+            assert exc_info.value.errors()[0]['msg'] == 'Template is not active'
 
     async def test_validate_template_active_raises_exception_when_template_not_active(self) -> None:
         """Test validate_template raises an exception when the template is not found."""
@@ -153,8 +159,9 @@ class TestValidateTemplate:
         template = await sample_template(content='before ((content)) after')
 
         with patch('app.legacy.v2.notifications.utils.LegacyTemplateDao.get_template', return_value=template):
-            with pytest.raises(ValueError, match='Missing personalisation: content'):
+            with pytest.raises(RequestValidationError) as exc_info:
                 await validate_template(template.id, NotificationType.SMS, {})
+            assert exc_info.value.errors()[0]['msg'] == 'Missing personalisation: content'
 
     async def test_validate_template_personalisation_raises_exception_when_missing_personalisation(self) -> None:
         """Test validate_template raises an exception when personalisation is missing."""
@@ -172,3 +179,37 @@ async def test_enqueue_notification_tasks() -> None:
 
     mock_enqueue.assert_called_once()
     assert mock_enqueue.call_args[0][0] == q_name
+
+
+async def test_create_notification_happy_path(mocker: AsyncMock) -> None:
+    """Validate functionality of create_notification.
+
+    Args:
+        mocker (AsyncMock): Mock object
+    """
+    request = V2PostSmsRequestModel(phone_number='+18005550101', template_id=uuid4())
+    mocker.patch('app.legacy.v2.notifications.utils.LegacyNotificationDao.create_notification')
+    mock_context = mocker.patch('app.legacy.v2.notifications.utils.context')
+    mock_context.api_key = uuid4()
+    mock_context.service_id = uuid4()
+    await create_notification(uuid4(), mocker.AsyncMock(), request)
+
+
+async def test_create_notification_failure(mocker: AsyncMock) -> None:
+    """Fail to create notification due to a NonRetryableError.
+
+    Args:
+        mocker (AsyncMock): Mock object
+    """
+    request = V2PostSmsRequestModel(phone_number='+18005550101', template_id=uuid4())
+    mocker.patch(
+        'app.legacy.v2.notifications.utils.LegacyNotificationDao.create_notification', side_effect=NonRetryableError
+    )
+    mock_context = mocker.patch('app.legacy.v2.notifications.utils.context')
+    mock_context.api_key = uuid4()
+    mock_context.service_id = uuid4()
+
+    with pytest.raises(HTTPException) as exc_info:
+        await create_notification(uuid4(), mocker.AsyncMock(), request)
+    assert exc_info.value.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
+    assert exc_info.value.detail == RESPONSE_500

@@ -1,31 +1,34 @@
 """Test module for app/legacy/v2/notifications/rest.py."""
 
-import time
-from typing import Any, Awaitable, Callable, ClassVar
+from collections.abc import AsyncGenerator, Generator
+from typing import Any, Awaitable, Callable, Coroutine
 from unittest.mock import AsyncMock, patch
 from uuid import UUID, uuid4
 
 import pytest
 from fastapi import BackgroundTasks, status
 from fastapi.encoders import jsonable_encoder
-from sqlalchemy import Row
+from pydantic import UUID4
+from sqlalchemy import Row, delete
 
-from app.auth import ACCESS_TOKEN_EXPIRE_SECONDS, JWTPayloadDict
 from app.constants import IdentifierType, MobileAppType
+from app.db.db_init import get_write_session_with_context, metadata_legacy
+from app.legacy.dao.notifications_dao import LegacyNotificationDao
 from app.legacy.v2.notifications.resolvers import (
     DirectSmsTaskResolver,
     IdentifierSmsTaskResolver,
-    get_sms_task_resolver,
 )
+from app.legacy.v2.notifications.rest import _sms_post
 from app.legacy.v2.notifications.route_schema import (
+    PersonalisationFileObject,
     RecipientIdentifierModel,
+    V2PostNotificationRequestModel,
     V2PostPushRequestModel,
     V2PostPushResponseModel,
     V2PostSmsRequestModel,
     ValidatedPhoneNumber,
 )
-from tests.app.legacy.dao.test_api_keys import encode_and_sign
-from tests.conftest import ENPTestClient, generate_token
+from tests.conftest import ENPTestClient, generate_headers
 
 _push_path = '/legacy/v2/notifications/push'
 
@@ -36,12 +39,14 @@ class TestPushRouter:
     async def test_router_returns_400_with_invalid_request_data(
         self,
         mock_background_task: AsyncMock,
+        mocker: AsyncMock,
         client: ENPTestClient,
     ) -> None:
         """Test route can return 400.
 
         Args:
             mock_background_task (AsyncMock): Mock call to add a background task
+            mocker (AsyncMock): Mock object
             client (ENPTestClient): Custom FastAPI client fixture
 
         """
@@ -54,7 +59,8 @@ class TestPushRouter:
             },
             'personalisation': 'not_a_dict',
         }
-
+        # Bypass auth, this is testing request data
+        mocker.patch('app.auth.verify_service_token')
         response = client.post(_push_path, json=invalid_request)
 
         assert response.status_code == status.HTTP_400_BAD_REQUEST
@@ -66,18 +72,20 @@ class TestPush:
     async def test_post_push_returns_201(
         self,
         mock_background_task: AsyncMock,
+        mocker: AsyncMock,
         client: ENPTestClient,
     ) -> None:
         """Test route can return 201.
 
         Args:
             mock_background_task (AsyncMock): Mock call to add a background task
+            mocker (AsyncMock): Mock object
             client (ENPTestClient): Custom FastAPI client fixture
 
         """
         request = V2PostPushRequestModel(
             mobile_app=MobileAppType.VA_FLAGSHIP_APP,
-            template_id='d5b6e67c-8e2a-11ee-8b8e-0242ac120002',
+            template_id='36fb0730-6259-4da1-8a80-c8de22ad4246',
             recipient_identifier=V2PostPushRequestModel.ICNRecipientIdentifierModel(
                 id_type=IdentifierType.ICN,
                 id_value='12345',
@@ -85,14 +93,224 @@ class TestPush:
             personalisation={'name': 'John'},
         )
 
+        # Bypass auth, this is testing request data
+        mocker.patch('app.auth.verify_service_token')
         response = client.post(_push_path, json=request.model_dump())
 
         assert response.status_code == status.HTTP_201_CREATED
         assert response.json() == {'result': 'success'} == V2PostPushResponseModel().model_dump()
 
 
-class TestNotificationRouter:
-    """Test the v2 notifications router."""
+@patch.object(BackgroundTasks, 'add_task')
+class TestSmsPostHandler:
+    """Test the v2 SMS notifications router."""
+
+    sms_route = '/legacy/v2/notifications/sms'
+
+    @pytest.fixture
+    async def prepare_database(
+        self,
+        sample_api_key: Callable[..., Awaitable[Row[Any]]],
+        sample_service: Callable[..., Awaitable[Row[Any]]],
+        sample_template: Callable[..., Awaitable[Row[Any]]],
+        sample_user: Callable[..., Awaitable[Row[Any]]],
+    ) -> AsyncGenerator[Callable[[], Coroutine[Any, Any, dict[str, Row[Any]]]], None]:
+        """Prepare the database for SMS requests and tear down.
+
+        Args:
+            sample_api_key (Callable[..., Awaitable[Row[Any]]]): ApiKey
+            sample_service (Callable[..., Awaitable[Row[Any]]]): Service
+            sample_template (Callable[..., Awaitable[Row[Any]]]): Template
+            sample_user (Callable[..., Awaitable[Row[Any]]]): User
+
+        Yields:
+            Iterator[AsyncGenerator[Callable[[], Coroutine[Any, Any, dict[str, Row[Any]]]], None]]: Callable for rows
+        """
+        # Needs to be persisted in a collection
+        ids = {}
+
+        async def _wrapper() -> dict[str, Row[Any]]:
+            async with get_write_session_with_context() as session:
+                user = await sample_user(session)
+                service = await sample_service(session, created_by_id=user.id)
+                template = await sample_template(session, service_id=service.id, created_by_id=user.id)
+                api_key = await sample_api_key(session, service_id=service.id)
+                await session.commit()
+            ids['user'] = user.id
+            ids['service'] = service.id
+            ids['template'] = template.id
+            ids['api_key'] = api_key.id
+            return {'user': user, 'service': service, 'template': template, 'api_key': api_key}
+
+        yield _wrapper
+
+        # Teardown
+        legacy_api_keys = metadata_legacy.tables['api_keys']
+        legacy_services = metadata_legacy.tables['services']
+        legacy_templates = metadata_legacy.tables['templates']
+        legacy_templates_hist = metadata_legacy.tables['templates_history']
+        legacy_users = metadata_legacy.tables['users']
+
+        async with get_write_session_with_context() as session:
+            # delete the template history
+            th_delete_stmt = delete(legacy_templates_hist).where(legacy_templates_hist.c.id == ids['template'])
+            await session.execute(th_delete_stmt)
+            # delete the template
+            template_delete_stmt = delete(legacy_templates).where(legacy_templates.c.id == ids['template'])
+            await session.execute(template_delete_stmt)
+            # delete the api key
+            key_delete_stmt = delete(legacy_api_keys).where(legacy_api_keys.c.id == ids['api_key'])
+            await session.execute(key_delete_stmt)
+            # delte the service
+            service_delete_stmt = delete(legacy_services).where(legacy_services.c.id == ids['service'])
+            await session.execute(service_delete_stmt)
+            # delete the user
+            user_delete_stmt = delete(legacy_users).where(legacy_users.c.id == ids['user'])
+            await session.execute(user_delete_stmt)
+            await session.commit()
+
+    @pytest.fixture
+    def build_headers(
+        self,
+    ) -> Generator[Callable[[UUID, UUID], dict[str, str]], None]:
+        """Generator to build headers.
+
+        Use of this fixture is associated with notifications added to the database.
+
+        Args:
+            sample_api_key (Callable[..., Awaitable[Row[Any]]]): Sample key generator
+
+        Yields:
+            Iterator[Generator[Callable[[str | None], Coroutine[Any, Any, dict[str, str]]], None]]: Generator that builds header data and tears down any created notifications
+        """
+
+        def _wrapper(api_key_id: UUID4, service_id: UUID4) -> dict[str, str]:
+            # Based on sample_api_key's secret being secret-id
+            secret_str = f'secret-{api_key_id}'
+            return generate_headers(secret_str, str(service_id))
+
+        yield _wrapper
+        ...
+
+    @pytest.fixture
+    def path_request(
+        self,
+    ) -> Generator[
+        Callable[
+            [
+                UUID,
+                str | None,
+                UUID | None,
+                str | None,
+                RecipientIdentifierModel | None,
+                dict[str, str | int | float | list[str | int | float] | PersonalisationFileObject] | None,
+            ],
+            dict[str, object],
+        ]
+    ]:
+        """Generator to build request data.
+
+        Yields:
+            Generator[ Callable[ [ str | None, UUID4 | None, str | None, RecipientIdentifierModel | None, dict[str, str | int | float | list[str | int | float] | PersonalisationFileObject] | None, ], dict[str, object], ], None, ]: Request data
+        """
+
+        def _wrapper(
+            template_id: UUID4,
+            reference: str | None = None,
+            sms_sender_id: UUID4 | None = None,
+            phone_number: str | None = None,
+            recipient_identifier: RecipientIdentifierModel | None = None,
+            personalization: dict[str, str | int | float | list[str | int | float] | PersonalisationFileObject]
+            | None = None,
+        ) -> dict[str, object]:
+            # Default to the simplest. Template requires personalization
+            request_data: V2PostSmsRequestModel | V2PostNotificationRequestModel
+            if phone_number:
+                request_data = V2PostSmsRequestModel(
+                    phone_number=ValidatedPhoneNumber(phone_number),
+                    template_id=template_id,
+                    personalisation=personalization or {'verify_code': '12345'},
+                )
+            else:
+                request_data = V2PostNotificationRequestModel(
+                    recipient_identifier=recipient_identifier,
+                    template_id=template_id,
+                    personalisation=personalization or {'verify_code': '12345'},
+                )
+            if reference is not None:
+                request_data.reference = reference
+            # TODO: 272 - Add sms_sender_id here
+            # if sms_sender_id is not None:
+            #     request_data.sms_sender_id = sms_sender_id
+            data: dict[str, object] = jsonable_encoder(request_data)
+            return data
+
+        yield _wrapper
+        # mypy and pytest expect a yield. Ruff expects something after yield, but that is not necessary.
+        ...
+
+    async def test_with_phone_number_returns_201(
+        self,
+        mock_background_task: AsyncMock,
+        client: ENPTestClient,
+        prepare_database: Callable[[], Coroutine[Any, Any, dict[str, Row[Any]]]],
+        path_request: Callable[..., dict[str, object]],
+        build_headers: Callable[[UUID, UUID], dict[str, str]],
+    ) -> None:
+        """Test sms notification route returns 201 with valid template."""
+        db_data = await prepare_database()
+        request = path_request(db_data['template'].id, phone_number='+18005550101')
+        headers = build_headers(db_data['api_key'].id, db_data['service'].id)
+        try:
+            response = client.post(self.sms_route, json=request, headers=headers)
+            assert response.status_code == status.HTTP_201_CREATED
+        finally:
+            await LegacyNotificationDao.delete_notification(response.json()['id'])
+
+    async def test_with_recipient_id_returns_201(
+        self,
+        mock_background_task: AsyncMock,
+        client: ENPTestClient,
+        prepare_database: Callable[[], Coroutine[Any, Any, dict[str, Row[Any]]]],
+        path_request: Callable[..., dict[str, object]],
+        build_headers: Callable[[UUID, UUID], dict[str, str]],
+    ) -> None:
+        """Test sms notification route returns 201 with valid template."""
+        recipient = RecipientIdentifierModel(id_type=IdentifierType.VA_PROFILE_ID, id_value='12345')
+        db_data = await prepare_database()
+        request = path_request(db_data['template'].id, recipient_identifier=recipient)
+        headers = build_headers(db_data['api_key'].id, db_data['service'].id)
+        try:
+            response = client.post(self.sms_route, json=request, headers=headers)
+            assert response.status_code == status.HTTP_201_CREATED
+        finally:
+            await LegacyNotificationDao.delete_notification(response.json()['id'])
+
+    @pytest.mark.parametrize('reference', [None, str(uuid4()), ''])
+    async def test_reference(
+        self,
+        mock_background_task: AsyncMock,
+        client: ENPTestClient,
+        prepare_database: Callable[[], Coroutine[Any, Any, dict[str, Row[Any]]]],
+        path_request: Callable[..., dict[str, object]],
+        build_headers: Callable[[UUID, UUID], dict[str, str]],
+        reference: UUID4 | None,
+    ) -> None:
+        """Test sms notification route returns 201 with valid template."""
+        db_data = await prepare_database()
+        request = path_request(db_data['template'].id, phone_number='+18005550101', reference=reference)
+        headers = build_headers(db_data['api_key'].id, db_data['service'].id)
+        try:
+            response = client.post(self.sms_route, json=request, headers=headers)
+            assert response.status_code == status.HTTP_201_CREATED
+            resp_json = response.json()
+            assert resp_json['reference'] == reference if reference is not None else 'null'
+        finally:
+            await LegacyNotificationDao.delete_notification(resp_json['id'])
+
+
+class TestSmsValidation:
+    """Test validation of the sms route(s)."""
 
     routes = (
         '/legacy/v2/notifications/sms',
@@ -100,407 +318,86 @@ class TestNotificationRouter:
     )
 
     @pytest.mark.parametrize('route', routes)
-    async def test_happy_path_admin_auth(
-        self,
-        mock_background_task: AsyncMock,
-        client: ENPTestClient,
-        route: str,
-    ) -> None:
-        """Test route can return 201.
-
-        Args:
-            mock_background_task (AsyncMock): Mock call to add a background task
-            client (ENPTestClient): Custom FastAPI client fixture
-            route (str): Route to test
-
-        """
-        template_id = uuid4()
-        sms_sender_id = uuid4()
-
-        request = V2PostSmsRequestModel(
-            reference=str(uuid4()),
-            template_id=template_id,
-            phone_number=ValidatedPhoneNumber('+18005550101'),
-            sms_sender_id=sms_sender_id,
-        )
-        payload = jsonable_encoder(request)
-        with patch('app.legacy.v2.notifications.rest.validate_template', return_value=None):
-            response = client.post(route, json=payload)
-
-        assert response.status_code == status.HTTP_201_CREATED
-
-    @pytest.mark.parametrize('route', routes)
-    async def test_happy_path_service_auth(
-        self,
-        mock_background_task: AsyncMock,
-        sample_api_key: Callable[..., Awaitable[Row[Any]]],
-        sample_service: Callable[..., Awaitable[Row[Any]]],
-        client_factory: Callable[[str], ENPTestClient],
-        route: str,
-    ) -> None:
-        """Should return 201 when request is authenticated with a valid service token.
-
-        Args:
-            mock_background_task (AsyncMock): Mock call to add a background task.
-            sample_api_key (Callable): Fixture to create a sample API key.
-            sample_service (Callable): Fixture to create a sample service.
-            client_factory (Callable): Factory to create an ENPTestClient with a token.
-            route (str): Route to test.
-        """
-        template_id = uuid4()
-        sms_sender_id = uuid4()
-
-        request = V2PostSmsRequestModel(
-            reference=str(uuid4()),
-            template_id=template_id,
-            phone_number=ValidatedPhoneNumber('+18005550101'),
-            sms_sender_id=sms_sender_id,
-        )
-        request_payload = jsonable_encoder(request)
-
-        service = await sample_service()
-
-        secret = 'not_so_secret'
-        encrypted_secret = encode_and_sign(secret)
-        api_key = await sample_api_key(service_id=service.id, secret=encrypted_secret)
-
-        current_timestamp = int(time.time())
-        payload: JWTPayloadDict = {
-            'iss': str(service.id),
-            'iat': current_timestamp,
-            'exp': current_timestamp + 60,
-        }
-        token = generate_token(sig_key=secret, payload=payload)
-        client = client_factory(token)
-
-        with (
-            patch('app.auth.LegacyServiceDao.get_service', new=AsyncMock(return_value=service)),
-            patch('app.auth.LegacyApiKeysDao.get_api_keys', new=AsyncMock(return_value=[api_key])),
-            patch('app.legacy.v2.notifications.rest.validate_template', return_value=None),
-        ):
-            response = client.post(route, json=request_payload)
-
-        assert response.status_code == status.HTTP_201_CREATED
-
-    @pytest.mark.parametrize('route', routes)
-    async def test_router_returns_403_wrong_admin_secret(
-        self,
-        client_factory: Callable[[str], ENPTestClient],
-        route: str,
-    ) -> None:
-        """Test sms notification route returns 403 with wrong admin secret."""
-        payload = JWTPayloadDict(
-            iss='enp',
-            iat=int(time.time()),
-            exp=int(time.time()) + ACCESS_TOKEN_EXPIRE_SECONDS,
-        )
-        token = generate_token(sig_key='not_the_admin_secret', payload=payload)
-        client = client_factory(token)
-
-        response = client.post(route)
-
-        assert response.status_code == status.HTTP_403_FORBIDDEN
-
-    @pytest.mark.parametrize('route', routes)
-    async def test_router_returns_401_missing_credentials(
+    async def test_router_returns_400_with_invalid_request_data(
         self,
         client: ENPTestClient,
         route: str,
         mocker: AsyncMock,
     ) -> None:
-        """Test sms notification route returns 401 with missing credentials."""
-        mocker.patch('app.auth.HTTPBearer.__call__', return_value=None)
-        response = client.post(route)
-
-        assert response.status_code == status.HTTP_401_UNAUTHORIZED
-
-    @pytest.mark.parametrize('route', routes)
-    async def test_router_returns_400_with_invalid_request_data(
-        self,
-        client: ENPTestClient,
-        route: str,
-    ) -> None:
-        """Test route can return 400.
+        """Responds with 400 when no data sent to the route.
 
         Args:
-            client (ENPTestClient): Custom FastAPI client fixture
-            route (str): Route to test
-
+            client (ENPTestClient): Test client
+            route (str): Route under test
+            mocker (AsyncMock): Mock object
         """
+        # Bypass auth, this is testing request data
+        mocker.patch('app.auth.verify_service_token')
         response = client.post(route)
 
         assert response.status_code == status.HTTP_400_BAD_REQUEST
 
-    @pytest.mark.parametrize('route', routes)
-    async def test_auth_error_uses_v2_json_structure(
-        self,
-        client: ENPTestClient,
-        route: str,
-    ) -> None:
-        """Test route can return 201.
 
-        Args:
-            client (ENPTestClient): Custom FastAPI client fixture
-            route (str): Route to test
-
-        """
-        request = V2PostSmsRequestModel(
-            reference=str(uuid4()),
-            template_id=uuid4(),
-            phone_number=ValidatedPhoneNumber('+18005550101'),
-            sms_sender_id=uuid4(),
-        )
-        payload = jsonable_encoder(request)
-        with patch('app.legacy.v2.notifications.rest.validate_template', return_value=None):
-            response = client.post(route, json=payload, headers={'Authorization': ''})
-
-        error_details = {
-            'errors': [
-                {
-                    'error': 'AuthError',
-                    'message': 'Unauthorized, authentication token must be provided',
-                },
-            ],
-            'status_code': 401,
-        }
-
-        assert response.status_code == status.HTTP_401_UNAUTHORIZED
-        assert response.json() == error_details
-
-
-@patch('app.legacy.v2.notifications.rest.validate_template')
-class TestV2SMS:
-    """Test the v2 SMS notifications router."""
-
-    # Error details based on consistency with the flask api
-    error_details: ClassVar = {
-        'errors': [
-            {
-                'error': 'ValidationError',
-                'message': '',
-            },
-        ],
-        'status_code': 400,
-    }
-
-    sms_route = '/legacy/v2/notifications/sms'
-    template_id = uuid4()
-    sms_sender_id = uuid4()
+@patch('app.legacy.v2.notifications.rest.context')
+@patch.object(BackgroundTasks, 'add_task')
+class TestSmsPost:
+    """Test the _sms_post method."""
 
     @pytest.fixture
-    def sms_request_data(self) -> dict[str, object]:
-        """Return valid request data."""
-        request_data = V2PostSmsRequestModel(
-            reference=str(uuid4()),
-            template_id=self.template_id,
-            phone_number=ValidatedPhoneNumber('+18005550101'),
-            sms_sender_id=self.sms_sender_id,
-        )
-        data: dict[str, object] = jsonable_encoder(request_data)
-        return data
+    def mock_template_get_id(self, mocker: AsyncMock) -> UUID4:
+        """Fixture to mock a template.
 
-    @patch.object(BackgroundTasks, 'add_task')
-    async def test_v2_sms_with_phone_number_returns_201(
-        self,
-        mock_background_task: AsyncMock,
-        mock_validate_template: AsyncMock,
-        client: ENPTestClient,
-        sms_request_data: dict[str, object],
-    ) -> None:
-        """Test sms notification route returns 201 with valid template."""
-        response = client.post(self.sms_route, json=sms_request_data)
+        Args:
+            mocker (AsyncMock): Mock object
 
-        assert response.status_code == status.HTTP_201_CREATED
-
-        # Verify response content structure and values
-        response_data = response.json()
-        assert 'id' in response_data
-        assert 'template' in response_data
-        assert 'content' in response_data
-        assert 'uri' in response_data
-
-        # Check that UUID fields are valid UUIDs
-        UUID(response_data['id'])  # This will raise an exception if invalid
-
-        # Check request fields are reflected in response
-        assert response_data['reference'] == sms_request_data['reference']
-        assert response_data['template']['id'] == str(self.template_id)
-
-        # Check content structure
-        assert 'body' in response_data['content']
-        assert 'from_number' in response_data['content']
-        assert response_data['content']['from_number'] == '+18005550101'
-
-    @patch.object(BackgroundTasks, 'add_task')
-    async def test_v2_sms_with_recipient_identifier_returns_201(
-        self,
-        mock_background_task: AsyncMock,
-        mock_validate_template: AsyncMock,
-        client: ENPTestClient,
-        sms_request_data: dict[str, object],
-    ) -> None:
-        """Test sms notification route returns 201 with valid recipient identifier."""
-        # Modify the request data to use recipient_identifier instead of phone_number
-        sms_request_data.pop('phone_number', None)
-        sms_request_data['recipient_identifier'] = {
-            'id_type': IdentifierType.ICN,
-            'id_value': '1234567890V123456',  # Valid ICN format: 10 digits + 'V' + 6 digits
-        }
-
-        response = client.post(self.sms_route, json=sms_request_data)
-
-        assert response.status_code == status.HTTP_201_CREATED
-
-        # Verify response content structure and values
-        response_data = response.json()
-        assert 'id' in response_data
-        assert 'template' in response_data
-        assert 'content' in response_data
-        assert 'uri' in response_data
-
-        # Check that response contains expected UUIDs and values
-        UUID(response_data['id'])  # This will raise an exception if invalid
-        assert response_data['reference'] == sms_request_data['reference']
-        assert response_data['template']['id'] == str(self.template_id)
-        assert response_data['template']['uri'].startswith('https://mock-notify.va.gov/templates/')
-        assert response_data['uri'].startswith('https://mock-notify.va.gov/notifications/')
-
-        # Check the content structure specific to SMS responses
-        assert 'body' in response_data['content']
-        assert 'from_number' in response_data['content']
-        assert response_data['content']['from_number'] == '+18005550101'
-
-        # Verify optional fields are handled correctly if present in request
-        if 'billing_code' in sms_request_data:
-            assert response_data['billing_code'] == sms_request_data['billing_code']
-        if 'callback_url' in sms_request_data:
-            assert response_data['callback_url'] == sms_request_data['callback_url']
-
-    @patch.object(BackgroundTasks, 'add_task')
-    async def test_sms_task_resolver_selection(
-        self,
-        mock_background_task: AsyncMock,
-        mock_validate_template: AsyncMock,
-    ) -> None:
-        """Test the get_sms_task_resolver function selects the appropriate resolver."""
-        # Setup
-        mock_validate_template.return_value = None
-
-        # Test direct phone number
-        request_with_phone = V2PostSmsRequestModel(
-            template_id=UUID('a71400e3-b2f8-4bd1-91c0-27f9ca7106a1'),
-            phone_number='+18005550101',
-        )
-        resolver = get_sms_task_resolver(request_with_phone)
-        assert isinstance(resolver, DirectSmsTaskResolver)
-        assert resolver.phone_number == '+18005550101'
-
-        # Test with recipient identifier
-        request_with_identifier = V2PostSmsRequestModel(
-            template_id=UUID('a71400e3-b2f8-4bd1-91c0-27f9ca7106a1'),
-            recipient_identifier=RecipientIdentifierModel(
-                id_type=IdentifierType.ICN,
-                id_value='1234567890V123456',  # Valid ICN format: 10 digits + 'V' + 6 digits
-            ),
-        )
-        resolver = get_sms_task_resolver(request_with_identifier)
-
-        assert isinstance(resolver, IdentifierSmsTaskResolver)
-        assert request_with_identifier.recipient_identifier is not None
-        # Check that the id_type and id_value are correctly set in the resolver
-        assert resolver.id_type == IdentifierType.ICN
-        assert resolver.id_value == '1234567890V123456'
-
-    async def test_v2_sms_returns_400_with_invalid_template(
-        self,
-        mock_validate_template: AsyncMock,
-        client: ENPTestClient,
-        sms_request_data: dict[str, object],
-    ) -> None:
-        """Test route returns 400 with invalid template (wrong template type)."""
-        error_details = self.error_details.copy()
-        error_details['errors'][0]['message'] = 'email template is not suitable for sms notification'
-
-        # class-level patch
-        mock_validate_template.side_effect = ValueError(error_details['errors'][0]['message'])
-
-        response = client.post(self.sms_route, json=sms_request_data)
-
-        assert response.status_code == status.HTTP_400_BAD_REQUEST
-
-        assert response.json() == error_details
-
-    async def test_v2_sms_returns_400_with_invalid_personalisation(
-        self,
-        mock_validate_template: AsyncMock,
-        client: ENPTestClient,
-        sms_request_data: dict[str, object],
-    ) -> None:
-        """Test route returns 400 with invalid personalisation."""
-        error_details = self.error_details.copy()
-        error_details['errors'][0]['message'] = 'Missing personalisation: content'
-
-        # class-level patch
-        mock_validate_template.side_effect = ValueError(error_details['errors'][0]['message'])
-
-        response = client.post(self.sms_route, json=sms_request_data)
-
-        assert response.status_code == status.HTTP_400_BAD_REQUEST
-        response_json = response.json()
-        assert len(response_json['errors']) == 1
-        assert response_json['errors'][0]['message'] == 'Missing personalisation: content'
-
-    async def test_v2_sms_returns_custom_uuid_message_for_invalid_uuid(
-        self,
-        mock_validate_template: AsyncMock,
-        client: ENPTestClient,
-        sms_request_data: dict[str, object],
-    ) -> None:
-        """Test route returns 400 and custom UUID formatting message."""
-        sms_request_data['template_id'] = 'bad_uuid'
-        expected_message = 'template_id: Input should be a valid UUID version 4'
-        expected_response = {
-            'errors': [
-                {
-                    'error': 'ValidationError',
-                    'message': expected_message,
-                },
-            ],
-            'status_code': 400,
-        }
-
-        response = client.post(self.sms_route, json=sms_request_data)
-
-        assert response.status_code == status.HTTP_400_BAD_REQUEST
-        assert response.json() == expected_response
-
-    async def test_v2_sms_prevents_duplicate_validation_errors(
-        self,
-        mock_validate_template: AsyncMock,
-        client: ENPTestClient,
-        sms_request_data: dict[str, object],
-    ) -> None:
-        """Test that we don't get duplicate validation errors when the same model is used twice.
-
-        This test validates the fix for the issue described in this FastAPI issue, https://github.com/fastapi/fastapi/issues/4072.
-        The underlying problem may be in passing the same request model to a route handler and a dependency resolver, resulting
-        in duplicate validation.
+        Returns:
+            Any: The mocked template
         """
-        # Modify the request data to have an invalid UUID for template_id
-        sms_request_data['template_id'] = 'not-a-valid-uuid'
+        template_id = uuid4()
+        mock_template = mocker.AsyncMock()
+        mock_template.id = template_id
+        mocker.patch('app.legacy.v2.notifications.rest.validate_template', return_value=mock_template)
+        return template_id
 
-        # The route handler uses the model both directly and in the get_sms_task_resolver dependency
-        response = client.post(self.sms_route, json=sms_request_data)
+    async def test_happy_path_direct(
+        self,
+        mock_background_task: AsyncMock,
+        mock_context: AsyncMock,
+        mocker: AsyncMock,
+        mock_template_get_id: AsyncMock,
+    ) -> None:
+        """Test _sms_post works with a recipient identifier.
 
-        # Check that we get a 400 error as expected
-        assert response.status_code == status.HTTP_400_BAD_REQUEST
+        Args:
+            mock_background_task (AsyncMock): Mock BackgroundTasks
+            mock_context (AsyncMock): Mock starlette context
+            mocker (AsyncMock): Mock object
+            mock_template_get_id (AsyncMock): Fixture to mock template setup
+        """
+        mock_context.data = {'request_id': uuid4(), 'service_id': uuid4()}
+        mocker.patch('app.legacy.v2.notifications.rest.create_notification')
+        request = V2PostSmsRequestModel(phone_number='+18005550101', template_id=mock_template_get_id)
+        mock_resolver = mocker.AsyncMock(spec=DirectSmsTaskResolver)
+        await _sms_post(request, mock_resolver, mock_background_task)
 
-        # Verify that the error message appears only once in the response
-        response_json = response.json()
-        assert len(response_json['errors']) == 1
+    async def test_happy_path_recipient(
+        self,
+        mock_background_task: AsyncMock,
+        mock_context: AsyncMock,
+        mocker: AsyncMock,
+        mock_template_get_id: AsyncMock,
+    ) -> None:
+        """Test _sms_post works with a recipient identifier.
 
-        # The message should be formatted as described in the request_validation_error_handler
-        assert response_json['errors'][0]['message'] == 'template_id: Input should be a valid UUID version 4'
-
-        # Verify the status code is included in the response body
-        assert response_json['status_code'] == 400
+        Args:
+            mock_background_task (AsyncMock): Mock BackgroundTasks
+            mock_context (AsyncMock): Mock starlette context
+            mocker (AsyncMock): Mock object
+            mock_template_get_id (AsyncMock): Fixture to mock template setup
+        """
+        mock_context.data = {'request_id': uuid4(), 'service_id': uuid4()}
+        mocker.patch('app.legacy.v2.notifications.rest.create_notification')
+        mock_resolver = mocker.AsyncMock(spec=IdentifierSmsTaskResolver)
+        recipient = RecipientIdentifierModel(id_type=IdentifierType.VA_PROFILE_ID, id_value='12345')
+        request = V2PostSmsRequestModel(recipient_identifier=recipient, template_id=mock_template_get_id)
+        await _sms_post(request, mock_resolver, mock_background_task)

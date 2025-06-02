@@ -1,7 +1,7 @@
 """Test module for app/legacy/v2/notifications/handlers.py."""
 
 from abc import ABC  # Explicitly import to test coverage
-from uuid import UUID
+from uuid import UUID, uuid4
 
 import pytest
 
@@ -10,7 +10,9 @@ from app.legacy.v2.notifications.resolvers import (
     DirectSmsTaskResolver,
     IdentifierSmsTaskResolver,
     SmsTaskResolver,
+    get_sms_task_resolver,
 )
+from app.legacy.v2.notifications.route_schema import RecipientIdentifierModel, V2PostSmsRequestModel
 
 
 class TestSmsTaskResolver:
@@ -46,9 +48,7 @@ class TestDirectSmsTaskResolver:
         # Verify a single task is returned with correct queue name and task name
         assert len(tasks) == 1
         task = tasks[0]
-        # TODO: 260 - Revert this once notifications are persisted in the database
-        # assert task == (QueueNames.SEND_SMS, ('deliver_sms', notification_id))
-        assert task == (QueueNames.TEST_SEND_DLQ, ('deliver_sms', notification_id))
+        assert task == (QueueNames.SEND_SMS, ('deliver_sms', notification_id))
 
 
 class TestIdentifierSmsTaskResolver:
@@ -100,3 +100,32 @@ class TestIdentifierSmsTaskResolver:
         ]
 
         assert tasks == expected_tasks
+
+
+class TestGetSmsTaskResolver:
+    """Test get_sms_task_resolver method."""
+
+    def test_happy_path_phone(self) -> None:
+        """Test happy path with a phone number."""
+        request = V2PostSmsRequestModel(phone_number='+18005550101', template_id=uuid4())
+        get_sms_task_resolver(request)
+
+    @pytest.mark.parametrize(
+        ('id_type', 'id_value'),
+        [
+            (IdentifierType.BIRLSID, '12345'),
+            (IdentifierType.EDIPI, '12345'),
+            (IdentifierType.ICN, '1234567890V123456'),
+            (IdentifierType.PID, '12345'),
+        ],
+    )
+    def test_happy_recipient(self, id_type: IdentifierType, id_value: str) -> None:
+        """Test happy path with recipient.
+
+        Args:
+            id_type (IdentifierType): Identifier type
+            id_value (str): Identifier value
+        """
+        recipient = RecipientIdentifierModel(id_type=id_type, id_value=id_value)
+        request = V2PostSmsRequestModel(recipient_identifier=recipient, template_id=uuid4())
+        get_sms_task_resolver(request)

@@ -8,7 +8,7 @@ from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_fu
 from app.constants import MAX_RETRIES
 from app.exceptions import NonRetryableError, RetryableError
 from app.providers.provider_schemas import PushModel
-from app.providers.utils import log_last_attempt_on_failure, log_on_retry
+from app.utils import log_last_attempt_on_failure, log_on_retry
 
 
 class ProviderBase(ABC):

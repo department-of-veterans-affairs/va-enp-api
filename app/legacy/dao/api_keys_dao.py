@@ -86,6 +86,7 @@ class ApiKeyRecord:
     service_id: UUID4
     expiry_date: datetime | None
     revoked: bool
+    key_type: str
 
     @property
     def secret(self) -> str:
@@ -127,11 +128,11 @@ class ApiKeyRecord:
             service_id=row.service_id,
             expiry_date=expiry,
             revoked=row.revoked,
+            key_type=row.key_type,
         )
 
 
-# TODO: TEAM-1664 temp "decrypt" until isdangerous added or proper encryption implemented
-# does not verify signature
+# TODO: TEAM-1664
 def decode_and_remove_signature(encoded: str) -> str:
     """Base64url-decode the first segment of a token and remove surrounding quotes.
 

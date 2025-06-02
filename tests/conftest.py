@@ -3,16 +3,24 @@
 import asyncio
 import os
 import time
-from typing import Any, Callable
+import tomllib
+from typing import Any
 from unittest.mock import Mock
 
 import jwt
 import pytest
+from fastapi import APIRouter
 from fastapi.testclient import TestClient
+from pydantic import UUID4
+from sqlalchemy import TextClause, select, text
+from starlette_context import plugins
+from starlette_context.middleware import ContextMiddleware
 
 from app.auth import JWTPayloadDict
+from app.db.db_init import get_read_session_with_context, get_write_session_with_context, init_db, metadata_legacy
 from app.main import CustomFastAPI, app
 from app.providers.provider_aws import ProviderAWS
+from app.routers import LegacyTimedAPIRoute
 from app.state import ENPState
 
 ADMIN_SECRET_KEY = os.getenv('ENP_ADMIN_SECRET_KEY', 'not-very-secret')
@@ -23,7 +31,9 @@ ACCESS_TOKEN_EXPIRE_SECONDS = int(os.getenv('ENP_ACCESS_TOKEN_EXPIRE_SECONDS', 6
 _COLOR_GREEN = '\033[32m'
 _COLOR_RED = '\033[91m'
 _COLOR_RESET = '\033[0m'
-_TRUNCATE_ARTIFACTS = os.getenv('TRUNCATE_ARTIFACTS', 'False') == 'True'
+_DELETE_DB_ARTIFACTS = os.getenv('DELETE_DB_ARTIFACTS', 'False') == 'True'
+
+router = APIRouter(prefix='/test', route_class=LegacyTimedAPIRoute)
 
 
 class ENPTestClient(TestClient):
@@ -65,34 +75,54 @@ def client() -> ENPTestClient:
 
     """
     app.enp_state = ENPState()
+    app.include_router(router)
 
     app.enp_state.providers['aws'] = Mock(spec=ProviderAWS)
 
+    app.add_middleware(
+        ContextMiddleware,
+        plugins=(plugins.RequestIdPlugin(force_new_uuid=False),),
+    )
     return ENPTestClient(app)
 
 
-@pytest.fixture(scope='session')
-def client_factory() -> Callable[[str], ENPTestClient]:
-    """Returns a factory for creating ENPTestClient with a custom token.
+def generate_headers(
+    sig_key: str,
+    issuer: str,
+    algorithm: str = ALGORITHM,
+    iat: int = -1,
+    exp: int = -1,
+) -> dict[str, str]:
+    """Generate a signed JWT token using the specified signature key, headers, and payload.
+
+    If no headers are provided, defaults to {'typ': 'JWT', 'alg': ALGORITHM}.
+    If no payload is provided, generates a default payload with issuer 'enp',
+    current issued-at time (iat), and an expiration (exp) set to the configured duration.
+
+    Args:
+        sig_key (str): The secret key used to sign the JWT token.
+        issuer (str): Token issuer
+        algorithm (str): Algorithm to encode with
+        iat: (int): Issued at time
+        exp: (int): Expires at time
 
     Returns:
-        Callable[[str], ENPTestClient]: Factory function accepting a token string.
+        dict[str, str]: Headers for an authorized request
     """
-
-    def _create_client(token: str) -> ENPTestClient:
-        """Create a test client with the given Bearer token.
-
-        Args:
-            token (str): The Bearer token to include in the Authorization header.
-
-        Returns:
-            ENPTestClient: A configured test client instance.
-        """
-        app.enp_state = ENPState()
-        app.enp_state.providers['aws'] = Mock(spec=ProviderAWS)
-        return ENPTestClient(app, token=token)
-
-    return _create_client
+    auth_headers = {
+        'typ': 'JWT',
+        'alg': algorithm,
+    }
+    payload = JWTPayloadDict(
+        iss=issuer,
+        iat=int(time.time()) if iat == -1 else iat,
+        exp=(int(time.time()) + ACCESS_TOKEN_EXPIRE_SECONDS) if exp == -1 else exp,
+    )
+    headers: dict[str, str] = {
+        'Content-Type': 'application/json',
+        'Authorization': f'Bearer {jwt.encode(dict(payload), sig_key, headers=auth_headers)}',
+    }
+    return headers
 
 
 def generate_token(
@@ -148,33 +178,11 @@ def generate_token_with_partial_payload(
     return jwt.encode(payload, sig_key, headers=headers)
 
 
-_skip_tables = (
-    'alembic_version',
-    'auth_type',
-    'branding_type',
-    'dm_datetime',
-    'key_types',
-    'notification_status_types',
-    'template_process_type',
-    'provider_details',
-    'provider_details_history',
-    'organisation_types',
-    'invite_status_type',
-    'job_status',
-)
+with open('tests/napi_table_data.toml', 'rb') as f:
+    _napi_toml_table_data = tomllib.load(f)
 
-_acceptable_counts = {
-    'communication_items': 4,
-    'job_status': 9,
-    'key_types': 3,
-    # 'provider_details': 9,  # TODO: 1631
-    # 'provider_details_history': 9,  # TODO: 1631
-    'provider_rates': 5,
-    # 'rates': 2,
-    'service_callback_channel': 2,
-    'service_callback_type': 3,
-    'service_permission_types': 12,
-}
+_napi_table_data: dict[str, dict[str, str | list[str | UUID4]]] = _napi_toml_table_data['napi_table_data']
+_skip_tables: list[str] = _napi_toml_table_data['skip_tables']['table_names']
 
 
 # No need to cover the test cleanup with a test
@@ -183,6 +191,13 @@ def pytest_sessionfinish(
     exitstatus: int | pytest.ExitCode,
 ) -> None:  # pragma: no cover
     """Ran after all tests.
+
+        The flow is:
+            1. Gather all table names
+            2. Skip tables that do not need to be checked
+            3. Check pre-defined tables that are listed in napi_table_data.toml
+            4. Catch any tables that have extra data so they can be cleaned
+            5. Clean all unexpected data
 
     Args:
         session (Any): The pytest session, not DB related
@@ -194,65 +209,109 @@ def pytest_sessionfinish(
 async def _validate_and_clean_tables(pt_session: pytest.Session) -> None:  # pragma: no cover
     """Validate and clean tables.
 
+        See pytest_session_finish for overview.
+
     Args:
         pt_session (pytest.Session): Pytest Session object, used for setting exit status
     """
-    from sqlalchemy import select
-
-    from app.db.db_init import get_read_session_with_context, init_db, metadata_legacy
-
     # Reflect the metadata, prep write session
     await init_db()
 
-    tables_with_artifacts = []
-    artifact_counts = []
+    tables_with_artifacts: list[str] = []
+    artifact_counts: list[int] = []
 
-    # Use metadata to query the table and add the table name to the list if there are any records
+    for table in metadata_legacy.tables.values():
+        if table.name in _skip_tables:
+            continue
+        elif table.name in _napi_table_data:
+            await _check_table(table.name, artifact_counts, tables_with_artifacts, pt_session)
+        else:
+            # Make sure this table is empty, so we do not accidentally add any artifacts.
+            async with get_read_session_with_context() as session:
+                rows_count = len((await session.execute(select(metadata_legacy.tables[table.name]))).all())
+            if rows_count != 0:
+                artifact_counts.append(rows_count)
+                tables_with_artifacts.append(table.name)
+                print(f'Table is not in the config and is leaving artifacts: {table.name} - Ensure proper teardown')
+                pt_session.exitstatus = 1
+                # Add this to table data so we can keep the code simple in the cleanup
+                _napi_table_data[table.name] = {'key': '', 'keys': []}
+
+    await _clean_tables(artifact_counts, tables_with_artifacts)
+
+
+async def _check_table(
+    name: str,
+    artifact_counts: list[int],
+    tables_with_artifacts: list[str],
+    pt_session: pytest.Session,
+) -> None:  # pragma: no cover
     async with get_read_session_with_context() as session:
-        for table in metadata_legacy.tables.values():
-            if table.name not in _skip_tables:
-                row_count = len((await session.execute(select(metadata_legacy.tables[table.name]))).all())
+        rows = (await session.execute(select(metadata_legacy.tables[name]))).all()
 
-                if table.name in _acceptable_counts and row_count <= _acceptable_counts[table.name]:
-                    continue
-                elif row_count > 0:
-                    artifact_counts.append((row_count))
-                    tables_with_artifacts.append(table.name)
-                    pt_session.exitstatus = 1
+    key_str = str(_napi_table_data[name]['key'])
+    fail_count = 0
+    for row in rows:
+        # Have to use getattr because this is dynamic and row expects dot notation, but we have a string
+        if str(getattr(row, key_str)) in _napi_table_data[name]['keys']:
+            continue
+        else:
+            fail_count += 1
+    # Only add to the artifacts if there were any failures
+    if fail_count > 0:
+        artifact_counts.append((fail_count))
+        tables_with_artifacts.append(name)
+        pt_session.exitstatus = 1
 
-    await clean_tables(artifact_counts, tables_with_artifacts)
+
+def _get_table_delete_statement(table: str, where_item: str, ids: list[str | UUID4]) -> TextClause:  # pragma: no cover
+    if len(ids) == 0:
+        # Earlier in the process this table had extra data that is not tracked.
+        stmt = text(f"""DELETE FROM {table};""")
+    elif len(ids) == 1:
+        # The ORM does not handle (<uuid>,). The extra comma breaks the query, so do a direct delete
+        stmt = text(f"""DELETE FROM {table} WHERE  {where_item} != '{ids[0]}';""")
+    else:
+        # Postgres doesn't accept ['<uuid>'], has to be in the form, ('<uuid>')
+        stmt = text(f"""DELETE FROM {table} WHERE {where_item} not in {tuple(ids)};""")
+    return stmt
 
 
-async def clean_tables(artifact_counts: list[int], tables_with_artifacts: list[str]) -> None:  # pragma: no cover
+async def _clear_table(artifact_counts: list[int], tables_with_artifacts: list[str]) -> None:  # pragma: no cover
+    async with get_write_session_with_context() as session:
+        try:
+            for i, table in enumerate(tables_with_artifacts):
+                # Would have to load each "table" into a dataclass. This is a cleanup script, ignore the mypy errors here.
+                where_item: str = _napi_table_data[table]['key']  # type:ignore
+                ids: list[str | UUID4] = _napi_table_data[table]['keys']  # type:ignore
+                stmt = _get_table_delete_statement(table, where_item, ids)
+                await session.execute(stmt)
+                print(
+                    f'Deleting extra {_COLOR_RED}{table}{_COLOR_RESET} entries...{artifact_counts[i]} record(s) removed'
+                )
+            await session.commit()
+        except Exception as e:
+            print(f'Unable to clear records due to {e}')
+        else:
+            print(
+                f'\n\nThese tables contained artifacts: {tables_with_artifacts}\n\n{_COLOR_RED}UNIT TESTS FAILED{_COLOR_RESET}'
+            )
+
+
+async def _clean_tables(artifact_counts: list[int], tables_with_artifacts: list[str]) -> None:  # pragma: no cover
     """Cleans database tables if the environment variable is set and there are tables to clean.
 
     Args:
         artifact_counts (list[int]): Parallel list of artifact counts
         tables_with_artifacts (list[str]): Parallel list of tables with artifacts
     """
-    from sqlalchemy import text
-
-    from app.db.db_init import get_write_session_with_context
-
-    if tables_with_artifacts and _TRUNCATE_ARTIFACTS:
+    if tables_with_artifacts and _DELETE_DB_ARTIFACTS:
         print('\n\n')
-        async with get_write_session_with_context() as session:
-            for i, table in enumerate(tables_with_artifacts):
-                # Skip tables that may have necessary information
-                if table not in _acceptable_counts:
-                    await session.execute(text(f"""TRUNCATE TABLE {table} CASCADE"""))
-                    print(
-                        f'Truncating {_COLOR_RED}{table}{_COLOR_RESET} with cascade...{artifact_counts[i]} records removed'
-                    )
-                else:
-                    print(f'Table {table} contains too many records but {_COLOR_RED}cannot be truncated{_COLOR_RESET}.')
-            await session.commit()
-            print(
-                f'\n\nThese tables contained artifacts: {tables_with_artifacts}\n\n{_COLOR_RED}UNIT TESTS FAILED{_COLOR_RESET}'
-            )
+        await _clear_table(artifact_counts, tables_with_artifacts)
     elif tables_with_artifacts:
-        print(
-            f'\n\nThese tables contain artifacts: {_COLOR_RED}{tables_with_artifacts}\n\nUNIT TESTS FAILED{_COLOR_RESET}'
-        )
+        print(f'\n\nThese tables contain artifacts: {_COLOR_RED}')
+        for c, a in zip(artifact_counts, tables_with_artifacts):
+            print(f'{c:>4} {a}')
+        print(f'\n\nUNIT TESTS FAILED{_COLOR_RESET}')
     else:
         print(f'\n\n{_COLOR_GREEN}DATABASE IS CLEAN{_COLOR_RESET}')

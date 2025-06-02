@@ -13,5 +13,9 @@ function display_result {
   fi
 }
 
-# Values set in pyroject.toml
-ENP_ADMIN_SECRET_KEY=not-very-secret pytest
+# Pull in local variables for testing
+source .env.local
+
+# Parameters for pytest set in pyroject.toml
+pytest
+display_result $? 1 "unit tests"
