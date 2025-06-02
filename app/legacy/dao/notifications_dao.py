@@ -63,6 +63,8 @@ class LegacyNotificationDao:
         notification_type: NotificationType,
         to: str | None,
         reply_to_text: str,
+        service_id: UUID4,
+        api_key_id: UUID4,
         template_id: UUID4,
         template_version: int,
         billable_units: int = 0,
@@ -75,6 +77,8 @@ class LegacyNotificationDao:
             notification_type (NotificationType): Channel
             to (str | None): Recipient
             reply_to_text (str): Origination phone, email, etc.
+            service_id (UUID4): The service id
+            api_key_id (UUID4): The api key id
             template_id (UUID4): The template id
             template_version (int): The template version
             billable_units (int, optional): How many billable units this is. Defaults to 0.
@@ -96,6 +100,8 @@ class LegacyNotificationDao:
         notification_type: NotificationType,
         to: str | None,
         reply_to_text: str,
+        service_id: UUID4,
+        api_key_id: UUID4,
         template_id: UUID4,
         template_version: int,
         billable_units: int,
@@ -109,6 +115,8 @@ class LegacyNotificationDao:
                     notification_type=notification_type.value,
                     to=to,
                     reply_to_text=reply_to_text,
+                    service_id=service_id,
+                    api_key_id=api_key_id,
                     template_id=template_id,
                     template_version=template_version,
                     billable_units=billable_units,

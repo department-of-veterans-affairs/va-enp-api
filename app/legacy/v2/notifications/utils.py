@@ -9,6 +9,7 @@ from fastapi.exceptions import RequestValidationError
 from pydantic import UUID4
 from sqlalchemy import Row
 from sqlalchemy.exc import NoResultFound
+from starlette_context import context
 from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_full_jitter
 
 from app.constants import RESPONSE_500, NotificationType
@@ -159,6 +160,8 @@ async def create_notification(
             request.get_channel(),
             request.get_direct_contact_info(),
             await request.get_reply_to_text(),
+            context.data['service_id'],
+            context.data['api_key'].id,
             template_row.id,
             template_row.version,
         )

@@ -28,9 +28,9 @@ fileignoreconfig:
 - filename: tests/app/legacy/conftest.py
   checksum: 934b3750f1ece758e527f077005b53e9220f1ac075f6c2ac0362e636d663980e
 - filename: app/legacy/dao/notifications_dao.py
-  checksum: e833656419747f3dfaa0537c0b53e63e5094ae494b64f558f9d43e24c9835385
+  checksum: 5519ec1bf2a863cb8e5a7a4a225db4a4d0ce7f97ce49d6caf445e4a887c47aef
 - filename: app/auth.py
-  checksum: 47f67ebb6938dc47d6d3775cf2b87d85fefaba7be2f00bf465da399681a8fce6
+  checksum: 17385fb02dcd3dffcaa45bbdcf3ac51d66a883a7ec930157618b9c8d7d2f32d8
 - filename: tests/conftest.py
   checksum: 0969081bb4d3ba4fd828d59212499f5fda87d2dc6dc99e2bcdd73a779b0c6a8b
 - filename: tests/napi_table_data.toml
@@ -39,4 +39,6 @@ fileignoreconfig:
   checksum: 09f3c0c9e51999aa42785f89845488bdb241b09fe99585d198dfd9389120e8b2
 - filename: tests/app/test_auth.py
   checksum: 8394b5cb4cac2d352bcc2d84988d81540a58dae7f3cbe22e881833d2eb1e9a75
+- filename: tests/app/legacy/v2/notifications/test_utils.py
+  checksum: d8967b47122115e2c42335aad0325bc50785633ab1d89a6e52bd149baed653a3
 version: "1.0"

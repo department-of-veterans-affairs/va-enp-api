@@ -206,7 +206,7 @@ async def verify_service_token(issuer: str, token: str) -> None:
             request_id,
         )
         # Set context so this can be used throughout the request
-        context['api_user'] = api_key
+        context['api_key'] = api_key
         context['service_id'] = service.id
 
         return
