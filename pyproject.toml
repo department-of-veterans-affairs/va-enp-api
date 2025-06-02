@@ -27,6 +27,7 @@ sqlalchemy = {extras = ["asyncio"], version = "*"}
 starlette_context = "*"
 tenacity = "*"
 uvicorn-worker = "*"
+cachetools = "*"
 
 [tool.poetry.group.test]
 optional = true

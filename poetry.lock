@@ -297,6 +297,18 @@ types-awscrt = "*"
 botocore = ["botocore"]
 
 [[package]]
+name = "cachetools"
+version = "6.0.0"
+description = "Extensible memoizing collections and decorators"
+optional = false
+python-versions = ">=3.9"
+groups = ["main"]
+files = [
+    {file = "cachetools-6.0.0-py3-none-any.whl", hash = "sha256:82e73ba88f7b30228b5507dce1a1f878498fc669d972aef2dde4f3a3c24f103e"},
+    {file = "cachetools-6.0.0.tar.gz", hash = "sha256:f225782b84438f828328fc2ad74346522f27e5b1440f4e9fd18b20ebfd1aa2cf"},
+]
+
+[[package]]
 name = "certifi"
 version = "2025.4.26"
 description = "Python package for providing Mozilla's CA Bundle."
@@ -3793,4 +3805,4 @@ propcache = ">=0.2.1"
 [metadata]
 lock-version = "2.1"
 python-versions = "^3.13"
-content-hash = "ccb73d589f9f625105073ba8e2d232a2d4918b8e063b1b794cfb9655e94ba1f0"
+content-hash = "3ad1c8486a7f63cdc305f605a611c0b9dba8901424609f802a7165d567f97792"
