@@ -1,6 +1,10 @@
 fileignoreconfig:
+- filename: cd/dev.env
+  checksum: d0d903977573691cca98a55622739ae8fcfd39a3c413fdc308e8bae0db35f567
+- filename: cd/perf.env
+  checksum: 6b5ba337d04b22246f4553919201fc47080dd502018c7199db0d9f5e23307d8b
 - filename: ci/.env.docker
-  checksum: 59cd9dbbecae5de1bf78feb4466501a7df91ef88ed09449d5f0dcd4a9760de55
+  checksum: 2ca10edc6e96beb5929c49af8d3208ba55d6d0ea020ac17d18df984de1ee6b3a
 - filename: poetry.lock
   checksum: c0169105c61f3b53473c867c5523f1e57ee0a01eecc0e4bad6f4462a2371aca0
 - filename: postman/enp-api.postman_collection.json

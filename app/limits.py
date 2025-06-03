@@ -62,7 +62,7 @@ class ServiceRateLimiter:
         try:
             allowed = await redis.consume_rate_limit_token(key, self.limit, self.window)
         except (NonRetryableError, RetryableError):
-            logger.exception(
+            logger.error(
                 'Rate limiting failed for request_id: {}, service_id: {}, api_key_id: {}, allowing request by default',
                 request_id,
                 service_id,
@@ -72,7 +72,7 @@ class ServiceRateLimiter:
             allowed = True
 
         if not allowed:
-            logger.info(
+            logger.debug(
                 'Request rate limited for throughput for request_id: {}, service_id: {}, api_key_id: {}',
                 request_id,
                 service_id,
