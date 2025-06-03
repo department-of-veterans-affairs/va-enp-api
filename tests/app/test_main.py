@@ -6,6 +6,7 @@ from uuid import uuid4
 
 from starlette import status
 
+from app.clients.redis_client import RedisClientManager
 from app.main import CustomFastAPI, lifespan
 from tests.conftest import ENPTestClient
 
@@ -57,7 +58,12 @@ async def test_lifespan_normal() -> None:
     Test that close_db() is called after normal context exit.
 
     """
+    # Create mock Redis client with a no-op ping
+    mock_redis_client = Mock()
+    mock_redis_client.ping = AsyncMock(return_value=True)
+
     with (
+        patch.object(RedisClientManager, 'get_client', return_value=mock_redis_client),
         patch('app.main.init_db', new_callable=AsyncMock) as mock_init_db,
         patch('app.main.close_db', new_callable=AsyncMock) as mock_close_db,
     ):
@@ -80,7 +86,12 @@ async def test_lifespan_cancelled_exception() -> None:
     Test that close_db() is called when asyncio.CancelledError raised in lifespan.
 
     """
+    # Create mock Redis client with a no-op ping
+    mock_redis_client = Mock()
+    mock_redis_client.ping = AsyncMock(return_value=True)
+
     with (
+        patch.object(RedisClientManager, 'get_client', return_value=mock_redis_client),
         patch('app.main.init_db', new_callable=AsyncMock) as mock_init_db,
         patch('app.main.close_db', new_callable=AsyncMock) as mock_close_db,
     ):
