@@ -3,7 +3,7 @@
 import re
 from typing import Annotated, Any, ClassVar, Collection, Literal
 
-from cachetools import cached
+from async_lru import alru_cache
 from fastapi import HTTPException, status
 from loguru import logger
 from phonenumbers import PhoneNumber
@@ -24,11 +24,12 @@ from pydantic_extra_types.phone_numbers import PhoneNumberValidator
 from starlette_context import context
 from typing_extensions import Self
 
-from app.constants import IdentifierType, MobileAppType, NotificationType
+from app.constants import FIVE_MINUTES, IdentifierType, MobileAppType, NotificationType
 from app.exceptions import NonRetryableError
 from app.legacy.dao.service_sms_sender_dao import LegacyServiceSmsSenderDao
 from app.legacy.dao.templates_dao import LegacyTemplateDao
-from app.legacy.dao.utils import db_12h_cache
+
+# from app.legacy.dao.utils import db_12h_cache
 from app.legacy.v2.notifications.validators import is_valid_recipient_id_value
 
 
@@ -405,7 +406,7 @@ class V2PostSmsRequestModel(V2PostNotificationRequestModel):
         return NotificationType.SMS
 
 
-@cached(db_12h_cache)
+@alru_cache(maxsize=1024, ttl=FIVE_MINUTES)
 async def _get_sms_sender(sms_sender_id: UUID4 | None, service_id: UUID4) -> str:
     """Get the sms_sender of a ServiceSmsSender.
 

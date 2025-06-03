@@ -7,7 +7,7 @@ from typing import Any, Sequence, TypedDict, cast
 from uuid import uuid4
 
 import jwt
-from cachetools import cached
+from async_lru import alru_cache
 from fastapi import HTTPException, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from loguru import logger
@@ -16,6 +16,7 @@ from sqlalchemy import Row
 from starlette_context import context
 
 from app.constants import (
+    FIVE_MINUTES,
     RESPONSE_LEGACY_ERROR_SYSTEM_CLOCK,
     RESPONSE_LEGACY_INVALID_TOKEN_ARCHIVED_SERVICE,
     RESPONSE_LEGACY_INVALID_TOKEN_NO_ISS,
@@ -26,11 +27,13 @@ from app.constants import (
     RESPONSE_LEGACY_INVALID_TOKEN_REVOKED,
     RESPONSE_LEGACY_INVALID_TOKEN_WRONG_TYPE,
     RESPONSE_LEGACY_NO_CREDENTIALS,
+    TWELVE_HOURS,
 )
 from app.exceptions import NonRetryableError, RetryableError
 from app.legacy.dao.api_keys_dao import ApiKeyRecord, LegacyApiKeysDao
 from app.legacy.dao.services_dao import LegacyServiceDao
-from app.legacy.dao.utils import db_5m_cache, db_12h_cache
+
+# from app.legacy.dao.utils import db_5m_cache, db_12h_cache
 
 ADMIN_CLIENT_USER_NAME = os.getenv('ENP_ADMIN_CLIENT_USER_NAME', 'enp')
 ADMIN_SECRET_KEY = os.getenv('ENP_ADMIN_SECRET_KEY', 'not-very-secret')
@@ -195,7 +198,7 @@ async def verify_service_token(issuer: str, token: str) -> None:
     raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=RESPONSE_LEGACY_INVALID_TOKEN_NOT_FOUND)
 
 
-@cached(db_12h_cache)
+@alru_cache(maxsize=1024, ttl=TWELVE_HOURS)
 async def get_active_service_for_issuer(issuer: str) -> tuple[UUID4, str]:
     """Validate the given issuer string as a UUID4 and return the corresponding active service.
 
@@ -245,7 +248,7 @@ async def get_active_service_for_issuer(issuer: str) -> tuple[UUID4, str]:
     return service.id, service.name
 
 
-@cached(db_5m_cache)
+@alru_cache(maxsize=1024, ttl=FIVE_MINUTES)
 async def _get_service_api_keys(service_id: UUID4) -> Sequence[Row[Any]]:
     """Retrieve all API keys associated with the given service ID.
 
