@@ -27,6 +27,7 @@ from app.legacy.v2.notifications.utils import (
     raise_request_validation_error,
     send_push_notification_helper,
     validate_template,
+    validate_template_personalisation,
 )
 from app.logging.logging_config import logger
 from app.routers import LegacyTimedAPIRoute
@@ -106,17 +107,14 @@ async def legacy_notification_post_handler(
     logger.debug('Creating SMS notification with request data: {}', request)
 
     notification_id = uuid4()
-    service_id = uuid4()
 
-    context['service_id'] = service_id
+    context['service_id'] = request.service_id
     context['template_id'] = request.template_id
     context['notification_id'] = notification_id
 
     try:
-        # TODO - await validate_personalization (?), need to move validating persoanlization to seperate function
-        #    to allow for caching in validate_template
-        # TODO - update to pass service_id and validate service
-        await validate_template(request.template_id, NotificationType.SMS, service_id)
+        await validate_template(request.template_id, NotificationType.SMS, request.service_id)
+        await validate_template_personalisation(request.template_id, request.personalisation)
     except ValueError as e:
         raise_request_validation_error(str(e))
 
