@@ -28,8 +28,6 @@ from app.constants import FIVE_MINUTES, IdentifierType, MobileAppType, Notificat
 from app.exceptions import NonRetryableError
 from app.legacy.dao.service_sms_sender_dao import LegacyServiceSmsSenderDao
 from app.legacy.dao.templates_dao import LegacyTemplateDao
-
-# from app.legacy.dao.utils import db_12h_cache
 from app.legacy.v2.notifications.validators import is_valid_recipient_id_value
 
 

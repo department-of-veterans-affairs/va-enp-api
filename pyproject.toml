@@ -24,9 +24,7 @@ starlette_context = "*"
 tenacity = "*"
 types-aiobotocore = {extras = ["essential"], version = "*"}
 uvicorn-worker = "*"
-cachetools = "^6.0.0"
-types-cachetools = "^6.0.0.20250525"
-async-lru = "^2.0.5"
+async-lru = "*"
 
 [tool.poetry.group.test]
 optional = true
