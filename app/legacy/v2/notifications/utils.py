@@ -6,7 +6,6 @@ from typing import Sequence
 from cachetools import TTLCache, cached
 from fastapi.exceptions import RequestValidationError
 from pydantic import UUID4
-from sqlalchemy.exc import NoResultFound
 
 from app.constants import NotificationType
 from app.exceptions import NonRetryableError, RetryableError
@@ -93,7 +92,30 @@ async def validate_push_template(template_id: UUID4) -> None:
     raise NotImplementedError('validate_push_template has not been implemented.')
 
 
+# TODO 134 - Cache not working as expected with async
 @cached(cache=TTLCache(maxsize=1024, ttl=600))
+async def get_template_cache(template_id: UUID4) -> LegacyTemplateDao:
+    """Retrieve a template from the database with caching.
+
+    Args:
+        template_id (UUID4): The unique identifier of the template to retrieve
+
+    Returns:
+        LegacyTemplateDao: The template object from the database
+
+    Raises:
+        NonRetryableError: If the template cannot be found or there's a non-recoverable error
+        RetryableError: If there's a temporary database issue that can be retried
+
+    """
+    try:
+        return await LegacyTemplateDao.get_template(template_id)
+    except (NonRetryableError, RetryableError):
+        raise
+
+
+# TODO 134 - Cache not working as expected with async
+# @cached(cache=TTLCache(maxsize=1024, ttl=600))
 async def validate_template(
     template_id: UUID4,
     expected_type: NotificationType,
@@ -112,11 +134,7 @@ async def validate_template(
         NonRetryableError: If the template is not found, or is invalid based on the expected type,
             or is archived, or doesn't belong to the correct service.
     """
-    try:
-        template = await LegacyTemplateDao.get_template(template_id)
-    except NoResultFound:
-        logger.exception('Template not found with ID {}', template_id)
-        raise NonRetryableError(log_msg='Template not found')
+    template = await get_template_cache(template_id)
 
     try:
         _validate_template_type(template.template_type, expected_type, template_id)
@@ -192,23 +210,23 @@ def _validate_template_active(archived: bool, template_id: UUID4) -> None:
         raise NonRetryableError(log_msg='Template is not active')
 
 
-def validate_template_personalisation(
-    template_content: str,
-    personalisation: dict[str, str | int | float | list[str | int | float] | PersonalisationFileObject] | None,
+async def validate_template_personalisation(
     template_id: UUID4,
+    personalisation: dict[str, str | int | float | list[str | int | float] | PersonalisationFileObject] | None,
 ) -> None:
     """Validates the personalisation data against the template.
 
     Args:
-        template_content (str): The template to validate against
-        personalisation (dict[str, str | int | float | list[str | int | float] | PersonalisationFileObject] | None): The personalisation data to validate
         template_id (UUID4): The ID of the template
+        personalisation (dict[str, str | int | float | list[str | int | float] | PersonalisationFileObject] | None): The personalisation data to validate
 
     Raises:
         NonRetryableError: If there are missing personalisation fields required by the template.
 
     """
-    template_personalisation_fields = _collect_personalisation_from_template(template_content)
+    template = await get_template_cache(template_id)
+
+    template_personalisation_fields = _collect_personalisation_from_template(template.content)
     incoming_personalisation_fields = set(personalisation.keys() if personalisation else [])
 
     # the current implementation is case-insensitive, so all fields are converted to lowercase
