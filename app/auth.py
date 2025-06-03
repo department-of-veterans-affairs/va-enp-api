@@ -27,7 +27,6 @@ from app.constants import (
     RESPONSE_LEGACY_INVALID_TOKEN_REVOKED,
     RESPONSE_LEGACY_INVALID_TOKEN_WRONG_TYPE,
     RESPONSE_LEGACY_NO_CREDENTIALS,
-    TWELVE_HOURS,
 )
 from app.exceptions import NonRetryableError, RetryableError
 from app.legacy.dao.api_keys_dao import ApiKeyRecord, LegacyApiKeysDao
@@ -196,7 +195,6 @@ async def verify_service_token(issuer: str, token: str) -> None:
     raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=RESPONSE_LEGACY_INVALID_TOKEN_NOT_FOUND)
 
 
-@alru_cache(maxsize=1024, ttl=TWELVE_HOURS)
 async def get_active_service_for_issuer(issuer: str) -> tuple[UUID4, str]:
     """Validate the given issuer string as a UUID4 and return the corresponding active service.
 

@@ -73,17 +73,17 @@ class LegacyServiceSmsSenderDao:
 
         except (IntegrityError, DataError) as e:
             # These are deterministic and will likely fail again
-            logger.exception('Notification lookup failed: invalid or unexpected data for id: {}', id)
-            raise NonRetryableError('Notification lookup failed: invalid or unexpected data.') from e
+            logger.exception('Service lookup failed: invalid or unexpected data for id: {}', id)
+            raise NonRetryableError('Service lookup failed: invalid or unexpected data.') from e
 
         except (OperationalError, InterfaceError, TimeoutError) as e:
             # Transient DB issues that may succeed on retry
-            logger.warning('Notification lookup failed due to a transient database error for id: {}', id)
-            raise RetryableError('Notification lookup failed due to a transient database error.') from e
+            logger.warning('Service lookup failed due to a transient database error for id: {}', id)
+            raise RetryableError('Service lookup failed due to a transient database error.') from e
 
         except SQLAlchemyError as e:
-            logger.exception('Unexpected SQLAlchemy error during notification lookup for id: {}', id)
-            raise NonRetryableError('Unexpected SQLAlchemy error during notification lookup.') from e
+            logger.exception('Unexpected SQLAlchemy error during service lookup for id: {}', id)
+            raise NonRetryableError('Unexpected SQLAlchemy error during service lookup.') from e
 
     @db_retry
     @staticmethod
@@ -100,14 +100,14 @@ class LegacyServiceSmsSenderDao:
 
         except (IntegrityError, DataError) as e:
             # These are deterministic and will likely fail again
-            logger.exception('Notification lookup failed: invalid or unexpected data for id: {}', id)
-            raise NonRetryableError('Notification lookup failed: invalid or unexpected data.') from e
+            logger.exception('Service lookup failed: invalid or unexpected data for id: {}', id)
+            raise NonRetryableError('Service lookup failed: invalid or unexpected data.') from e
 
         except (OperationalError, InterfaceError, TimeoutError) as e:
             # Transient DB issues that may succeed on retry
-            logger.warning('Notification lookup failed due to a transient database error for id: {}', id)
-            raise RetryableError('Notification lookup failed due to a transient database error.') from e
+            logger.warning('Service lookup failed due to a transient database error for id: {}', id)
+            raise RetryableError('Service lookup failed due to a transient database error.') from e
 
         except SQLAlchemyError as e:
-            logger.exception('Unexpected SQLAlchemy error during notification lookup for id: {}', id)
-            raise NonRetryableError('Unexpected SQLAlchemy error during notification lookup.') from e
+            logger.exception('Unexpected SQLAlchemy error during service lookup for id: {}', id)
+            raise NonRetryableError('Unexpected SQLAlchemy error during service lookup.') from e

@@ -7,7 +7,7 @@ fileignoreconfig:
 - filename: tests/app/legacy/dao/conftest.py
   checksum: c82f4eb2f484f6465fa50bb5bbbff6152c84fe4071e3724a0d91124049a2fad9
 - filename: app/legacy/dao/api_keys_dao.py
-  checksum: 173b55053300c426cb1cd313eb6e998c8adb7c1c8d2ca42ddd75bd6772a0140f
+  checksum: 460fc7fbfb35b1b87b282a7cddf3e1a14e79e9ba478e8f39d47d04b6b836f7a5
 - filename: tests/app/providers/__init__.py
   checksum: 0e3ae2fd3a50245a8c143d31c4316b164b51161d2db6e660aa956b78eda1b4d8
 - filename: tests/app/providers/test_provider_aws.py
