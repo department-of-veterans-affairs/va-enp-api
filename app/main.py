@@ -52,11 +52,14 @@ async def lifespan(app: CustomFastAPI) -> AsyncIterator[Never]:
         None: nothing
 
     """
-    await init_db()
-
+    logger.info('Initializing the RedisClientManager...')
     redis_url = os.getenv('REDIS_URL', 'redis://redis:6379')
     redis_manager = RedisClientManager(redis_url)
     app.enp_state.redis_client_manager = redis_manager
+    await redis_manager.get_client().ping()
+    logger.info('...RedisClientManager initialized.')
+
+    await init_db()
 
     try:
         yield  # type: ignore
