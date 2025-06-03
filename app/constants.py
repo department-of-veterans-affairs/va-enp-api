@@ -16,6 +16,7 @@ MAX_RETRIES = int(os.getenv('MAX_RETRIES', 3))
 RESPONSE_400 = 'Bad request'
 RESPONSE_403 = 'Not authenticated'
 RESPONSE_404 = 'Not found'
+RESPONSE_429 = 'Rate limit exceeded'
 RESPONSE_500 = 'Server error'
 
 

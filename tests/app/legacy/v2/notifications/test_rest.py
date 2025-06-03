@@ -2,7 +2,7 @@
 
 from collections.abc import AsyncGenerator, Generator
 from typing import Any, Awaitable, Callable, Coroutine
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, Mock, patch
 from uuid import UUID, uuid4
 
 import pytest
@@ -11,6 +11,7 @@ from fastapi.encoders import jsonable_encoder
 from pydantic import UUID4
 from sqlalchemy import Row, delete
 
+from app.clients.redis_client import RedisClientManager
 from app.constants import IdentifierType, MobileAppType
 from app.db.db_init import get_write_session_with_context, metadata_legacy
 from app.legacy.dao.notifications_dao import LegacyNotificationDao
@@ -59,8 +60,9 @@ class TestPushRouter:
             },
             'personalisation': 'not_a_dict',
         }
-        # Bypass auth, this is testing request data
+        # Bypass auth and rate limiter, this is testing request data
         mocker.patch('app.auth.verify_service_token')
+        mocker.patch('app.limits.ServiceRateLimiter.__call__')
         response = client.post(_push_path, json=invalid_request)
 
         assert response.status_code == status.HTTP_400_BAD_REQUEST
@@ -93,8 +95,9 @@ class TestPush:
             personalisation={'name': 'John'},
         )
 
-        # Bypass auth, this is testing request data
+        # Bypass auth and rate limiter, this is testing request data
         mocker.patch('app.auth.verify_service_token')
+        mocker.patch('app.limits.ServiceRateLimiter.__call__')
         response = client.post(_push_path, json=request.model_dump())
 
         assert response.status_code == status.HTTP_201_CREATED
@@ -308,6 +311,32 @@ class TestSmsPostHandler:
         finally:
             await LegacyNotificationDao.delete_notification(resp_json['id'])
 
+    async def test_rate_limited_returns_429(
+        self,
+        mock_background_task: AsyncMock,
+        mocker: AsyncMock,
+        client: ENPTestClient,
+        prepare_database: Callable[[], Coroutine[Any, Any, dict[str, Row[Any]]]],
+        path_request: Callable[..., dict[str, object]],
+        build_headers: Callable[[UUID, UUID], dict[str, str]],
+    ) -> None:
+        """Test sms notification route returns 429 when rate limited."""
+        db_data = await prepare_database()
+        request = path_request(db_data['template'].id, phone_number='+18005550101')
+        headers = build_headers(db_data['api_key'].id, db_data['service'].id)
+
+        # mock redis client manager to rate limit
+        redis_mock = Mock(spec=RedisClientManager)
+        redis_mock.consume_rate_limit_token = AsyncMock(return_value=False)
+        client.app.enp_state.redis_client_manager = redis_mock
+
+        response = client.post(
+            self.sms_route,
+            json=request,
+            headers=headers,
+        )
+        assert response.status_code == status.HTTP_429_TOO_MANY_REQUESTS
+
 
 class TestSmsValidation:
     """Test validation of the sms route(s)."""
@@ -331,8 +360,9 @@ class TestSmsValidation:
             route (str): Route under test
             mocker (AsyncMock): Mock object
         """
-        # Bypass auth, this is testing request data
+        # Bypass auth and rate limiter, this is testing request data
         mocker.patch('app.auth.verify_service_token')
+        mocker.patch('app.limits.ServiceRateLimiter.__call__')
         response = client.post(route)
 
         assert response.status_code == status.HTTP_400_BAD_REQUEST
