@@ -187,11 +187,14 @@ async def test_create_notification_happy_path(mocker: AsyncMock) -> None:
     Args:
         mocker (AsyncMock): Mock object
     """
-    request = V2PostSmsRequestModel(phone_number='+18005550101', template_id=uuid4())
     mocker.patch('app.legacy.v2.notifications.utils.LegacyNotificationDao.create_notification')
+    mocker.patch('app.legacy.v2.notifications.route_schema.LegacyServiceSmsSenderDao.get_service_default')
     mock_context = mocker.patch('app.legacy.v2.notifications.utils.context')
-    mock_context.api_key = uuid4()
-    mock_context.service_id = uuid4()
+    mock_context['api_key_id'] = uuid4()
+    mock_context['service_id'] = uuid4()
+    mocker.patch('app.legacy.v2.notifications.route_schema.context', return_value=mock_context)
+
+    request = V2PostSmsRequestModel(phone_number='+18005550101', template_id=uuid4())
     await create_notification(uuid4(), mocker.AsyncMock(), request)
 
 
@@ -205,9 +208,11 @@ async def test_create_notification_failure(mocker: AsyncMock) -> None:
     mocker.patch(
         'app.legacy.v2.notifications.utils.LegacyNotificationDao.create_notification', side_effect=NonRetryableError
     )
+    mocker.patch('app.legacy.v2.notifications.route_schema.LegacyServiceSmsSenderDao.get_service_default')
     mock_context = mocker.patch('app.legacy.v2.notifications.utils.context')
-    mock_context.api_key = uuid4()
-    mock_context.service_id = uuid4()
+    mock_context['api_key_id'] = uuid4()
+    mock_context['service_id'] = uuid4()
+    mocker.patch('app.legacy.v2.notifications.route_schema.context', return_value=mock_context)
 
     with pytest.raises(HTTPException) as exc_info:
         await create_notification(uuid4(), mocker.AsyncMock(), request)

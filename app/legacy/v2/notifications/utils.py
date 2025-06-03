@@ -156,15 +156,15 @@ async def create_notification(
     """
     try:
         await LegacyNotificationDao.create_notification(
-            id,
-            request.get_channel(),
-            request.get_direct_contact_info(),
-            await request.get_reply_to_text(),
-            context['service_id'],
-            context['api_key_id'],
-            request.reference,
-            template_row.id,
-            template_row.version,
+            id=id,
+            notification_type=request.get_channel(),
+            to=request.get_direct_contact_info(),
+            reply_to_text=await request.get_reply_to_text(),
+            service_id=context['service_id'],
+            api_key_id=context['api_key_id'],
+            reference=request.reference,
+            template_id=template_row.id,
+            template_version=template_row.version,
         )
     except NonRetryableError as e:
         logger.exception('Failed to create notification due to unexpected error in the database')

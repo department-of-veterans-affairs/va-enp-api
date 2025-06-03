@@ -1,6 +1,7 @@
 """Pytest setup for all legacy code."""
 
 from datetime import datetime, timezone
+from random import randint
 from typing import Any, Awaitable, Callable, Coroutine
 from uuid import uuid4
 
@@ -267,5 +268,47 @@ def sample_template(
         select_stmt = select(legacy_templates).where(legacy_templates.c.id == id)
         template = (await session.execute(select_stmt)).one()
         return template
+
+    return _wrapper
+
+
+@pytest.fixture
+def sample_service_sms_sender(
+    test_db_session: AsyncSession,
+) -> Callable[..., Awaitable[Row[Any]]]:
+    """Generates a sample ServiceSmsSender - Does not commit to the database.
+
+    Args:
+        test_db_session (AsyncSession): A non-commit test session
+
+    Returns:
+        Callable[..., Awaitable[Row[Any]]]: The function to create an ServiceSmsSender
+    """
+
+    async def _wrapper(
+        service_id: UUID4,
+        session: AsyncSession | None = None,
+        archived: bool = False,
+        created_at: datetime | None = None,
+        id: UUID4 | None = None,
+        is_default: bool = True,
+        sms_sender: str | None = None,
+    ) -> Row[Any]:
+        id = id or uuid4()
+        session = session or test_db_session
+        legacy_service_sms_senders = metadata_legacy.tables['service_sms_senders']
+
+        # No need for the values to be in a separate dictionary because they have all the data already
+        insert_stmt = insert(legacy_service_sms_senders).values(
+            service_id=service_id,
+            archived=archived,
+            created_at=created_at or datetime.now(timezone.utc),
+            id=id,
+            is_default=is_default,
+            sms_sender=sms_sender or f'+1{randint(100000000, 999999999)}',
+        )
+        await session.execute(insert_stmt)
+        select_stmt = select(legacy_service_sms_senders).where(legacy_service_sms_senders.c.id == id)
+        return (await session.execute(select_stmt)).one()
 
     return _wrapper

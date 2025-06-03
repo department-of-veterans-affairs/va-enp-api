@@ -7,6 +7,7 @@ from typing import Any, Sequence, TypedDict, cast
 from uuid import uuid4
 
 import jwt
+from cachetools import cached
 from fastapi import HTTPException, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from loguru import logger
@@ -29,6 +30,7 @@ from app.constants import (
 from app.exceptions import NonRetryableError, RetryableError
 from app.legacy.dao.api_keys_dao import ApiKeyRecord, LegacyApiKeysDao
 from app.legacy.dao.services_dao import LegacyServiceDao
+from app.legacy.dao.utils import db_5m_cache, db_12h_cache
 
 ADMIN_CLIENT_USER_NAME = os.getenv('ENP_ADMIN_CLIENT_USER_NAME', 'enp')
 ADMIN_SECRET_KEY = os.getenv('ENP_ADMIN_SECRET_KEY', 'not-very-secret')
@@ -163,19 +165,11 @@ async def verify_service_token(issuer: str, token: str) -> None:
     request_id = uuid4()
     context['request_id'] = request_id
 
-    logger.debug(
-        'Entering service auth token verification request_id: {}',
-        request_id,
-    )
+    service_id, service_name = await get_active_service_for_issuer(issuer)
 
-    service = await get_active_service_for_issuer(issuer, request_id)
+    logger.debug('Attempting to Lookup service API keys for ({}) service_id: {}', service_name, service_id)
 
-    logger.debug(
-        'Attempting to Lookup service API keys for service_id: {}',
-        service.id,
-    )
-
-    api_keys = await _get_service_api_keys(service.id, request_id)
+    api_keys = await _get_service_api_keys(service_id)
 
     for row in api_keys:
         api_key = ApiKeyRecord.from_row(row)
@@ -183,38 +177,26 @@ async def verify_service_token(issuer: str, token: str) -> None:
         if not _verify_service_token(token, api_key):
             continue
 
-        logger.debug(
-            'Service API key verified for service_id: {} api_key_id: {} request_id: {}',
-            service.id,
-            api_key.id,
-            request_id,
-        )
-
-        _validate_service_api_key(api_key, service.id, service.name)
-
-        logger.debug(
-            'Service auth token validated for service_id: {} api_key_id: {} request_id: {}',
-            service.id,
-            api_key.id,
-            request_id,
-        )
+        _validate_service_api_key(api_key, str(service_id), service_name)
 
         logger.info(
-            'Service auth token authenticated for service_id: {} api_key_id: {} request_id: {}',
-            service.id,
+            'Service auth token authenticated for ({}) service_id: {} api_key_id: {} request_id: {}',
+            service_name,
+            service_id,
             api_key.id,
             request_id,
         )
         # Set context so this can be used throughout the request
         context['api_key_id'] = api_key.id
-        context['service_id'] = service.id
+        context['service_id'] = service_id
 
         return
 
     raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=RESPONSE_LEGACY_INVALID_TOKEN_NOT_FOUND)
 
 
-async def get_active_service_for_issuer(issuer: str, request_id: UUID4) -> Row[Any]:
+@cached(db_12h_cache)
+async def get_active_service_for_issuer(issuer: str) -> tuple[UUID4, str]:
     """Validate the given issuer string as a UUID4 and return the corresponding active service.
 
     This function performs the following:
@@ -224,10 +206,9 @@ async def get_active_service_for_issuer(issuer: str, request_id: UUID4) -> Row[A
 
     Args:
         issuer (str): The issuer value extracted from a JWT token, expected to be a UUID4 string.
-        request_id (uuid): Current request id
 
     Returns:
-        Row[Any]: A SQLAlchemy Core row representing the active service associated with the given issuer.
+        uple[UUID4, str]: A SQLAlchemy Core row representing the active service associated with the given issuer.
 
     Raises:
         HTTPException:
@@ -236,9 +217,8 @@ async def get_active_service_for_issuer(issuer: str, request_id: UUID4) -> Row[A
             - 403 if the service is found but marked as archived (inactive).
     """
     logger.debug(
-        'Attempting to lookup service by issuer: {} request_id: {}',
+        'Attempting to lookup service by issuer: {}',
         issuer,
-        request_id,
     )
 
     try:
@@ -257,16 +237,16 @@ async def get_active_service_for_issuer(issuer: str, request_id: UUID4) -> Row[A
         )
 
     logger.debug(
-        'Found service service_id: {} for issuer: {} request_id: {}',
+        'Found service service_id: {} for issuer: {}',
         service.id,
         issuer,
-        request_id,
     )
 
-    return service
+    return service.id, service.name
 
 
-async def _get_service_api_keys(service_id: UUID4, request_id: UUID4) -> Sequence[Row[Any]]:
+@cached(db_5m_cache)
+async def _get_service_api_keys(service_id: UUID4) -> Sequence[Row[Any]]:
     """Retrieve all API keys associated with the given service ID.
 
     Attempts to fetch API keys for a service from the LegacyApiKeysDao. If no keys are found,
@@ -275,7 +255,6 @@ async def _get_service_api_keys(service_id: UUID4, request_id: UUID4) -> Sequenc
 
     Args:
         service_id (UUID4): The UUID of the service whose API keys are being requested.
-        request_id (UUID4): The UUID associated with the request, used for logging context.
 
     Returns:
         Sequence[Row[Any]]: A collection of API keys associated with the service.
@@ -287,9 +266,8 @@ async def _get_service_api_keys(service_id: UUID4, request_id: UUID4) -> Sequenc
         api_keys = list(await LegacyApiKeysDao.get_api_keys(service_id))
     except (RetryableError, NonRetryableError):
         logger.debug(
-            'No API keys found for service_id: {} request_id: {}',
+            'No API keys found for service_id: {}',
             service_id,
-            request_id,
         )
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=RESPONSE_LEGACY_INVALID_TOKEN_NO_KEYS)
 

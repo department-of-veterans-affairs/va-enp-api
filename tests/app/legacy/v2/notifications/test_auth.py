@@ -152,21 +152,20 @@ class TestGetActiveServiceForIssuer:
     ) -> None:
         """Should return service Row[Any] if issuer valid and service found."""
         service = await sample_service()
-        request_id = uuid4()
 
         with patch('app.auth.LegacyServiceDao.get_service', return_value=service):
-            service_by_issuer = await get_active_service_for_issuer(str(service.id), request_id)
+            service_id, service_name = await get_active_service_for_issuer(str(service.id))
 
         # just checking if returned service id matches
-        assert service_by_issuer.id == service.id
+        assert service_id == service.id
+        assert service_name == service.name
 
     async def test_raises_with_invalid_issuer(self) -> None:
         """Should raise 403 with correct detail if the issuer invalid."""
         issuer = 'invalid-uuid'
-        request_id = uuid4()
 
         with pytest.raises(HTTPException) as exc_info:
-            await get_active_service_for_issuer(issuer, request_id)
+            await get_active_service_for_issuer(issuer)
 
         exc = exc_info.value
         assert exc.status_code == status.HTTP_403_FORBIDDEN
@@ -186,11 +185,10 @@ class TestGetActiveServiceForIssuer:
     ) -> None:
         """Should raise 403 with correct detail if the service ID is invalid or not found."""
         issuer = str(uuid4())
-        request_id = uuid4()
 
         with patch('app.auth.LegacyServiceDao.get_service', side_effect=raises):
             with pytest.raises(HTTPException) as exc_info:
-                await get_active_service_for_issuer(issuer, request_id)
+                await get_active_service_for_issuer(issuer)
 
         exc = exc_info.value
         assert exc.status_code == status.HTTP_403_FORBIDDEN
@@ -203,11 +201,10 @@ class TestGetActiveServiceForIssuer:
         """Should raise 403 if the service is archived (inactive)."""
         service = await sample_service(active=False)
         issuer = str(service.id)
-        request_id = uuid4()
 
         with patch('app.auth.LegacyServiceDao.get_service', return_value=service):
             with pytest.raises(HTTPException) as exc_info:
-                await get_active_service_for_issuer(issuer, request_id)
+                await get_active_service_for_issuer(issuer)
 
         exc = exc_info.value
         assert exc.status_code == status.HTTP_403_FORBIDDEN
