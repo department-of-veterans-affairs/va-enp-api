@@ -218,6 +218,7 @@ class V2PostNotificationRequestModel(StrictBaseModel):
     reference: str | None = None
     template_id: Annotated[UUID4, Field(strict=False)]
     scheduled_for: Annotated[AwareDatetime, Field(strict=False)] | None = None
+    service_id: Annotated[UUID4, Field(strict=False)]
 
 
 class V2PostEmailRequestModel(V2PostNotificationRequestModel):
@@ -283,6 +284,7 @@ class V2PostSmsRequestModel(V2PostNotificationRequestModel):
                     'template_id': 'a71400e3-b2f8-4bd1-91c0-27f9ca7106a1',
                     'sms_sender_id': '4f44ffc8-1ff8-4832-b1af-0b615691b6ea',
                     'recipient_identifier': {'id_type': 'ICN', 'id_value': 'not-a-valid-icn'},
+                    'service_id': 'f47ac10b-58cc-4372-a567-0e02b2c3d479',
                 },
             },
         },
