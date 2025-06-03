@@ -258,9 +258,9 @@ class TestValidateServiceApiKey:
             _validate_service_api_key(api_key, str(api_key.service_id), service_name)
 
             mock_warning.assert_called_once_with(
-                'service {} - {} used old-style api key {} with no expiry_date',
-                str(api_key.service_id),
+                '({}) service {} - used old-style api key {} with no expiry_date',
                 service_name,
+                str(api_key.service_id),
                 api_key.id,
             )
 
@@ -274,9 +274,9 @@ class TestValidateServiceApiKey:
             _validate_service_api_key(api_key, str(api_key.service_id), service_name)
 
             mock_warning.assert_called_once_with(
-                'service {} - {} used expired api key {} expired as of {}',
-                str(api_key.service_id),
+                '({}) service {} - used expired api key {} expired as of {}',
                 service_name,
+                str(api_key.service_id),
                 api_key.id,
                 api_key.expiry_date,
             )
