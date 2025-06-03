@@ -4,7 +4,6 @@ from asyncio import current_task
 from typing import AsyncIterator
 
 from fastapi.concurrency import asynccontextmanager
-from loguru import logger
 from sqlalchemy import MetaData
 from sqlalchemy.ext.asyncio import (
     AsyncEngine,
@@ -15,6 +14,7 @@ from sqlalchemy.ext.asyncio import (
 )
 
 from app.db import NAPI_DB_READ_URI, NAPI_DB_WRITE_URI
+from app.logging.logging_config import logger
 
 _engine_napi_read: AsyncEngine | None = None
 _engine_napi_write: AsyncEngine | None = None

@@ -3,7 +3,6 @@
 from datetime import datetime
 from typing import Any
 
-from loguru import logger
 from pydantic import UUID4
 from sqlalchemy import Row, delete, select
 from sqlalchemy.dialects.postgresql import insert
@@ -20,6 +19,7 @@ from app.constants import NotificationStatus, NotificationType
 from app.db.db_init import get_read_session_with_context, get_write_session_with_context, metadata_legacy
 from app.exceptions import NonRetryableError, RetryableError
 from app.legacy.dao.utils import db_retry
+from app.logging.logging_config import logger
 
 
 class LegacyNotificationDao:

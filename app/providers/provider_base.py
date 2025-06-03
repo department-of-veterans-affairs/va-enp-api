@@ -2,11 +2,11 @@
 
 from abc import ABC
 
-from loguru import logger
 from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_full_jitter
 
 from app.constants import MAX_RETRIES
 from app.exceptions import NonRetryableError, RetryableError
+from app.logging.logging_config import logger
 from app.providers.provider_schemas import PushModel
 from app.utils import log_last_attempt_on_failure, log_on_retry
 

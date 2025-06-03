@@ -2,7 +2,6 @@
 
 from typing import Any
 
-from loguru import logger
 from pydantic import UUID4
 from sqlalchemy import Row, select
 from sqlalchemy.exc import (
@@ -18,6 +17,7 @@ from sqlalchemy.exc import (
 from app.db.db_init import get_read_session_with_context, metadata_legacy
 from app.exceptions import NonRetryableError, RetryableError
 from app.legacy.dao.utils import db_retry
+from app.logging.logging_config import logger
 
 
 class LegacyServiceDao:
@@ -55,8 +55,8 @@ class LegacyServiceDao:
             id (UUID4): The service id to get
 
         Raises:
-            NonRetryableError: Cannot be retried
-            RetryableError: Retryable
+            NonRetryableError: If the error is non-retryable
+            RetryableError: If the error is retryable
 
         Returns:
             Row[Any]: Service row

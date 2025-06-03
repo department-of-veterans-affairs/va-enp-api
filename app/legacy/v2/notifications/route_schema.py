@@ -5,7 +5,6 @@ from typing import Annotated, Any, ClassVar, Collection, Literal
 
 from async_lru import alru_cache
 from fastapi import HTTPException, status
-from loguru import logger
 from phonenumbers import PhoneNumber
 from pydantic import (
     UUID4,
@@ -29,6 +28,7 @@ from app.exceptions import NonRetryableError
 from app.legacy.dao.service_sms_sender_dao import LegacyServiceSmsSenderDao
 from app.legacy.dao.templates_dao import LegacyTemplateDao
 from app.legacy.v2.notifications.validators import is_valid_recipient_id_value
+from app.logging.logging_config import logger
 
 
 class StrictBaseModel(BaseModel):

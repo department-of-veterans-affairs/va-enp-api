@@ -10,7 +10,6 @@ import jwt
 from async_lru import alru_cache
 from fastapi import HTTPException, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-from loguru import logger
 from pydantic import UUID4
 from sqlalchemy import Row
 from starlette_context import context
@@ -32,6 +31,7 @@ from app.constants import (
 from app.exceptions import NonRetryableError, RetryableError
 from app.legacy.dao.api_keys_dao import ApiKeyRecord, LegacyApiKeysDao
 from app.legacy.dao.services_dao import LegacyServiceDao
+from app.logging.logging_config import logger
 
 ADMIN_CLIENT_USER_NAME = os.getenv('ENP_ADMIN_CLIENT_USER_NAME', 'enp')
 ADMIN_SECRET_KEY = os.getenv('ENP_ADMIN_SECRET_KEY', 'not-very-secret')
