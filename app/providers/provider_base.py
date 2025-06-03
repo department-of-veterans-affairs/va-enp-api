@@ -45,7 +45,7 @@ class ProviderBase(ABC):
             model (PushModel): the parameters to pass to SNS.Client.publish
 
         Raises:
-            NonRetryableError: Don't retry the request
+            NonRetryableError: If the error is non-retryable
 
         Returns:
             str: A reference identifier for the sent notification

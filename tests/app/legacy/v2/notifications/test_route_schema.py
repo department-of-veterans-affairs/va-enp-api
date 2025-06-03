@@ -150,7 +150,7 @@ class TestV2PostEmailRequestModel:
             mocker (AsyncMock): Mock object
         """
         mocker.patch(
-            'app.legacy.v2.notifications.route_schema.LegacyTemplateDao.get_template',
+            'app.legacy.v2.notifications.route_schema.LegacyTemplateDao.get',
             return_value=mocker.AsyncMock(),
             new_callable=AsyncMock,
         )
@@ -270,9 +270,7 @@ class TestV2PostNotificationRequestModel:
         Args:
             mocker (AsyncMock): Mock object
         """
-        mocker.patch(
-            'app.legacy.v2.notifications.route_schema.LegacyTemplateDao.get_template', return_value=mocker.AsyncMock()
-        )
+        mocker.patch('app.legacy.v2.notifications.route_schema.LegacyTemplateDao.get', return_value=mocker.AsyncMock())
         recipient = RecipientIdentifierModel(id_type=IdentifierType.VA_PROFILE_ID, id_value='12345')
         model = V2PostNotificationRequestModel(recipient_identifier=recipient, template_id=uuid4())
         with pytest.raises(NotImplementedError):

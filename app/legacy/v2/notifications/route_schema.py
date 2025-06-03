@@ -288,7 +288,7 @@ class V2PostEmailRequestModel(V2PostNotificationRequestModel):
         Returns:
             str: The reply to string
         """
-        return str((await LegacyTemplateDao.get_template(self.template_id)).reply_to_text)
+        return str((await LegacyTemplateDao.get(self.template_id)).reply_to_text)
 
     def get_direct_contact_info(self) -> str | None:
         """Get the direct contact info from the request.

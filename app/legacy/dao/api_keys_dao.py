@@ -53,8 +53,8 @@ class LegacyApiKeysDao:
             service_id (UUID4): The service id to get keys for
 
         Raises:
-            NonRetryableError: If this is not retryable
-            RetryableError: If this is retryable
+            NonRetryableError: If the error is non-retryable
+            RetryableError: If the error is retryable
 
         Returns:
             Sequence[Row[Any]]: Iterable of Service rows

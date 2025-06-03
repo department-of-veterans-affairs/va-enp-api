@@ -124,7 +124,7 @@ async def validate_template(
         Row[Any]: A template row
     """
     try:
-        template = await LegacyTemplateDao.get_template(template_id)
+        template = await LegacyTemplateDao.get(template_id)
     except NoResultFound:
         logger.exception('Template not found with ID {}', template_id)
         raise_request_validation_error('Template not found')
