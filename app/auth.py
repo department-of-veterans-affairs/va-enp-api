@@ -285,17 +285,17 @@ def _validate_service_api_key(api_key: ApiKeyRecord, service_id: str, service_na
 
     if api_key.expiry_date is not None and api_key.expiry_date < datetime.now(timezone.utc):
         logger.warning(
-            'service {} - {} used expired api key {} expired as of {}',
-            service_id,
+            '({}) service {} - used expired api key {} expired as of {}',
             service_name,
+            service_id,
             api_key.id,
             api_key.expiry_date,
         )
     elif api_key.expiry_date is None:
         logger.warning(
-            'service {} - {} used old-style api key {} with no expiry_date',
-            service_id,
+            '({}) service {} - used old-style api key {} with no expiry_date',
             service_name,
+            service_id,
             api_key.id,
         )
 
