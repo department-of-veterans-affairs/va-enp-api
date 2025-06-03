@@ -38,6 +38,7 @@ VALID_ICN_VALUE = '1234567890V123456'
 def test_v2_post_email_request_model_valid(data: dict[str, str | dict[str, str]]) -> None:
     """Valid data with an e-mail address should not raise ValidationError."""
     data['template_id'] = str(uuid4())
+    data['service_id'] = str(uuid4())
     assert isinstance(V2PostEmailRequestModel.model_validate(data), V2PostEmailRequestModel)
 
 
@@ -102,6 +103,7 @@ def test_v2_post_sms_request_model_valid(data: dict[str, str | dict[str, str]]) 
     """Valid required data should not raise ValidationError."""
     data['sms_sender_id'] = str(uuid4())
     data['template_id'] = str(uuid4())
+    data['service_id'] = str(uuid4())
 
     request = V2PostSmsRequestModel.model_validate(data)
     assert isinstance(request, V2PostSmsRequestModel)
