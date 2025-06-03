@@ -209,7 +209,7 @@ async def get_active_service_for_issuer(issuer: str) -> tuple[UUID4, str]:
         issuer (str): The issuer value extracted from a JWT token, expected to be a UUID4 string.
 
     Returns:
-        uple[UUID4, str]: A SQLAlchemy Core row representing the active service associated with the given issuer.
+        Tuple[UUID4, str]: A SQLAlchemy Core row representing the active service associated with the given issuer.
 
     Raises:
         HTTPException:
@@ -217,10 +217,7 @@ async def get_active_service_for_issuer(issuer: str) -> tuple[UUID4, str]:
             - 403 if the service is not found.
             - 403 if the service is found but marked as archived (inactive).
     """
-    logger.debug(
-        'Attempting to lookup service by issuer: {}',
-        issuer,
-    )
+    logger.debug('Attempting to lookup service by issuer: {}', issuer)
 
     try:
         service_id = UUID4(issuer)
@@ -237,11 +234,7 @@ async def get_active_service_for_issuer(issuer: str) -> tuple[UUID4, str]:
             status_code=status.HTTP_403_FORBIDDEN, detail=RESPONSE_LEGACY_INVALID_TOKEN_ARCHIVED_SERVICE
         )
 
-    logger.debug(
-        'Found service service_id: {} for issuer: {}',
-        service.id,
-        issuer,
-    )
+    logger.debug('Found service service_id: {} for issuer: {}', service.id, issuer)
 
     return service.id, service.name
 
