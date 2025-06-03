@@ -2,6 +2,7 @@
 
 from typing import Any
 
+from async_lru import alru_cache
 from loguru import logger
 from pydantic import UUID4
 from sqlalchemy import Row, select
@@ -15,8 +16,10 @@ from sqlalchemy.exc import (
     TimeoutError,
 )
 
+from app.constants import TWELVE_HOURS
 from app.db.db_init import get_read_session_with_context, metadata_legacy
 from app.exceptions import NonRetryableError, RetryableError
+from app.legacy.dao.utils import db_retry
 
 
 class LegacyServiceDao:
@@ -40,16 +43,8 @@ class LegacyServiceDao:
             RetryableError: If the failure is likely transient (e.g., connection error).
             NonRetryableError: If the failure is deterministic (e.g., not found, bad input).
         """
-        legacy_services = metadata_legacy.tables['services']
-
-        stmt = select(legacy_services).where(legacy_services.c.id == service_id)
-
         try:
-            async with get_read_session_with_context() as session:
-                result = await session.execute(stmt)
-
-            return result.one()
-
+            return await _get_service(service_id)
         except (NoResultFound, MultipleResultsFound, DataError) as e:
             # These are deterministic and will likely fail again
             logger.exception('Service lookup failed: invalid or unexpected data for service_id: {}', service_id)
@@ -63,3 +58,22 @@ class LegacyServiceDao:
         except SQLAlchemyError as e:
             logger.exception('Unexpected SQLAlchemy error during service lookup for service_id: {}', service_id)
             raise NonRetryableError('Unexpected SQLAlchemy error during service lookup.') from e
+
+
+@db_retry
+@alru_cache(maxsize=1024, ttl=TWELVE_HOURS)
+async def _get_service(service_id: UUID4) -> Row[Any]:
+    """Retryable and cached function to get a Service row.
+
+    Args:
+        service_id (UUID4): The service UUID
+
+    Returns:
+        Row[Any]: A Service row
+    """
+    legacy_services = metadata_legacy.tables['services']
+    stmt = select(legacy_services).where(legacy_services.c.id == service_id)
+
+    async with get_read_session_with_context() as session:
+        result = await session.execute(stmt)
+    return result.one()
