@@ -30,7 +30,7 @@ class LegacyNotificationDao:
     """
 
     @staticmethod
-    async def get_notification(id: UUID4) -> Row[Any]:
+    async def get(id: UUID4) -> Row[Any]:
         """Get a Notification from the legacy database.
 
         Args:
@@ -43,11 +43,10 @@ class LegacyNotificationDao:
             Row[Any]: notification table row
         """
         try:
-            row: Row[Any] = await LegacyNotificationDao._get(id)
+            return await LegacyNotificationDao._get(id)
         except (RetryableError, NonRetryableError) as e:
             # Exceeded retries or was never retryable. Downstream methods logged this
             raise NonRetryableError from e
-        return row
 
     @db_retry
     @staticmethod

@@ -27,6 +27,7 @@ from app.constants import (
     RESPONSE_LEGACY_INVALID_TOKEN_REVOKED,
     RESPONSE_LEGACY_INVALID_TOKEN_WRONG_TYPE,
     RESPONSE_LEGACY_NO_CREDENTIALS,
+    TWELVE_HOURS,
 )
 from app.exceptions import NonRetryableError, RetryableError
 from app.legacy.dao.api_keys_dao import ApiKeyRecord, LegacyApiKeysDao
@@ -195,6 +196,7 @@ async def verify_service_token(issuer: str, token: str) -> None:
     raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=RESPONSE_LEGACY_INVALID_TOKEN_NOT_FOUND)
 
 
+@alru_cache(maxsize=1024, ttl=TWELVE_HOURS)
 async def get_active_service_for_issuer(issuer: str) -> tuple[UUID4, str]:
     """Validate the given issuer string as a UUID4 and return the corresponding active service.
 
@@ -223,7 +225,7 @@ async def get_active_service_for_issuer(issuer: str) -> tuple[UUID4, str]:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=RESPONSE_LEGACY_INVALID_TOKEN_WRONG_TYPE)
 
     try:
-        service = await LegacyServiceDao.get_service(service_id)
+        service = await LegacyServiceDao.get(service_id)
     except (NonRetryableError, RetryableError):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=RESPONSE_LEGACY_INVALID_TOKEN_NO_SERVICE)
 
@@ -255,7 +257,7 @@ async def _get_service_api_keys(service_id: UUID4) -> Sequence[Row[Any]]:
         HTTPException: If no API keys exist or the DAO raises any error, a 403 is returned.
     """
     try:
-        api_keys = list(await LegacyApiKeysDao.get_api_keys(service_id))
+        api_keys = list(await LegacyApiKeysDao.get_service_api_keys(service_id))
     except (RetryableError, NonRetryableError):
         logger.debug(
             'No API keys found for service_id: {}',

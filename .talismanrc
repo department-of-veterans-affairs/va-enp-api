@@ -7,7 +7,7 @@ fileignoreconfig:
 - filename: tests/app/legacy/dao/conftest.py
   checksum: c82f4eb2f484f6465fa50bb5bbbff6152c84fe4071e3724a0d91124049a2fad9
 - filename: app/legacy/dao/api_keys_dao.py
-  checksum: 460fc7fbfb35b1b87b282a7cddf3e1a14e79e9ba478e8f39d47d04b6b836f7a5
+  checksum: 9f11c845ba2a49530816867abfab4c12817db01f89f365e6a5641539e516216e
 - filename: tests/app/providers/__init__.py
   checksum: 0e3ae2fd3a50245a8c143d31c4316b164b51161d2db6e660aa956b78eda1b4d8
 - filename: tests/app/providers/test_provider_aws.py
@@ -19,7 +19,7 @@ fileignoreconfig:
 - filename: app/legacy/dao/api_key_dao.py
   checksum: 9eb496d3ae4238193baf5c5627d8d186beeda815133e9b4e1bc6e56ce57a3802
 - filename: tests/app/legacy/dao/test_api_keys.py
-  checksum: 30f8d4b5117cb785cb962d93cb89c056067184e8572f0550a7223dec9507fa5e
+  checksum: c08a73f7e31069462f1ed336e33485ee9ef4bdae9ff70d0691684df361777fc7
 - filename: tests/app/legacy/v2/notifications/test_auth.py
   checksum: 9a46795e0124515bc5960deee90d0a7531aaff989c39b4ecc93ab8c9f1969942
 - filename: .env.local
@@ -31,7 +31,7 @@ fileignoreconfig:
 - filename: app/legacy/dao/notifications_dao.py
   checksum: 5519ec1bf2a863cb8e5a7a4a225db4a4d0ce7f97ce49d6caf445e4a887c47aef
 - filename: app/auth.py
-  checksum: 45c7a96a5c5aaf6af5168b24625c7561a992cbe6bc516f4c55667ff76dde1fd7
+  checksum: fa5256f19e5afb2115af5dc6b2b69984eb1f16642a801daed4ba72298c5fe4a2
 - filename: tests/conftest.py
   checksum: c39c4b3e4777417f7b302794e869c272c2175d27dbc5236f85d4ecf9668dbe0d
 - filename: tests/napi_table_data.toml
@@ -39,7 +39,7 @@ fileignoreconfig:
 - filename: tests/app/legacy/v2/notifications/test_rest.py
   checksum: be7fe988e19ccd447cca130915c9a2052208297580573179a6da9aeca48f0352
 - filename: tests/app/test_auth.py
-  checksum: 4afa019ce45edf17b74925c5b92dae24e1f4ef53cd579d52286fe09415a58646
+  checksum: 760334bef0bf6ebf446fee7f7aef7d902ad06f5e18b80816816d2b12c5035285
 - filename: tests/app/legacy/v2/notifications/test_utils.py
   checksum: c18b734f3d91923174ef8260a918b45eebdb872b7b656ac266b5a915f14ab31f
 - filename: app/legacy/v2/notifications/utils.py

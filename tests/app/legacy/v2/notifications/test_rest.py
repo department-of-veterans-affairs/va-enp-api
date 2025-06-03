@@ -345,7 +345,7 @@ class TestSmsPostHandler:
             assert response.status_code == status.HTTP_201_CREATED
 
             # Validate the passed-in sms_sender_id was used
-            notification = await LegacyNotificationDao.get_notification(resp_json['id'])
+            notification = await LegacyNotificationDao.get(resp_json['id'])
             assert notification.reply_to_text == db_data['service_sms_sender'].sms_sender
         finally:
             await LegacyNotificationDao.delete_notification(resp_json['id'])
@@ -368,7 +368,7 @@ class TestSmsPostHandler:
             assert response.status_code == status.HTTP_201_CREATED
 
             # Validate the correct sms sender was used
-            notification = await LegacyNotificationDao.get_notification(resp_json['id'])
+            notification = await LegacyNotificationDao.get(resp_json['id'])
             service_sms_sender = await LegacyServiceSmsSenderDao.get_service_default(db_data['service'].id)
             assert notification.reply_to_text == service_sms_sender.sms_sender
         finally:

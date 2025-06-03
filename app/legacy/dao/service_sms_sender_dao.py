@@ -36,11 +36,10 @@ class LegacyServiceSmsSenderDao:
             Row[Any]: service_sms_senders table row
         """
         try:
-            row: Row[Any] = await LegacyServiceSmsSenderDao._get(id)
+            return await LegacyServiceSmsSenderDao._get(id)
         except (RetryableError, NonRetryableError) as e:
             # Exceeded retries or was never retryable. Downstream methods logged this
             raise NonRetryableError from e
-        return row
 
     @staticmethod
     async def get_service_default(service_id: UUID4) -> Row[Any]:
@@ -56,11 +55,10 @@ class LegacyServiceSmsSenderDao:
             Row[Any]: service_sms_senders table row
         """
         try:
-            row: Row[Any] = await LegacyServiceSmsSenderDao._get_service_default(service_id)
+            return await LegacyServiceSmsSenderDao._get_service_default(service_id)
         except (RetryableError, NonRetryableError) as e:
             # Exceeded retries or was never retryable. Downstream methods logged this
             raise NonRetryableError from e
-        return row
 
     @db_retry
     @staticmethod

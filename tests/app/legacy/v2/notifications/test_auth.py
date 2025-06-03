@@ -3,7 +3,7 @@
 import time
 from datetime import datetime, timedelta, timezone
 from typing import Any, Awaitable, Callable, Type
-from unittest.mock import patch
+from unittest.mock import AsyncMock, patch
 from uuid import uuid4
 
 import jwt
@@ -153,7 +153,7 @@ class TestGetActiveServiceForIssuer:
         """Should return service Row[Any] if issuer valid and service found."""
         service = await sample_service()
 
-        with patch('app.auth.LegacyServiceDao.get_service', return_value=service):
+        with patch('app.auth.LegacyServiceDao.get', return_value=service, new_callable=AsyncMock):
             service_id, service_name = await get_active_service_for_issuer(str(service.id))
 
         # just checking if returned service id matches
@@ -186,7 +186,7 @@ class TestGetActiveServiceForIssuer:
         """Should raise 403 with correct detail if the service ID is invalid or not found."""
         issuer = str(uuid4())
 
-        with patch('app.auth.LegacyServiceDao.get_service', side_effect=raises):
+        with patch('app.auth.LegacyServiceDao.get', side_effect=raises):
             with pytest.raises(HTTPException) as exc_info:
                 await get_active_service_for_issuer(issuer)
 
@@ -196,15 +196,16 @@ class TestGetActiveServiceForIssuer:
 
     async def test_raises_with_inactive_service(
         self,
+        mocker: AsyncMock,
         sample_service: Callable[..., Awaitable[Row[Any]]],
     ) -> None:
         """Should raise 403 if the service is archived (inactive)."""
         service = await sample_service(active=False)
         issuer = str(service.id)
 
-        with patch('app.auth.LegacyServiceDao.get_service', return_value=service):
-            with pytest.raises(HTTPException) as exc_info:
-                await get_active_service_for_issuer(issuer)
+        mocker.patch('app.auth.LegacyServiceDao.get', return_value=service, new_callable=AsyncMock)
+        with pytest.raises(HTTPException) as exc_info:
+            await get_active_service_for_issuer(issuer)
 
         exc = exc_info.value
         assert exc.status_code == status.HTTP_403_FORBIDDEN

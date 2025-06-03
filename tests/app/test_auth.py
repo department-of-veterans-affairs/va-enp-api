@@ -149,7 +149,7 @@ class TestGetServiceApiKeys:
         Args:
             mocker (AsyncMock): Mock object
         """
-        mocker.patch('app.auth.LegacyApiKeysDao.get_api_keys')
+        mocker.patch('app.auth.LegacyApiKeysDao.get_service_api_keys', new_callable=AsyncMock)
         await _get_service_api_keys(uuid4())
 
     @pytest.mark.parametrize('test_exception', [RetryableError, NonRetryableError])
@@ -160,7 +160,7 @@ class TestGetServiceApiKeys:
             test_exception (Exception): Exception to raise
             mocker (AsyncMock): Mock object
         """
-        mocker.patch('app.auth.LegacyApiKeysDao.get_api_keys', side_effect=test_exception)
+        mocker.patch('app.auth.LegacyApiKeysDao.get_service_api_keys', side_effect=test_exception)
         with pytest.raises(HTTPException) as exc_info:
             await _get_service_api_keys(uuid4())
         assert exc_info.value.status_code == status.HTTP_403_FORBIDDEN
@@ -609,7 +609,7 @@ class TestGetActiveServiceForIssuer:
             mocker (AsyncMock): Mock object
         """
         service_id = uuid4()
-        mock_service = mocker.patch('app.auth.LegacyServiceDao.get_service')
+        mock_service = mocker.patch('app.auth.LegacyServiceDao.get', new_callable=AsyncMock)
         mock_service.active = True
         mock_service.id = service_id
 
@@ -624,7 +624,7 @@ class TestGetActiveServiceForIssuer:
             mocker (AsyncMock): Mock object
         """
         service_id = uuid4()
-        mocker.patch('app.auth.LegacyServiceDao.get_service', side_effect=test_exception)
+        mocker.patch('app.auth.LegacyServiceDao.get', side_effect=test_exception)
         with pytest.raises(HTTPException) as exc_info:
             await get_active_service_for_issuer(str(service_id))
         assert exc_info.value.status_code == status.HTTP_403_FORBIDDEN
@@ -640,7 +640,7 @@ class TestGetActiveServiceForIssuer:
         mock_service = mocker.AsyncMock()
         mock_service.active = False
         mock_service.id = service_id
-        mocker.patch('app.auth.LegacyServiceDao.get_service', return_value=mock_service)
+        mocker.patch('app.auth.LegacyServiceDao.get', return_value=mock_service, new_callable=AsyncMock)
         with pytest.raises(HTTPException) as exc_info:
             await get_active_service_for_issuer(str(service_id))
         assert exc_info.value.status_code == status.HTTP_403_FORBIDDEN

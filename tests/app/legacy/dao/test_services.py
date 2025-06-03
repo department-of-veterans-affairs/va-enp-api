@@ -37,7 +37,7 @@ class TestLegacyServiceDao:
         Asserts:
             - The retrieved service ID matches the inserted service ID.
         """
-        service = await LegacyServiceDao.get_service(prepared_service.id)
+        service = await LegacyServiceDao.get(prepared_service.id)
 
         for column in prepared_service._mapping.keys():
             expected = prepared_service._mapping[column]
@@ -47,7 +47,7 @@ class TestLegacyServiceDao:
     async def test_get_service_raises_if_not_found(self) -> None:
         """Should raise NoResultFound when service does not exist in DB."""
         with pytest.raises(NonRetryableError):
-            await LegacyServiceDao.get_service(uuid4())
+            await LegacyServiceDao.get(uuid4())
 
     @pytest.mark.parametrize(
         ('raised_exception', 'expected_error'),
@@ -76,4 +76,4 @@ class TestLegacyServiceDao:
             mock_session_ctx.return_value.__aenter__.return_value = mock_session
 
             with pytest.raises(expected_error):
-                await LegacyServiceDao.get_service(service_id)
+                await LegacyServiceDao._get(service_id)

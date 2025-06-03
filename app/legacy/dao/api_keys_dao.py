@@ -5,7 +5,6 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import Any, Sequence
 
-from async_lru import alru_cache
 from loguru import logger
 from pydantic import UUID4
 from sqlalchemy import Row, select
@@ -17,21 +16,16 @@ from sqlalchemy.exc import (
     TimeoutError,
 )
 
-from app.constants import FIVE_MINUTES
 from app.db.db_init import get_read_session_with_context, metadata_legacy
 from app.exceptions import NonRetryableError, RetryableError
 from app.legacy.dao.utils import db_retry
 
 
 class LegacyApiKeysDao:
-    """Data access object for interacting with API keys in the legacy database schema.
-
-    Methods:
-        get_api_keys(service_id): Retrieve all API keys associated with a given service ID.
-    """
+    """Data access object for interacting with API keys in the legacy database schema."""
 
     @staticmethod
-    async def get_api_keys(service_id: UUID4) -> Sequence[Row[Any]]:
+    async def get_service_api_keys(service_id: UUID4) -> Sequence[Row[Any]]:
         """Retrieve all API keys associated with the given service ID.
 
         Args:
@@ -42,11 +36,36 @@ class LegacyApiKeysDao:
             associated with the specified service.
 
         Raises:
-            RetryableError: If the failure is likely transient (e.g., connection error).
             NonRetryableError: If the failure is deterministic (e.g., bad input).
         """
         try:
-            return await _get_api_keys_for_service(service_id)
+            return await LegacyApiKeysDao._get_api_keys_for_service(service_id)
+        except (RetryableError, NonRetryableError) as e:
+            # Exceeded retries or was never retryable. Downstream methods logged this
+            raise NonRetryableError from e
+
+    @db_retry
+    @staticmethod
+    async def _get_api_keys_for_service(service_id: UUID4) -> Sequence[Row[Any]]:
+        """Retryable and cached function to get a ApiKey row.
+
+        Args:
+            service_id (UUID4): The service id to get keys for
+
+        Raises:
+            NonRetryableError: If this is not retryable
+            RetryableError: If this is retryable
+
+        Returns:
+            Sequence[Row[Any]]: Iterable of Service rows
+        """
+        legacy_api_keys = metadata_legacy.tables['api_keys']
+        try:
+            stmt = select(legacy_api_keys).where(legacy_api_keys.c.service_id == service_id)
+            async with get_read_session_with_context() as session:
+                result = await session.execute(stmt)
+            return result.fetchall()
+
         except DataError as e:
             # Deterministic and will likely fail again
             logger.exception(
@@ -63,26 +82,6 @@ class LegacyApiKeysDao:
         except SQLAlchemyError as e:
             logger.exception('Uexpected SQLAlchemy error during service API keys lookup for service_id: {}', service_id)
             raise NonRetryableError('Uexpected SQLAlchemy error during service API keys lookup.') from e
-
-
-@db_retry
-@alru_cache(maxsize=1024, ttl=FIVE_MINUTES)
-async def _get_api_keys_for_service(service_id: UUID4) -> Sequence[Row[Any]]:
-    """Retryable and cached function to get a ApiKey row.
-
-    Args:
-        service_id (UUID4): The api key UUID
-
-    Returns:
-        Row[Any]: A ApiKey row
-    """
-    legacy_api_keys = metadata_legacy.tables['api_keys']
-    stmt = select(legacy_api_keys).where(legacy_api_keys.c.service_id == service_id)
-
-    async with get_read_session_with_context() as session:
-        result = await session.execute(stmt)
-
-    return result.fetchall()
 
 
 @dataclass
