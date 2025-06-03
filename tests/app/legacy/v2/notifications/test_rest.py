@@ -9,6 +9,7 @@ import pytest
 from fastapi import BackgroundTasks, status
 from fastapi.encoders import jsonable_encoder
 from sqlalchemy import Row
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth import ACCESS_TOKEN_EXPIRE_SECONDS, JWTPayloadDict
 from app.constants import IdentifierType, MobileAppType
@@ -106,15 +107,15 @@ class TestNotificationRouter:
         self,
         client: ENPTestClient,
         route: str,
+        sample_template: Callable[..., Awaitable[Row[Any]]],
+        test_db_session: AsyncSession,
     ) -> None:
-        """Test route can return 201.
+        """Test route can return 201."""
+        template = await sample_template(session=test_db_session)
+        await test_db_session.commit()
 
-        Args:
-            client (ENPTestClient): Custom FastAPI client fixture
-            route (str): Route to test
-
-        """
-        template_id = uuid4()
+        template_id = template.id
+        service_id = template.service_id
         sms_sender_id = uuid4()
 
         request = V2PostSmsRequestModel(
@@ -122,6 +123,7 @@ class TestNotificationRouter:
             template_id=template_id,
             phone_number=ValidatedPhoneNumber('+18005550101'),
             sms_sender_id=sms_sender_id,
+            service_id=service_id,
         )
         payload = jsonable_encoder(request)
         with patch('app.legacy.v2.notifications.rest.validate_template', return_value=None):
