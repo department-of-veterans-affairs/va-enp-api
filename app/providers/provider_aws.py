@@ -150,8 +150,8 @@ def _handle_sns_exceptions(e: Exception, fail_message: str) -> None:
         fail_message (str): The message to log when the exception is caught
 
     Raises:
-        RetryableError: Exception that can be retried
-        NonRetryableError: Don't retry the request
+        RetryableError: If the error is retryable
+        NonRetryableError: If the error is non-retryable
 
     """
     if isinstance(e, botocore.exceptions.ClientError):

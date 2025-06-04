@@ -51,13 +51,13 @@ class TestLegacyApiKeysDao:
         """Test that API keys can be retrieved by service ID.
 
         Given a committed API key associated with a sample service (via the prepared_api_key fixture),
-        this test verifies that LegacyApiKeysDao.get_api_keys correctly returns the expected key.
+        this test verifies that LegacyApiKeysDao.get_service_api_keys correctly returns the expected key.
 
         Asserts:
             - Exactly one API key is returned for the service
             - The returned key's ID and name match the inserted key
         """
-        keys = await LegacyApiKeysDao.get_api_keys(prepared_api_key.service_id)
+        keys = await LegacyApiKeysDao.get_service_api_keys(prepared_api_key.service_id)
 
         assert len(keys) == 1, 'prepared service should only have one api key'
 
@@ -70,7 +70,7 @@ class TestLegacyApiKeysDao:
 
     async def test_get_api_keys_should_return_empty_list(self) -> None:
         """API keys should not exist for non-existant service."""
-        keys = await LegacyApiKeysDao.get_api_keys(uuid4())
+        keys = await LegacyApiKeysDao.get_service_api_keys(uuid4())
 
         assert len(keys) == 0, 'keys should not exist'
 
@@ -99,7 +99,7 @@ class TestLegacyApiKeysDao:
             mock_session_ctx.return_value.__aenter__.return_value = mock_session
 
             with pytest.raises(expected_error):
-                await LegacyApiKeysDao.get_api_keys(service_id)
+                await LegacyApiKeysDao._get_api_keys_for_service(service_id)
 
 
 class TestApiKeyRecord:

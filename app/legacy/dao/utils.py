@@ -1,7 +1,5 @@
 """Legacy dao utility helpers."""
 
-import functools
-
 from tenacity import retry, retry_if_exception_type, stop_after_attempt
 
 from app.exceptions import RetryableError
@@ -11,8 +9,7 @@ _MAX_DB_RETRIES = 3  # Arbitrary
 
 
 # Database retry parameters
-db_retry = functools.partial(
-    retry,
+db_retry = retry(
     before_sleep=log_on_retry,
     reraise=True,
     retry_error_callback=log_last_attempt_on_failure,

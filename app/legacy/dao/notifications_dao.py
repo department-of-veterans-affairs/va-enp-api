@@ -3,7 +3,6 @@
 from datetime import datetime
 from typing import Any
 
-from loguru import logger
 from pydantic import UUID4
 from sqlalchemy import Row, delete, select
 from sqlalchemy.dialects.postgresql import insert
@@ -20,6 +19,7 @@ from app.constants import NotificationStatus, NotificationType
 from app.db.db_init import get_read_session_with_context, get_write_session_with_context, metadata_legacy
 from app.exceptions import NonRetryableError, RetryableError
 from app.legacy.dao.utils import db_retry
+from app.logging.logging_config import logger
 
 
 class LegacyNotificationDao:
@@ -30,7 +30,7 @@ class LegacyNotificationDao:
     """
 
     @staticmethod
-    async def get_notification(id: UUID4) -> Row[Any]:
+    async def get(id: UUID4) -> Row[Any]:
         """Get a Notification from the legacy database.
 
         Args:
@@ -43,11 +43,10 @@ class LegacyNotificationDao:
             Row[Any]: notification table row
         """
         try:
-            row: Row[Any] = await LegacyNotificationDao._get(id)
+            return await LegacyNotificationDao._get(id)
         except (RetryableError, NonRetryableError) as e:
             # Exceeded retries or was never retryable. Downstream methods logged this
             raise NonRetryableError from e
-        return row
 
     @db_retry
     @staticmethod
@@ -80,6 +79,7 @@ class LegacyNotificationDao:
         reply_to_text: str,
         service_id: UUID4,
         api_key_id: UUID4,
+        reference: str | None,
         template_id: UUID4,
         template_version: int,
         billable_units: int = 0,
@@ -94,6 +94,7 @@ class LegacyNotificationDao:
             reply_to_text (str): Origination phone, email, etc.
             service_id (UUID4): The service id
             api_key_id (UUID4): The api key id
+            reference (str | None): Client provided reference
             template_id (UUID4): The template id
             template_version (int): The template version
             billable_units (int, optional): How many billable units this is. Defaults to 0.
@@ -117,6 +118,7 @@ class LegacyNotificationDao:
         reply_to_text: str,
         service_id: UUID4,
         api_key_id: UUID4,
+        reference: str | None,
         template_id: UUID4,
         template_version: int,
         billable_units: int,
@@ -132,6 +134,7 @@ class LegacyNotificationDao:
                     reply_to_text=reply_to_text,
                     service_id=service_id,
                     api_key_id=api_key_id,
+                    reference=reference,
                     template_id=template_id,
                     template_version=template_version,
                     billable_units=billable_units,

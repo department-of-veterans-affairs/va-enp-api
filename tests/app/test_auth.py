@@ -66,11 +66,14 @@ class TestVerifyServiceToken:
             mock_context (AsyncMock): Mocked starlette context
             mocker (AsyncMock): Mock object
         """
-        mock_service = mocker.patch('app.auth.get_active_service_for_issuer')
+        # new_callable=AsyncMock to avoid the cache
+        mock_service = mocker.patch(
+            'app.auth.get_active_service_for_issuer', new_callable=AsyncMock, return_value=(uuid4(), 'service_name')
+        )
         mock_service.id = uuid4()
         mock_service.name = 'Mock Name'
         mock_api_key = mocker.patch.object(ApiKeyRecord, 'from_row')
-        mocker.patch('app.auth._get_service_api_keys', return_value=[mock_api_key])
+        mocker.patch('app.auth._get_service_api_keys', new_callable=AsyncMock, return_value=[mock_api_key])
         mocker.patch('app.auth._verify_service_token', return_value=True)
         mocker.patch('app.auth._validate_service_api_key')
 
@@ -104,12 +107,12 @@ class TestVerifyServiceToken:
             mock_context (AsyncMock): Mocked starlette context
             mocker (AsyncMock): Mock object
         """
-        # _verify_service_token never finds a key
-        mock_service = mocker.patch('app.auth.get_active_service_for_issuer')
-        mock_service.id = uuid4()
-        mock_service.name = 'Mock Name'
+        # new_callable=AsyncMock to avoid the cache
+        mock_service = mocker.patch(
+            'app.auth.get_active_service_for_issuer', new_callable=AsyncMock, return_value=(uuid4(), str(uuid4()))
+        )
         mock_api_key = mocker.patch.object(ApiKeyRecord, 'from_row')
-        mocker.patch('app.auth._get_service_api_keys', return_value=[mock_api_key])
+        mocker.patch('app.auth._get_service_api_keys', new_callable=AsyncMock, return_value=[mock_api_key])
 
         with pytest.raises(HTTPException) as exc_info:
             await verify_service_token(str(mock_service.id), 'Fake token')
@@ -146,8 +149,8 @@ class TestGetServiceApiKeys:
         Args:
             mocker (AsyncMock): Mock object
         """
-        mocker.patch('app.auth.LegacyApiKeysDao.get_api_keys')
-        await _get_service_api_keys(uuid4(), uuid4())
+        mocker.patch('app.auth.LegacyApiKeysDao.get_service_api_keys', new_callable=AsyncMock)
+        await _get_service_api_keys(uuid4())
 
     @pytest.mark.parametrize('test_exception', [RetryableError, NonRetryableError])
     async def test_no_api_keys(self, test_exception: Exception, mocker: AsyncMock) -> None:
@@ -157,9 +160,9 @@ class TestGetServiceApiKeys:
             test_exception (Exception): Exception to raise
             mocker (AsyncMock): Mock object
         """
-        mocker.patch('app.auth.LegacyApiKeysDao.get_api_keys', side_effect=test_exception)
+        mocker.patch('app.auth.LegacyApiKeysDao.get_service_api_keys', side_effect=test_exception)
         with pytest.raises(HTTPException) as exc_info:
-            await _get_service_api_keys(uuid4(), uuid4())
+            await _get_service_api_keys(uuid4())
         assert exc_info.value.status_code == status.HTTP_403_FORBIDDEN
         assert exc_info.value.detail == RESPONSE_LEGACY_INVALID_TOKEN_NO_KEYS
 
@@ -606,11 +609,11 @@ class TestGetActiveServiceForIssuer:
             mocker (AsyncMock): Mock object
         """
         service_id = uuid4()
-        mock_service = mocker.patch('app.auth.LegacyServiceDao.get_service')
+        mock_service = mocker.patch('app.auth.LegacyServiceDao.get', new_callable=AsyncMock)
         mock_service.active = True
         mock_service.id = service_id
 
-        await get_active_service_for_issuer(str(service_id), uuid4())
+        await get_active_service_for_issuer(str(service_id))
 
     @pytest.mark.parametrize('test_exception', [RetryableError, NonRetryableError])
     async def test_service_lookup_failure(self, test_exception: Exception, mocker: AsyncMock) -> None:
@@ -621,9 +624,9 @@ class TestGetActiveServiceForIssuer:
             mocker (AsyncMock): Mock object
         """
         service_id = uuid4()
-        mocker.patch('app.auth.LegacyServiceDao.get_service', side_effect=test_exception)
+        mocker.patch('app.auth.LegacyServiceDao.get', side_effect=test_exception)
         with pytest.raises(HTTPException) as exc_info:
-            await get_active_service_for_issuer(str(service_id), uuid4())
+            await get_active_service_for_issuer(str(service_id))
         assert exc_info.value.status_code == status.HTTP_403_FORBIDDEN
         assert exc_info.value.detail == RESPONSE_LEGACY_INVALID_TOKEN_NO_SERVICE
 
@@ -637,15 +640,15 @@ class TestGetActiveServiceForIssuer:
         mock_service = mocker.AsyncMock()
         mock_service.active = False
         mock_service.id = service_id
-        mocker.patch('app.auth.LegacyServiceDao.get_service', return_value=mock_service)
+        mocker.patch('app.auth.LegacyServiceDao.get', return_value=mock_service, new_callable=AsyncMock)
         with pytest.raises(HTTPException) as exc_info:
-            await get_active_service_for_issuer(str(service_id), uuid4())
+            await get_active_service_for_issuer(str(service_id))
         assert exc_info.value.status_code == status.HTTP_403_FORBIDDEN
         assert exc_info.value.detail == RESPONSE_LEGACY_INVALID_TOKEN_ARCHIVED_SERVICE
 
     async def test_invalid_uuid_for_issuer(self) -> None:
         """Test for an invalid issuer."""
         with pytest.raises(HTTPException) as exc_info:
-            await get_active_service_for_issuer('not a uuid', uuid4())
+            await get_active_service_for_issuer('not a uuid')
         assert exc_info.value.status_code == status.HTTP_403_FORBIDDEN
         assert exc_info.value.detail == RESPONSE_LEGACY_INVALID_TOKEN_WRONG_TYPE

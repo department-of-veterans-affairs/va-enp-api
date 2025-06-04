@@ -3,7 +3,7 @@
 import time
 from datetime import datetime, timedelta, timezone
 from typing import Any, Awaitable, Callable, Type
-from unittest.mock import patch
+from unittest.mock import AsyncMock, patch
 from uuid import uuid4
 
 import jwt
@@ -152,21 +152,20 @@ class TestGetActiveServiceForIssuer:
     ) -> None:
         """Should return service Row[Any] if issuer valid and service found."""
         service = await sample_service()
-        request_id = uuid4()
 
-        with patch('app.auth.LegacyServiceDao.get_service', return_value=service):
-            service_by_issuer = await get_active_service_for_issuer(str(service.id), request_id)
+        with patch('app.auth.LegacyServiceDao.get', return_value=service, new_callable=AsyncMock):
+            service_id, service_name = await get_active_service_for_issuer(str(service.id))
 
         # just checking if returned service id matches
-        assert service_by_issuer.id == service.id
+        assert service_id == service.id
+        assert service_name == service.name
 
     async def test_raises_with_invalid_issuer(self) -> None:
         """Should raise 403 with correct detail if the issuer invalid."""
         issuer = 'invalid-uuid'
-        request_id = uuid4()
 
         with pytest.raises(HTTPException) as exc_info:
-            await get_active_service_for_issuer(issuer, request_id)
+            await get_active_service_for_issuer(issuer)
 
         exc = exc_info.value
         assert exc.status_code == status.HTTP_403_FORBIDDEN
@@ -186,11 +185,10 @@ class TestGetActiveServiceForIssuer:
     ) -> None:
         """Should raise 403 with correct detail if the service ID is invalid or not found."""
         issuer = str(uuid4())
-        request_id = uuid4()
 
-        with patch('app.auth.LegacyServiceDao.get_service', side_effect=raises):
+        with patch('app.auth.LegacyServiceDao.get', side_effect=raises):
             with pytest.raises(HTTPException) as exc_info:
-                await get_active_service_for_issuer(issuer, request_id)
+                await get_active_service_for_issuer(issuer)
 
         exc = exc_info.value
         assert exc.status_code == status.HTTP_403_FORBIDDEN
@@ -198,16 +196,16 @@ class TestGetActiveServiceForIssuer:
 
     async def test_raises_with_inactive_service(
         self,
+        mocker: AsyncMock,
         sample_service: Callable[..., Awaitable[Row[Any]]],
     ) -> None:
         """Should raise 403 if the service is archived (inactive)."""
         service = await sample_service(active=False)
         issuer = str(service.id)
-        request_id = uuid4()
 
-        with patch('app.auth.LegacyServiceDao.get_service', return_value=service):
-            with pytest.raises(HTTPException) as exc_info:
-                await get_active_service_for_issuer(issuer, request_id)
+        mocker.patch('app.auth.LegacyServiceDao.get', return_value=service, new_callable=AsyncMock)
+        with pytest.raises(HTTPException) as exc_info:
+            await get_active_service_for_issuer(issuer)
 
         exc = exc_info.value
         assert exc.status_code == status.HTTP_403_FORBIDDEN
@@ -261,9 +259,9 @@ class TestValidateServiceApiKey:
             _validate_service_api_key(api_key, str(api_key.service_id), service_name)
 
             mock_warning.assert_called_once_with(
-                'service {} - {} used old-style api key {} with no expiry_date',
-                str(api_key.service_id),
+                '({}) service {} - used old-style api key {} with no expiry_date',
                 service_name,
+                str(api_key.service_id),
                 api_key.id,
             )
 
@@ -277,9 +275,9 @@ class TestValidateServiceApiKey:
             _validate_service_api_key(api_key, str(api_key.service_id), service_name)
 
             mock_warning.assert_called_once_with(
-                'service {} - {} used expired api key {} expired as of {}',
-                str(api_key.service_id),
+                '({}) service {} - used expired api key {} expired as of {}',
                 service_name,
+                str(api_key.service_id),
                 api_key.id,
                 api_key.expiry_date,
             )
