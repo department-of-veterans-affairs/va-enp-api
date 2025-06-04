@@ -2,6 +2,7 @@
 
 from typing import Dict
 
+from app.clients.redis_client import RedisClientManager
 from app.providers.provider_aws import ProviderAWS
 from app.providers.provider_base import ProviderBase
 
@@ -14,6 +15,7 @@ class ENPState:
         # Route handlers should access this dictionary to send notifications using
         # various third-party services, such as AWS, Twilio, etc.
         self.providers: Dict[str, ProviderBase] = {'aws': ProviderAWS()}
+        self.redis_client_manager: RedisClientManager | None = None
 
     def clear_providers(self) -> None:
         """Clear the providers dictionary."""
