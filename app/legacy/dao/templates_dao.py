@@ -23,8 +23,46 @@ class LegacyTemplateDao:
     """A class to handle the data access for templates in the legacy database.
 
     Methods:
+        get_template_for_service: Get a Template from the legacy database for a specific service.
         get_template: Get a Template from the legacy database.
     """
+
+    # TODO 134 - Add caching here.
+    # 5 minutes TTL cache for templates
+    async def get_template_for_service(template_id: UUID4, service_id: UUID4) -> Row[Any]:
+        """Get a Template from the legacy database for a specific service.
+
+        Args:
+            template_id (UUID4): The unique identifier of the template.
+            service_id (UUID4): The unique identifier of the service.
+
+        Returns:
+            Row[Any]: A SQLAlchemy Core Row object containing the template data.
+
+        Raises:
+            RetryableError: If the failure is likely transient (e.g., connection error).
+            NonRetryableError: If the failure is deterministic (e.g., not found, bad input).
+        """
+        legacy_templates = metadata_legacy.tables['templates']
+
+        stmt = select(legacy_templates).where(
+            legacy_templates.c.id == template_id,
+            legacy_templates.c.service_id == service_id,
+        )
+
+        try:
+            async with get_read_session_with_context() as session:
+                result = await session.execute(stmt)
+
+            return result.one()
+
+        except (NoResultFound, MultipleResultsFound, DataError) as e:
+            # These are deterministic and will likely fail again
+            logger.exception('Template lookup failed: invalid or unexpected data for template_id: {}', template_id)
+            raise NonRetryableError(log_msg='Template lookup failed: invalid or unexpected data.') from e
+
+        except (OperationalError, InterfaceError, TimeoutError):
+            pass
 
     @staticmethod
     async def get_template(template_id: UUID4) -> Row[Any]:

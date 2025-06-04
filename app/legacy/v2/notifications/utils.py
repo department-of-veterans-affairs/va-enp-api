@@ -93,6 +93,7 @@ async def validate_push_template(template_id: UUID4) -> None:
 
 
 # TODO 134 - Cache not working as expected with async
+# Move to DAO Method ?
 @cached(cache=TTLCache(maxsize=1024, ttl=600))
 async def get_template_cache(template_id: UUID4) -> LegacyTemplateDao:
     """Retrieve a template from the database with caching.
@@ -139,6 +140,8 @@ async def validate_template(
     try:
         _validate_template_type(template.template_type, expected_type, template_id)
         _validate_template_active(template.archived, template_id)
+
+        # TODO 134 - Get rid of this method in favor of get_template_by_service_id
         _validate_template_service(template.service_id, service_id, template_id)
     except NonRetryableError:
         raise

@@ -134,10 +134,12 @@ class TestNotificationRouter:
     @pytest.mark.parametrize('route', routes)
     async def test_happy_path_service_auth(
         self,
+        sample_template: Callable[..., Awaitable[Row[Any]]],
         sample_api_key: Callable[..., Awaitable[Row[Any]]],
         sample_service: Callable[..., Awaitable[Row[Any]]],
         client_factory: Callable[[str], ENPTestClient],
         route: str,
+        test_db_session: AsyncSession,
     ) -> None:
         """Should return 201 when request is authenticated with a valid service token.
 
@@ -147,7 +149,18 @@ class TestNotificationRouter:
             client_factory (Callable): Factory to create an ENPTestClient with a token.
             route (str): Route to test.
         """
-        template_id = uuid4()
+        # TODO 134 - mock for TemplateDao.get_template_for_service == sample_template
+        # use prepare_database from main as needed for a final test. See TestSmsPostHandler  contains the prepare_database fixture.
+        # use prepare_database for end to end tests
+        service = await sample_service(session=test_db_session)
+        test_db_session.commit()
+
+        template = await sample_template(session=test_db_session, service_id=service.id)
+        test_db_session.commit()
+
+        template_id = template.id
+        service = template.service
+        service_id = template.service_id
         sms_sender_id = uuid4()
 
         request = V2PostSmsRequestModel(
@@ -155,10 +168,9 @@ class TestNotificationRouter:
             template_id=template_id,
             phone_number=ValidatedPhoneNumber('+18005550101'),
             sms_sender_id=sms_sender_id,
+            service_id=service_id,
         )
         request_payload = jsonable_encoder(request)
-
-        service = await sample_service()
 
         secret = 'not_so_secret'
         encrypted_secret = encode_and_sign(secret)
