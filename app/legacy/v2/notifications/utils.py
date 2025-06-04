@@ -106,8 +106,8 @@ async def validate_push_template(template_id: UUID4) -> None:
 
 async def validate_template(
     template_id: UUID4,
+    service_id: UUID4,
     expected_type: NotificationType,
-    personalisation: dict[str, str | int | float | list[str | int | float] | PersonalisationFileObject] | None,
 ) -> Row[Any]:
     """Validates the template with the given ID.
 
@@ -116,15 +116,14 @@ async def validate_template(
 
     Args:
         template_id (UUID4): The template_id to validate
+        service_id (UUID4): The service_id to validate
         expected_type (NotificationType): The expected type of the template
-        personalisation (dict[str, str | int | float | list[str | int | float] | PersonalisationFileObject] | None):
-            The personalisation data to validate
 
     Returns:
         Row[Any]: A template row
     """
     try:
-        template = await LegacyTemplateDao.get(template_id)
+        template = await LegacyTemplateDao.get_by_id_and_service_id(template_id, service_id)
     except NoResultFound:
         logger.exception('Template not found with ID {}', template_id)
         raise_request_validation_error('Template not found')
@@ -132,7 +131,6 @@ async def validate_template(
     try:
         _validate_template_type(template.template_type, expected_type, template_id)
         _validate_template_active(template.archived, template_id)
-        _validate_template_personalisation(template.content, personalisation, template_id)
     except ValueError as e:
         raise_request_validation_error(str(e))
     return template
@@ -212,23 +210,25 @@ def _validate_template_active(archived: bool, template_id: UUID4) -> None:
         raise ValueError('Template is not active')
 
 
-def _validate_template_personalisation(
-    template_content: str,
-    personalisation: dict[str, str | int | float | list[str | int | float] | PersonalisationFileObject] | None,
+async def validate_template_personalisation(
     template_id: UUID4,
+    service_id: UUID4,
+    personalisation: dict[str, str | int | float | list[str | int | float] | PersonalisationFileObject] | None,
 ) -> None:
     """Validates the personalisation data against the template.
 
     Args:
-        template_content (str): The template to validate against
-        personalisation (dict[str, str | int | float | list[str | int | float] | PersonalisationFileObject] | None): The personalisation data to validate
         template_id (UUID4): The ID of the template
+        service_id (UUID4): The ID of the service
+        personalisation (dict[str, str | int | float | list[str | int | float] | PersonalisationFileObject] | None): The personalisation data to validate
 
     Raises:
-        ValueError: If there are missing personalisation fields required by the template.
+        NonRetryableError: If there are missing personalisation fields required by the template.
 
     """
-    template_personalisation_fields = _collect_personalisation_from_template(template_content)
+    template = await LegacyTemplateDao.get_by_id_and_service_id(template_id, service_id)
+
+    template_personalisation_fields = _collect_personalisation_from_template(template.content)
     incoming_personalisation_fields = set(personalisation.keys() if personalisation else [])
 
     # the current implementation is case-insensitive, so all fields are converted to lowercase
@@ -242,7 +242,7 @@ def _validate_template_personalisation(
             template_id,
             missing_fields,
         )
-        raise ValueError(f'Missing personalisation: {", ".join(missing_fields)}')
+        raise NonRetryableError(log_msg=f'Missing personalisation: {", ".join(missing_fields)}')
 
 
 def _collect_personalisation_from_template(template_content: str) -> set[str]:
