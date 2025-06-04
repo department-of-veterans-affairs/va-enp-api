@@ -3,6 +3,8 @@
 import re
 from typing import Annotated, Any, ClassVar, Collection, Literal
 
+from async_lru import alru_cache
+from fastapi import HTTPException, status
 from phonenumbers import PhoneNumber
 from pydantic import (
     UUID4,
@@ -18,11 +20,15 @@ from pydantic import (
 )
 from pydantic_core import PydanticCustomError, core_schema
 from pydantic_extra_types.phone_numbers import PhoneNumberValidator
+from starlette_context import context
 from typing_extensions import Self
 
-from app.constants import IdentifierType, MobileAppType, NotificationType
+from app.constants import FIVE_MINUTES, IdentifierType, MobileAppType, NotificationType
+from app.exceptions import NonRetryableError
+from app.legacy.dao.service_sms_sender_dao import LegacyServiceSmsSenderDao
 from app.legacy.dao.templates_dao import LegacyTemplateDao
 from app.legacy.v2.notifications.validators import is_valid_recipient_id_value
+from app.logging.logging_config import logger
 
 
 class StrictBaseModel(BaseModel):
@@ -282,7 +288,7 @@ class V2PostEmailRequestModel(V2PostNotificationRequestModel):
         Returns:
             str: The reply to string
         """
-        return str((await LegacyTemplateDao.get_template(self.template_id)).reply_to_text)
+        return str((await LegacyTemplateDao.get(self.template_id)).reply_to_text)
 
     def get_direct_contact_info(self) -> str | None:
         """Get the direct contact info from the request.
@@ -364,11 +370,22 @@ class V2PostSmsRequestModel(V2PostNotificationRequestModel):
     async def get_reply_to_text(self) -> str:
         """Get the reply_to_text field for this request.
 
+        Raises:
+            HTTPException: Return that this was a bad request
+
         Returns:
             str: The reply to string
         """
-        # TODO: #272 - Comes from sms_sender_id in the request or the Service. service_sms_sender.sender
-        return ''
+        sender: str
+        try:
+            sender = await _get_sms_sender(self.sms_sender_id, context['service_id'])
+        except NonRetryableError:
+            logger.info('Unable to find ServiceSmsSender')
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f'sms_sender_id {self.sms_sender_id} does not exist in database for service id {context["service_id"]}',
+            )
+        return sender
 
     def get_direct_contact_info(self) -> str | None:
         """Get the direct contact info from the request.
@@ -385,6 +402,27 @@ class V2PostSmsRequestModel(V2PostNotificationRequestModel):
             NotificationType: The channel for this type of request
         """
         return NotificationType.SMS
+
+
+@alru_cache(maxsize=1024, ttl=FIVE_MINUTES)
+async def _get_sms_sender(sms_sender_id: UUID4 | None, service_id: UUID4) -> str:
+    """Get the sms_sender of a ServiceSmsSender.
+
+        Moved outside the class due to caching issues.
+
+    Args:
+        sms_sender_id (UUID4 | None): The id to check if it is there
+        service_id (UUID4): The fallback id
+
+    Returns:
+        str: A string representing a PhoneNumber, PoolId, etc.
+    """
+    sender: str
+    if sms_sender_id is not None:
+        sender = (await LegacyServiceSmsSenderDao.get(sms_sender_id)).sms_sender
+    else:
+        sender = (await LegacyServiceSmsSenderDao.get_service_default(service_id)).sms_sender
+    return sender
 
 
 ##################################################

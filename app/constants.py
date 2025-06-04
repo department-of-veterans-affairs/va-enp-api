@@ -13,10 +13,9 @@ AWS_REGION = os.getenv('AWS_REGION', 'us-east-1')
 # Defaulting to 3 so local testing doesn't take too long.
 MAX_RETRIES = int(os.getenv('MAX_RETRIES', 3))
 
-RESPONSE_400 = 'Bad request'
-RESPONSE_403 = 'Not authenticated'
-RESPONSE_404 = 'Not found'
-RESPONSE_500 = 'Server error'
+# Time calculations
+FIVE_MINUTES = 5 * 60
+TWELVE_HOURS = 12 * 60 * 60
 
 
 class AttachmentType(StrEnum):
@@ -86,3 +85,9 @@ RESPONSE_LEGACY_INVALID_TOKEN_NO_KEYS = 'Invalid token: service has no API keys'
 RESPONSE_LEGACY_INVALID_TOKEN_REVOKED = 'Invalid token: API key revoked'  # nosec
 RESPONSE_LEGACY_ERROR_SYSTEM_CLOCK = 'Error: Your system clock must be accurate to within 30 seconds'
 RESPONSE_LEGACY_NO_CREDENTIALS = 'Unauthorized, authentication token must be provided'
+
+# ENP responses
+RESPONSE_400 = 'Bad request'
+RESPONSE_403 = 'Not authenticated'
+RESPONSE_404 = 'Not found'
+RESPONSE_500 = 'Server error'

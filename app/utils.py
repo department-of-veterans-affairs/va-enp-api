@@ -1,7 +1,8 @@
 """Utils for logging retry information."""
 
-from loguru import logger
 from tenacity import RetryCallState
+
+from app.logging.logging_config import logger
 
 
 def log_on_retry(retry_state: RetryCallState) -> None:

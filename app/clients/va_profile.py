@@ -3,9 +3,8 @@
 - register_device_with_vaprofile: Register a device with VA Profile.
 """
 
-from loguru import logger
-
 from app.constants import MobileAppType, OSPlatformType
+from app.logging.logging_config import logger
 
 
 def register_device_with_vaprofile(

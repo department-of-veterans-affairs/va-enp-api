@@ -14,6 +14,7 @@ from sqlalchemy import Row, delete
 from app.constants import IdentifierType, MobileAppType
 from app.db.db_init import get_write_session_with_context, metadata_legacy
 from app.legacy.dao.notifications_dao import LegacyNotificationDao
+from app.legacy.dao.service_sms_sender_dao import LegacyServiceSmsSenderDao
 from app.legacy.v2.notifications.resolvers import (
     DirectSmsTaskResolver,
     IdentifierSmsTaskResolver,
@@ -22,7 +23,6 @@ from app.legacy.v2.notifications.rest import _sms_post
 from app.legacy.v2.notifications.route_schema import (
     PersonalisationFileObject,
     RecipientIdentifierModel,
-    V2PostNotificationRequestModel,
     V2PostPushRequestModel,
     V2PostPushResponseModel,
     V2PostSmsRequestModel,
@@ -112,6 +112,7 @@ class TestSmsPostHandler:
         self,
         sample_api_key: Callable[..., Awaitable[Row[Any]]],
         sample_service: Callable[..., Awaitable[Row[Any]]],
+        sample_service_sms_sender: Callable[..., Awaitable[Row[Any]]],
         sample_template: Callable[..., Awaitable[Row[Any]]],
         sample_user: Callable[..., Awaitable[Row[Any]]],
     ) -> AsyncGenerator[Callable[[], Coroutine[Any, Any, dict[str, Row[Any]]]], None]:
@@ -120,6 +121,7 @@ class TestSmsPostHandler:
         Args:
             sample_api_key (Callable[..., Awaitable[Row[Any]]]): ApiKey
             sample_service (Callable[..., Awaitable[Row[Any]]]): Service
+            sample_service_sms_sender (Callable[..., Awaitable[Row[Any]]]): ServiceSmsSender
             sample_template (Callable[..., Awaitable[Row[Any]]]): Template
             sample_user (Callable[..., Awaitable[Row[Any]]]): User
 
@@ -133,6 +135,8 @@ class TestSmsPostHandler:
             async with get_write_session_with_context() as session:
                 user = await sample_user(session)
                 service = await sample_service(session, created_by_id=user.id)
+                await sample_service_sms_sender(service.id, session, is_default=True)  # Service default, bury it
+                service_sms_sender = await sample_service_sms_sender(service.id, session, is_default=False)
                 template = await sample_template(session, service_id=service.id, created_by_id=user.id)
                 api_key = await sample_api_key(session, service_id=service.id)
                 await session.commit()
@@ -140,18 +144,30 @@ class TestSmsPostHandler:
             ids['service'] = service.id
             ids['template'] = template.id
             ids['api_key'] = api_key.id
-            return {'user': user, 'service': service, 'template': template, 'api_key': api_key}
+            return {
+                'user': user,
+                'service': service,
+                'template': template,
+                'api_key': api_key,
+                'service_sms_sender': service_sms_sender,
+            }
 
         yield _wrapper
 
         # Teardown
         legacy_api_keys = metadata_legacy.tables['api_keys']
         legacy_services = metadata_legacy.tables['services']
+        legacy_service_sms_senders = metadata_legacy.tables['service_sms_senders']
         legacy_templates = metadata_legacy.tables['templates']
         legacy_templates_hist = metadata_legacy.tables['templates_history']
         legacy_users = metadata_legacy.tables['users']
 
         async with get_write_session_with_context() as session:
+            # delete both service_sms_sender entries - Uses the service_id to delete instead of it's id
+            sender_delete_stmt = delete(legacy_service_sms_senders).where(
+                legacy_service_sms_senders.c.service_id == ids['service']
+            )
+            await session.execute(sender_delete_stmt)
             # delete the template history
             th_delete_stmt = delete(legacy_templates_hist).where(legacy_templates_hist.c.id == ids['template'])
             await session.execute(th_delete_stmt)
@@ -224,24 +240,23 @@ class TestSmsPostHandler:
             | None = None,
         ) -> dict[str, object]:
             # Default to the simplest. Template requires personalization
-            request_data: V2PostSmsRequestModel | V2PostNotificationRequestModel
+            request_data: V2PostSmsRequestModel
             if phone_number:
                 request_data = V2PostSmsRequestModel(
                     phone_number=ValidatedPhoneNumber(phone_number),
                     template_id=template_id,
-                    personalisation=personalization or {'verify_code': '12345'},
+                    personalisation=personalization,
                 )
             else:
-                request_data = V2PostNotificationRequestModel(
+                request_data = V2PostSmsRequestModel(
                     recipient_identifier=recipient_identifier,
                     template_id=template_id,
-                    personalisation=personalization or {'verify_code': '12345'},
+                    personalisation=personalization,
                 )
             if reference is not None:
                 request_data.reference = reference
-            # TODO: 272 - Add sms_sender_id here
-            # if sms_sender_id is not None:
-            #     request_data.sms_sender_id = sms_sender_id
+            if sms_sender_id is not None:
+                request_data.sms_sender_id = sms_sender_id
             data: dict[str, object] = jsonable_encoder(request_data)
             return data
 
@@ -305,6 +320,57 @@ class TestSmsPostHandler:
             assert response.status_code == status.HTTP_201_CREATED
             resp_json = response.json()
             assert resp_json['reference'] == reference if reference is not None else 'null'
+        finally:
+            await LegacyNotificationDao.delete_notification(resp_json['id'])
+
+    async def test_sms_sender_id_in_request(
+        self,
+        mock_background_task: AsyncMock,
+        client: ENPTestClient,
+        prepare_database: Callable[[], Coroutine[Any, Any, dict[str, Row[Any]]]],
+        path_request: Callable[..., dict[str, object]],
+        build_headers: Callable[[UUID, UUID], dict[str, str]],
+    ) -> None:
+        """Test sms notification route returns 201 with valid template."""
+        db_data = await prepare_database()
+        request = path_request(
+            template_id=db_data['template'].id,
+            phone_number='+18005550101',
+            sms_sender_id=db_data['service_sms_sender'].id,
+        )
+        headers = build_headers(db_data['api_key'].id, db_data['service'].id)
+        try:
+            response = client.post(self.sms_route, json=request, headers=headers)
+            resp_json = response.json()
+            assert response.status_code == status.HTTP_201_CREATED
+
+            # Validate the passed-in sms_sender_id was used
+            notification = await LegacyNotificationDao.get(resp_json['id'])
+            assert notification.reply_to_text == db_data['service_sms_sender'].sms_sender
+        finally:
+            await LegacyNotificationDao.delete_notification(resp_json['id'])
+
+    async def test_sms_sender_id_default(
+        self,
+        mock_background_task: AsyncMock,
+        client: ENPTestClient,
+        prepare_database: Callable[[], Coroutine[Any, Any, dict[str, Row[Any]]]],
+        path_request: Callable[..., dict[str, object]],
+        build_headers: Callable[[UUID, UUID], dict[str, str]],
+    ) -> None:
+        """Test sms notification route returns 201 with valid template."""
+        db_data = await prepare_database()
+        request = path_request(template_id=db_data['template'].id, phone_number='+18005550101')
+        headers = build_headers(db_data['api_key'].id, db_data['service'].id)
+        try:
+            response = client.post(self.sms_route, json=request, headers=headers)
+            resp_json = response.json()
+            assert response.status_code == status.HTTP_201_CREATED
+
+            # Validate the correct sms sender was used
+            notification = await LegacyNotificationDao.get(resp_json['id'])
+            service_sms_sender = await LegacyServiceSmsSenderDao.get_service_default(db_data['service'].id)
+            assert notification.reply_to_text == service_sms_sender.sms_sender
         finally:
             await LegacyNotificationDao.delete_notification(resp_json['id'])
 

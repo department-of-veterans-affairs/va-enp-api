@@ -2,11 +2,11 @@
 
 from abc import ABC
 
-from loguru import logger
 from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_full_jitter
 
 from app.constants import MAX_RETRIES
 from app.exceptions import NonRetryableError, RetryableError
+from app.logging.logging_config import logger
 from app.providers.provider_schemas import PushModel
 from app.utils import log_last_attempt_on_failure, log_on_retry
 
@@ -45,7 +45,7 @@ class ProviderBase(ABC):
             model (PushModel): the parameters to pass to SNS.Client.publish
 
         Raises:
-            NonRetryableError: Don't retry the request
+            NonRetryableError: If the error is non-retryable
 
         Returns:
             str: A reference identifier for the sent notification

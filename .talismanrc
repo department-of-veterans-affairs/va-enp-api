@@ -1,12 +1,13 @@
 fileignoreconfig:
 - filename: poetry.lock
-  checksum: 56213588f7fc12b5a2acde43e0582dcef4e29949e5db09552bb223d1d9399c4a
+  checksum: 14aaa474c1ad01deab49d8822a058d0057ea95349190211970fb1f03f038bd6a
+  ignore_detectors: []  # Ignore everything
 - filename: postman/enp-api.postman_collection.json
   checksum: a75beb668be832bdb38484e044987be0ace21a597fa1aa30ba837d3bfc94a0c7
 - filename: tests/app/legacy/dao/conftest.py
   checksum: c82f4eb2f484f6465fa50bb5bbbff6152c84fe4071e3724a0d91124049a2fad9
 - filename: app/legacy/dao/api_keys_dao.py
-  checksum: 173b55053300c426cb1cd313eb6e998c8adb7c1c8d2ca42ddd75bd6772a0140f
+  checksum: 9f11c845ba2a49530816867abfab4c12817db01f89f365e6a5641539e516216e
 - filename: tests/app/providers/__init__.py
   checksum: 0e3ae2fd3a50245a8c143d31c4316b164b51161d2db6e660aa956b78eda1b4d8
 - filename: tests/app/providers/test_provider_aws.py
@@ -18,7 +19,7 @@ fileignoreconfig:
 - filename: app/legacy/dao/api_key_dao.py
   checksum: 9eb496d3ae4238193baf5c5627d8d186beeda815133e9b4e1bc6e56ce57a3802
 - filename: tests/app/legacy/dao/test_api_keys.py
-  checksum: 30f8d4b5117cb785cb962d93cb89c056067184e8572f0550a7223dec9507fa5e
+  checksum: c08a73f7e31069462f1ed336e33485ee9ef4bdae9ff70d0691684df361777fc7
 - filename: tests/app/legacy/v2/notifications/test_auth.py
   checksum: 9a46795e0124515bc5960deee90d0a7531aaff989c39b4ecc93ab8c9f1969942
 - filename: .env.local
@@ -30,15 +31,17 @@ fileignoreconfig:
 - filename: app/legacy/dao/notifications_dao.py
   checksum: 5519ec1bf2a863cb8e5a7a4a225db4a4d0ce7f97ce49d6caf445e4a887c47aef
 - filename: app/auth.py
-  checksum: bd65417f924018a0417557fbc608769dbe9ae56312e7a2f7c96f82264bd2d818
+  checksum: fa5256f19e5afb2115af5dc6b2b69984eb1f16642a801daed4ba72298c5fe4a2
 - filename: tests/conftest.py
   checksum: c39c4b3e4777417f7b302794e869c272c2175d27dbc5236f85d4ecf9668dbe0d
 - filename: tests/napi_table_data.toml
   checksum: db0b29eb4c9c25867f0aa0fd4ae5bacceed1cea95c33602274bacf31f073aa0b
 - filename: tests/app/legacy/v2/notifications/test_rest.py
-  checksum: 1cb3438564a64fb4fca2873315b71863401cafb50e27163d590e1e06f2e29e0b
+  checksum: be7fe988e19ccd447cca130915c9a2052208297580573179a6da9aeca48f0352
 - filename: tests/app/test_auth.py
-  checksum: 8394b5cb4cac2d352bcc2d84988d81540a58dae7f3cbe22e881833d2eb1e9a75
+  checksum: 760334bef0bf6ebf446fee7f7aef7d902ad06f5e18b80816816d2b12c5035285
 - filename: tests/app/legacy/v2/notifications/test_utils.py
-  checksum: d8967b47122115e2c42335aad0325bc50785633ab1d89a6e52bd149baed653a3
+  checksum: c18b734f3d91923174ef8260a918b45eebdb872b7b656ac266b5a915f14ab31f
+- filename: app/legacy/v2/notifications/utils.py
+  checksum: 0fa791627c35746bebd1e338372c04b9b4e71e06fbedb4f8730b5c7e2bb5cae7
 version: "1.0"

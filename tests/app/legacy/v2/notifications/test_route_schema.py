@@ -3,13 +3,17 @@
 The tests cover Pydantic models that have custom validation.
 """
 
+from typing import Any, Awaitable, Callable
 from unittest.mock import AsyncMock
 from uuid import uuid4
 
 import pytest
+from fastapi import HTTPException, status
 from pydantic import ValidationError
+from sqlalchemy import Row
 
 from app.constants import IdentifierType, NotificationType
+from app.exceptions import NonRetryableError
 from app.legacy.v2.notifications.route_schema import (
     RecipientIdentifierModel,
     V2PostEmailRequestModel,
@@ -146,7 +150,9 @@ class TestV2PostEmailRequestModel:
             mocker (AsyncMock): Mock object
         """
         mocker.patch(
-            'app.legacy.v2.notifications.route_schema.LegacyTemplateDao.get_template', return_value=mocker.AsyncMock()
+            'app.legacy.v2.notifications.route_schema.LegacyTemplateDao.get',
+            return_value=mocker.AsyncMock(),
+            new_callable=AsyncMock,
         )
         model = V2PostEmailRequestModel(email_address='fake_email@va.gov', template_id=uuid4())
         assert isinstance(await model.get_reply_to_text(), str)
@@ -170,17 +176,73 @@ class TestV2PostSmsRequestModel:
         """Test V2PostSmsRequestModel instantiation works."""
         V2PostSmsRequestModel(phone_number='+18005550101', template_id=uuid4())
 
-    async def test_get_reply_to(self, mocker: AsyncMock) -> None:
-        """Test get_reply_to_tex returns a string.
+    async def test_get_reply_to_with_sender(
+        self,
+        sample_service: Callable[..., Awaitable[Row[Any]]],
+        sample_service_sms_sender: Callable[..., Awaitable[Row[Any]]],
+        mocker: AsyncMock,
+    ) -> None:
+        """Test get_reply_to_text returns the correct sms_sender.
+
+        Args:
+            sample_service (Callable[..., Awaitable[Row[Any]]]): Service
+            sample_service_sms_sender (Callable[..., Awaitable[Row[Any]]]): ServiceSmsSender
+            mocker (AsyncMock): Mock object
+        """
+        service_sms_sender = await sample_service_sms_sender((await sample_service()).id)
+        mocker.patch(
+            'app.legacy.v2.notifications.route_schema.LegacyServiceSmsSenderDao.get', return_value=service_sms_sender
+        )
+        mocker.patch('app.legacy.v2.notifications.route_schema.context')
+        model = V2PostSmsRequestModel(
+            phone_number='+18005550101', template_id=uuid4(), sms_sender_id=service_sms_sender.id
+        )
+        assert (await model.get_reply_to_text()) == service_sms_sender.sms_sender
+
+    async def test_get_reply_to_no_sender(
+        self,
+        sample_service: Callable[..., Awaitable[Row[Any]]],
+        sample_service_sms_sender: Callable[..., Awaitable[Row[Any]]],
+        mocker: AsyncMock,
+    ) -> None:
+        """Test get_reply_to_text returns the correct sms_sender.
+
+        Args:
+            sample_service (Callable[..., Awaitable[Row[Any]]]): Service
+            sample_service_sms_sender (Callable[..., Awaitable[Row[Any]]]): ServiceSmsSender
+            mocker (AsyncMock): Mock object
+        """
+        service_sms_sender = await sample_service_sms_sender((await sample_service()).id)
+        mocker.patch(
+            'app.legacy.v2.notifications.route_schema.LegacyServiceSmsSenderDao.get_service_default',
+            return_value=service_sms_sender,
+        )
+        mocker.patch('app.legacy.v2.notifications.route_schema.context')
+        model = V2PostSmsRequestModel(phone_number='+18005550101', template_id=uuid4())
+        assert (await model.get_reply_to_text()) == service_sms_sender.sms_sender
+
+    async def test_get_reply_to_exception(self, mocker: AsyncMock) -> None:
+        """Test get_reply_to_text raises the exception correctly.
 
         Args:
             mocker (AsyncMock): Mock object
         """
+        mock_context = mocker.patch('app.legacy.v2.notifications.route_schema.context')
+        service_id = uuid4()
+        sms_sender_id = uuid4()
+        mock_context.__getitem__.return_value = service_id
         mocker.patch(
-            'app.legacy.v2.notifications.route_schema.LegacyTemplateDao.get_template', return_value=mocker.AsyncMock()
+            'app.legacy.v2.notifications.route_schema.LegacyServiceSmsSenderDao.get', side_effect=NonRetryableError
         )
-        model = V2PostSmsRequestModel(phone_number='+18005550101', template_id=uuid4())
-        assert isinstance(await model.get_reply_to_text(), str)
+
+        model = V2PostSmsRequestModel(phone_number='+18005550101', template_id=uuid4(), sms_sender_id=sms_sender_id)
+        with pytest.raises(HTTPException) as exc_info:
+            await model.get_reply_to_text()
+        assert exc_info.value.status_code == status.HTTP_400_BAD_REQUEST
+        assert (
+            exc_info.value.detail
+            == f'sms_sender_id {sms_sender_id} does not exist in database for service id {service_id}'
+        )
 
     def test_get_direct_contact_info(self) -> None:
         """Test get_direct_contact_info returns a phone number."""
@@ -208,9 +270,7 @@ class TestV2PostNotificationRequestModel:
         Args:
             mocker (AsyncMock): Mock object
         """
-        mocker.patch(
-            'app.legacy.v2.notifications.route_schema.LegacyTemplateDao.get_template', return_value=mocker.AsyncMock()
-        )
+        mocker.patch('app.legacy.v2.notifications.route_schema.LegacyTemplateDao.get', return_value=mocker.AsyncMock())
         recipient = RecipientIdentifierModel(id_type=IdentifierType.VA_PROFILE_ID, id_value='12345')
         model = V2PostNotificationRequestModel(recipient_identifier=recipient, template_id=uuid4())
         with pytest.raises(NotImplementedError):
