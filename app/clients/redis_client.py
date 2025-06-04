@@ -22,9 +22,6 @@ def redis_retry() -> Callable[[F], F]:
     It uses the `tenacity` retry strategy, logging before each retry attempt and retrying up to
     `_MAX_REDIS_RETRIES` times before re-raising the exception.
 
-    Type Hint:
-        Returns a decorator that can be applied to any `async def` function that returns `bool`.
-
     Returns:
         Callable[[F], F]: A decorator that applies retry behavior to a coroutine function.
     """
