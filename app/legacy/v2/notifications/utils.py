@@ -149,7 +149,7 @@ async def validate_template(
     """
     try:
         template = await LegacyTemplateDao.get_by_id_and_service_id(template_id, service_id)
-    except NonRetryableError or RetryableError:
+    except (NonRetryableError, RetryableError):
         logger.exception('Template not found with ID {}', template_id)
         raise_request_validation_error('Template not found')
 
