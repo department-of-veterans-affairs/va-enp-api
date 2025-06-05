@@ -5,7 +5,7 @@ import os
 import time
 import tomllib
 from typing import Any
-from unittest.mock import Mock
+from unittest.mock import AsyncMock, Mock
 
 import jwt
 import pytest
@@ -17,6 +17,7 @@ from starlette_context import plugins
 from starlette_context.middleware import ContextMiddleware
 
 from app.auth import JWTPayloadDict
+from app.clients.redis_client import RedisClientManager
 from app.db.db_init import get_read_session_with_context, get_write_session_with_context, init_db, metadata_legacy
 from app.main import CustomFastAPI, app
 from app.providers.provider_aws import ProviderAWS
@@ -78,6 +79,11 @@ def client() -> ENPTestClient:
     app.include_router(router)
 
     app.enp_state.providers['aws'] = Mock(spec=ProviderAWS)
+
+    # mock redis client manager for rate limiting
+    redis_mock = Mock(spec=RedisClientManager)
+    redis_mock.consume_rate_limit_token = AsyncMock(return_value=True)
+    app.enp_state.redis_client_manager = redis_mock
 
     app.add_middleware(
         ContextMiddleware,

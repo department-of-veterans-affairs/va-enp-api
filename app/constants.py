@@ -90,4 +90,5 @@ RESPONSE_LEGACY_NO_CREDENTIALS = 'Unauthorized, authentication token must be pro
 RESPONSE_400 = 'Bad request'
 RESPONSE_403 = 'Not authenticated'
 RESPONSE_404 = 'Not found'
+RESPONSE_429 = 'Rate limit exceeded'
 RESPONSE_500 = 'Server error'

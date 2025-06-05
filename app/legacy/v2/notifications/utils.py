@@ -2,10 +2,10 @@
 
 import json
 import re
-from typing import Any, Sequence
+from typing import Any, Awaitable, Callable, Sequence
 
 from async_lru import alru_cache
-from fastapi import HTTPException, status
+from fastapi import HTTPException, Request, status
 from fastapi.exceptions import RequestValidationError
 from pydantic import UUID4
 from sqlalchemy import Row
@@ -26,6 +26,30 @@ from app.logging.logging_config import logger
 from app.providers.provider_aws import ProviderAWS
 from app.providers.provider_schemas import PushModel
 from app.utils import log_last_attempt_on_failure, log_on_retry
+
+
+class ChainedDepends:
+    """Chains multiple FastAPI-compatible dependencies to enforce execution order."""
+
+    def __init__(self, *dependencies: Callable[[Request], Awaitable[Any]]) -> None:
+        """Initialize the ChainedDepends with a list of async dependencies.
+
+        Args:
+            *dependencies: A sequence of callables that take a Request and return an awaitable.
+        """
+        self._dependencies = dependencies
+
+    async def __call__(self, request: Request) -> None:
+        """Invoke each wrapped dependency in the order they were provided.
+
+        Each dependency must be an async callable that accepts a `Request` and returns an awaitable.
+        Exceptions raised by any dependency will interrupt the chain and propagate.
+
+        Args:
+            request (Request): The incoming FastAPI request object.
+        """
+        for dep in self._dependencies:
+            await dep(request)
 
 
 def raise_request_validation_error(
