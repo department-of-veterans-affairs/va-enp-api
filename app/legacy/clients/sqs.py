@@ -6,13 +6,15 @@ from typing import Any, TypedDict
 from uuid import uuid4
 
 from aiobotocore.session import ClientCreatorContext, get_session
+from async_lru import alru_cache
 from botocore.exceptions import ClientError
 from pydantic import UUID4
 from types_aiobotocore_sqs import SQSClient
 from types_aiobotocore_sqs.type_defs import SendMessageResultTypeDef
 
-from app.constants import AWS_REGION
+from app.constants import AWS_REGION, TWELVE_HOURS
 from app.exceptions import NonRetryableError, RetryableError
+from app.legacy.clients.utils import client_retry
 from app.logging.logging_config import logger
 
 
@@ -76,6 +78,28 @@ class SqsAsyncProducer:
 
         return self._client
 
+    async def enqueue_message_v2(self, tasks: list[tuple[str, tuple[str, UUID4]]]) -> None:
+        """Enqueue multiple messages to SQS.
+
+        Args:
+            tasks (list[tuple[str, tuple[str, UUID4]]]): List of tuples containing queue name and task details
+        """
+        # build body for 1 task
+        # build body for multiple tasks
+        queue_name = ''
+        if len(tasks) == 1:
+            queue_name, (task_name, notification_id) = tasks[0]
+            task_envelope = json.dumps(self.generate_celery_task(queue_name, task_name, notification_id))
+        else:
+            queue_name = tasks[0][0]
+            task_envelope = json.dumps(self.generate_celery_tasks(tasks))
+
+        logger.debug('Enqueuing {} tasks to SQS.', len(tasks))
+        await self.enqueue_message(
+            queue_name=queue_name,
+            message=task_envelope,
+        )
+
     async def enqueue_message(
         self,
         queue_name: str,
@@ -103,6 +127,8 @@ class SqsAsyncProducer:
 
         return response
 
+    @client_retry
+    @alru_cache(maxsize=1024, ttl=TWELVE_HOURS)
     async def _get_queue_url(
         self,
         sqs_client: SQSClient,
@@ -120,7 +146,6 @@ class SqsAsyncProducer:
         Raises:
             NonRetryableError: If the queue URL cannot be retrieved
         """
-        # async with self.sqs_client_context as sqs_client:
         try:
             response = await sqs_client.get_queue_url(QueueName=queue_name)
             q_url = response['QueueUrl']
@@ -141,6 +166,7 @@ class SqsAsyncProducer:
 
         return q_url
 
+    @client_retry
     async def _send_message_to_queue(
         self,
         sqs_client: SQSClient,
@@ -237,6 +263,58 @@ class SqsAsyncProducer:
                 correlation_id=str(uuid4()),
                 delivery_mode=2,
                 delivery_info=DeliveryInfoDict(priority=0, exchange='default', routing_key=queue_name),
+                body_encoding='base64',
+                delivery_tag=str(uuid4()),
+            ),
+        }
+
+        return envelope
+
+    @staticmethod
+    def generate_celery_tasks(tasks: list[tuple[str, tuple[str, UUID4]]]) -> CeleryTaskEnvelope:
+        """Generate a celery task envelope for a celery task chain.
+
+        Args:
+            tasks (list[tuple[str, tuple[str, UUID4]]]): List of tuples containing queue name and task details
+
+        Returns:
+            CeleryTaskEnvelope: The envelope containing the task body and properties
+        """
+        first_queue_name, (first_task_name, first_notification_id) = tasks.pop(0)
+
+        # Reverse the order to maintain the correct chain order
+        tasks.reverse()
+
+        task_bodies = {
+            'task': first_task_name,
+            'id': str(uuid4()),
+            'args': None,
+            'kwargs': {'notification_id': str(first_notification_id)},
+            'options': {'queue': first_queue_name},
+            'chain': [
+                {
+                    'task': task_name,
+                    'id': str(uuid4()),
+                    'args': None,
+                    'kwargs': {'notification_id': str(notification_id)},
+                    'options': {'queue': queue_name},
+                }
+                for queue_name, (task_name, notification_id) in tasks
+            ]
+            if len(tasks) > 0
+            else None,
+        }
+
+        envelope: CeleryTaskEnvelope = {
+            'body': base64.b64encode(bytes(json.dumps(task_bodies), 'utf-8')).decode('utf-8'),
+            'content-encoding': 'utf-8',
+            'content-type': 'application/json',
+            'headers': {},
+            'properties': PropertiesDict(
+                reply_to=str(uuid4()),
+                correlation_id=str(uuid4()),
+                delivery_mode=2,
+                delivery_info=DeliveryInfoDict(priority=0, exchange='default', routing_key=first_queue_name),
                 body_encoding='base64',
                 delivery_tag=str(uuid4()),
             ),

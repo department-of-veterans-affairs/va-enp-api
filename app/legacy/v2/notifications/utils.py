@@ -1,6 +1,5 @@
 """Utilities to aid the REST Notification routes."""
 
-import json
 import re
 from typing import Any, Awaitable, Callable, Sequence
 
@@ -10,7 +9,6 @@ from pydantic import UUID4
 from sqlalchemy import Row
 from sqlalchemy.exc import NoResultFound
 from starlette_context import context
-from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_full_jitter
 
 from app.constants import RESPONSE_500, NotificationType
 from app.exceptions import NonRetryableError, RetryableError
@@ -25,7 +23,6 @@ from app.legacy.v2.notifications.route_schema import (
 from app.logging.logging_config import logger
 from app.providers.provider_aws import ProviderAWS
 from app.providers.provider_schemas import PushModel
-from app.utils import log_last_attempt_on_failure, log_on_retry
 
 
 class ChainedDepends:
@@ -286,15 +283,9 @@ def _collect_personalisation_from_template(template_content: str) -> set[str]:
     return set(matches)
 
 
-@retry(
-    before_sleep=log_on_retry,
-    reraise=True,
-    retry_error_callback=log_last_attempt_on_failure,
-    retry=retry_if_exception_type(RetryableError),
-    stop=stop_after_attempt(10),
-    wait=wait_full_jitter(multiplier=1, max=60),
-)
-async def enqueue_notification_tasks(tasks: list[tuple[str, tuple[str, UUID4]]]) -> None:
+async def enqueue_notification_tasks(
+    tasks: list[tuple[str, tuple[str, UUID4]]], sqs_producer: SqsAsyncProducer
+) -> None:
     """Queues a notification for processing.
 
     This function uses the SqsAsyncProducer to enqueue tasks for processing by Celery.
@@ -304,9 +295,22 @@ async def enqueue_notification_tasks(tasks: list[tuple[str, tuple[str, UUID4]]])
         tasks (list[tuple[str, tuple[str, UUID4]]]): The tasks to enqueue
 
     """
-    sqs_producer = SqsAsyncProducer()
+    try:
+        await sqs_producer.enqueue_message_v2(tasks)
+    except (RetryableError, NonRetryableError):
+        logger.exception('Failed to enqueue notification tasks.')
 
-    for queue_name, task_args in tasks:
-        task_message = sqs_producer.generate_celery_task(queue_name, *task_args)
+    # TODO: This needs a rework, will most likely just call enqueue_message and not generate_celery_task
+    # enqueue_message will call something to build the message body as necessary
+    # for queue_name, task_args in tasks:
+    #     task_message = sqs_producer.generate_celery_task(queue_name, *task_args)
 
-        await sqs_producer.enqueue_message(queue_name, json.dumps(task_message))
+    #     try:
+    #         await sqs_producer.enqueue_message(queue_name, json.dumps(task_message))
+    #     except (RetryableError, NonRetryableError) as error:
+    #         logger.exception(
+    #             'Failed to enqueue notification task for queue {} with args {}: {}',
+    #             queue_name,
+    #             task_args,
+    #             str(error),
+    #         )
