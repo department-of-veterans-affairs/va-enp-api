@@ -479,19 +479,12 @@ class TestSmsPost:
         mock_background_task: AsyncMock,
         mock_context: AsyncMock,
         mocker: AsyncMock,
-        mock_template_get_id: AsyncMock,
+        mock_template_validations: AsyncMock,
     ) -> None:
-        """Test _sms_post works with a recipient identifier.
-
-        Args:
-            mock_background_task (AsyncMock): Mock BackgroundTasks
-            mock_context (AsyncMock): Mock starlette context
-            mocker (AsyncMock): Mock object
-            mock_template_get_id (AsyncMock): Fixture to mock template setup
-        """
+        """Test _sms_post works with a recipient identifier."""
         mock_context.data = {'request_id': uuid4(), 'service_id': uuid4()}
         mocker.patch('app.legacy.v2.notifications.rest.create_notification')
         mock_resolver = mocker.AsyncMock(spec=IdentifierSmsTaskResolver)
         recipient = RecipientIdentifierModel(id_type=IdentifierType.VA_PROFILE_ID, id_value='12345')
-        request = V2PostSmsRequestModel(recipient_identifier=recipient, template_id=mock_template_get_id)
+        request = V2PostSmsRequestModel(recipient_identifier=recipient, template_id=mock_template_validations)
         await _sms_post(request, mock_resolver, mock_background_task)
