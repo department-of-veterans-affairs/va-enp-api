@@ -2,7 +2,6 @@
 
 from typing import Any
 
-
 from async_lru import alru_cache
 from pydantic import UUID4
 from sqlalchemy import Row, select
@@ -21,7 +20,6 @@ from app.db.db_init import get_read_session_with_context, metadata_legacy
 from app.exceptions import NonRetryableError, RetryableError
 from app.legacy.dao.utils import db_retry
 from app.logging.logging_config import logger
-
 
 class LegacyTemplateDao:
     """A class to handle the data access for templates in the legacy database.
@@ -85,6 +83,7 @@ class LegacyTemplateDao:
             logger.exception('Unexpected SQLAlchemy error during template lookup for id: {}', id)
             raise NonRetryableError('Unexpected SQLAlchemy error during template lookup.') from e
     
+
     @alru_cache(maxsize=1024, ttl=FIVE_MINUTES)
     @staticmethod
     async def get_by_id_and_service_id(id: UUID4, service_id: UUID4) -> Row[Any]:
