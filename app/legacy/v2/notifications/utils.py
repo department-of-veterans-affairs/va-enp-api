@@ -4,15 +4,15 @@ import json
 import re
 from typing import Any, Sequence
 
+from async_lru import alru_cache
 from fastapi import HTTPException, status
 from fastapi.exceptions import RequestValidationError
 from pydantic import UUID4
 from sqlalchemy import Row
-from sqlalchemy.exc import NoResultFound
 from starlette_context import context
 from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_full_jitter
 
-from app.constants import RESPONSE_500, NotificationType
+from app.constants import FIVE_MINUTES, RESPONSE_500, NotificationType
 from app.exceptions import NonRetryableError, RetryableError
 from app.legacy.clients.sqs import SqsAsyncProducer
 from app.legacy.dao.notifications_dao import LegacyNotificationDao
@@ -104,6 +104,7 @@ async def validate_push_template(template_id: UUID4) -> None:
     raise NotImplementedError('validate_push_template has not been implemented.')
 
 
+@alru_cache(maxsize=1024, ttl=FIVE_MINUTES)
 async def validate_template(
     template_id: UUID4,
     service_id: UUID4,
@@ -124,14 +125,14 @@ async def validate_template(
     """
     try:
         template = await LegacyTemplateDao.get_by_id_and_service_id(template_id, service_id)
-    except NoResultFound:
+    except NonRetryableError or RetryableError:
         logger.exception('Template not found with ID {}', template_id)
         raise_request_validation_error('Template not found')
 
     try:
         _validate_template_type(template.template_type, expected_type, template_id)
         _validate_template_active(template.archived, template_id)
-    except ValueError as e:
+    except NonRetryableError as e:
         raise_request_validation_error(str(e))
     return template
 
@@ -210,24 +211,20 @@ def _validate_template_active(archived: bool, template_id: UUID4) -> None:
         raise ValueError('Template is not active')
 
 
-async def validate_template_personalisation(
-    template_id: UUID4,
-    service_id: UUID4,
+def validate_template_personalisation(
+    template: Row[Any],
     personalisation: dict[str, str | int | float | list[str | int | float] | PersonalisationFileObject] | None,
 ) -> None:
     """Validates the personalisation data against the template.
 
     Args:
-        template_id (UUID4): The ID of the template
-        service_id (UUID4): The ID of the service
+        template (Row[Any]): Template row data to validate against
         personalisation (dict[str, str | int | float | list[str | int | float] | PersonalisationFileObject] | None): The personalisation data to validate
 
     Raises:
-        NonRetryableError: If there are missing personalisation fields required by the template.
+        HTTPException: If there are missing personalisation fields required by the template.
 
     """
-    template = await LegacyTemplateDao.get_by_id_and_service_id(template_id, service_id)
-
     template_personalisation_fields = _collect_personalisation_from_template(template.content)
     incoming_personalisation_fields = set(personalisation.keys() if personalisation else [])
 
@@ -239,10 +236,13 @@ async def validate_template_personalisation(
     if missing_fields:
         logger.warning(
             'Attempted to send with temaplate {} while missing personalisation field(s): {}',
-            template_id,
+            template.id,
             missing_fields,
         )
-        raise NonRetryableError(log_msg=f'Missing personalisation: {", ".join(missing_fields)}')
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f'Attempted to send with template {template.id} while missing personalisation field(s): {", ".join(missing_fields)}',
+        )
 
 
 def _collect_personalisation_from_template(template_content: str) -> set[str]:
