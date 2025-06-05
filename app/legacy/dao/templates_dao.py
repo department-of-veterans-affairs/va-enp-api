@@ -21,6 +21,7 @@ from app.exceptions import NonRetryableError, RetryableError
 from app.legacy.dao.utils import db_retry
 from app.logging.logging_config import logger
 
+
 class LegacyTemplateDao:
     """A class to handle the data access for templates in the legacy database.
 
@@ -82,7 +83,6 @@ class LegacyTemplateDao:
         except SQLAlchemyError as e:
             logger.exception('Unexpected SQLAlchemy error during template lookup for id: {}', id)
             raise NonRetryableError('Unexpected SQLAlchemy error during template lookup.') from e
-    
 
     @alru_cache(maxsize=1024, ttl=FIVE_MINUTES)
     @staticmethod
