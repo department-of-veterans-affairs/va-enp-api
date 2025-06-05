@@ -1,6 +1,6 @@
 """Test module for app/legacy/v2/notifications/utils.py."""
 
-from typing import Any, Awaitable, Callable
+from typing import Any, Awaitable, Callable, cast
 from unittest.mock import AsyncMock, patch
 from uuid import uuid4
 
@@ -12,7 +12,7 @@ from sqlalchemy import Row
 from app.constants import RESPONSE_500, NotificationType
 from app.exceptions import NonRetryableError
 from app.legacy.clients.sqs import SqsAsyncProducer
-from app.legacy.v2.notifications.route_schema import V2PostSmsRequestModel
+from app.legacy.v2.notifications.route_schema import PersonalisationFileObject, V2PostSmsRequestModel
 from app.legacy.v2.notifications.utils import (
     _validate_template_active,
     _validate_template_type,
@@ -162,7 +162,10 @@ class TestValidateTemplatePersonalisation:
     ) -> None:
         """Test validate_template_personalisation for happy path."""
         template = await sample_template(content='before ((content)) after')
-        personalisation = {'content': 'test content'}
+        personalisation = cast(
+            dict[str, str | int | float | list[str | int | float] | PersonalisationFileObject],
+            {'content': 'test content'},
+        )
 
         # Should not raise an exception
         validate_template_personalisation(template, personalisation)
