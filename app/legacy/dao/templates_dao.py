@@ -84,8 +84,8 @@ class LegacyTemplateDao:
             logger.exception('Unexpected SQLAlchemy error during template lookup for id: {}', id)
             raise NonRetryableError('Unexpected SQLAlchemy error during template lookup.') from e
 
-    @alru_cache(maxsize=1024, ttl=FIVE_MINUTES)
     @staticmethod
+    @alru_cache(maxsize=1024, ttl=FIVE_MINUTES)
     async def get_by_id_and_service_id(id: UUID4, service_id: UUID4) -> Row[Any]:
         """Retrieve a single template row by its ID and service ID.
 
