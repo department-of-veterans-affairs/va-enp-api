@@ -127,12 +127,11 @@ async def _sms_post(
         V2PostSmsResponseModel: The notification response data
     """
     logger.debug('Creating SMS notification with request data: {}', request)
-
     service_id = context['service_id']
     notification_id: UUID4 = context.data['request_id']
 
     template_row = await validate_template(request.template_id, service_id, request.get_channel())
-    await validate_template_personalisation(template_row, request.personalisation)
+    validate_template_personalisation(template_row, request.personalisation)
 
     await create_notification(notification_id, template_row, request)
 

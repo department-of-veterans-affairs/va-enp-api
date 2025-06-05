@@ -152,11 +152,10 @@ async def validate_template(
     except (NonRetryableError, RetryableError):
         logger.exception('Template not found with ID {}', template_id)
         raise_request_validation_error('Template not found')
-
     try:
         _validate_template_type(template.template_type, expected_type, template_id)
         _validate_template_active(template.archived, template_id)
-    except NonRetryableError as e:
+    except ValueError as e:
         raise_request_validation_error(str(e))
     return template
 
@@ -265,7 +264,7 @@ def validate_template_personalisation(
         )
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f'Attempted to send with template {template.id} while missing personalisation field(s): {", ".join(missing_fields)}',
+            detail=f'Missing personalisation: {", ".join(missing_fields)}',
         )
 
 

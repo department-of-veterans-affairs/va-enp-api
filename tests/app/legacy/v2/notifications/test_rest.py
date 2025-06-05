@@ -12,7 +12,7 @@ from pydantic import UUID4
 from sqlalchemy import Row, delete
 
 from app.clients.redis_client import RedisClientManager
-from app.constants import IdentifierType, MobileAppType
+from app.constants import IdentifierType, MobileAppType, NotificationType
 from app.db.db_init import get_write_session_with_context, metadata_legacy
 from app.legacy.dao.notifications_dao import LegacyNotificationDao
 from app.legacy.dao.service_sms_sender_dao import LegacyServiceSmsSenderDao
@@ -440,7 +440,7 @@ class TestSmsPost:
     """Test the _sms_post method."""
 
     @pytest.fixture
-    def mock_template_get_id(self, mocker: AsyncMock) -> UUID4:
+    def mock_template_validations(self, mocker: AsyncMock) -> UUID4:
         """Fixture to mock a template.
 
         Args:
@@ -452,7 +452,11 @@ class TestSmsPost:
         template_id = uuid4()
         mock_template = mocker.AsyncMock()
         mock_template.id = template_id
+        mock_template.template_type = NotificationType.SMS
+        mock_template.archived = False
+        mock_template.service_id = uuid4()
         mocker.patch('app.legacy.v2.notifications.rest.validate_template', return_value=mock_template)
+        mocker.patch('app.legacy.v2.notifications.rest.validate_template_personalisation')
         return template_id
 
     async def test_happy_path_direct(
@@ -460,19 +464,13 @@ class TestSmsPost:
         mock_background_task: AsyncMock,
         mock_context: AsyncMock,
         mocker: AsyncMock,
-        mock_template_get_id: AsyncMock,
+        mock_template_validations: AsyncMock,
     ) -> None:
-        """Test _sms_post works with a recipient identifier.
-
-        Args:
-            mock_background_task (AsyncMock): Mock BackgroundTasks
-            mock_context (AsyncMock): Mock starlette context
-            mocker (AsyncMock): Mock object
-            mock_template_get_id (AsyncMock): Fixture to mock template setup
-        """
+        """Test _sms_post works with a recipient identifier."""
         mock_context.data = {'request_id': uuid4(), 'service_id': uuid4()}
         mocker.patch('app.legacy.v2.notifications.rest.create_notification')
-        request = V2PostSmsRequestModel(phone_number='+18005550101', template_id=mock_template_get_id)
+
+        request = V2PostSmsRequestModel(phone_number='+18005550101', template_id=mock_template_validations)
         mock_resolver = mocker.AsyncMock(spec=DirectSmsTaskResolver)
         await _sms_post(request, mock_resolver, mock_background_task)
 
