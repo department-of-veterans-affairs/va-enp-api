@@ -55,7 +55,7 @@ class TestLegacyTimedAPIRoute:
         """
         response = client.get('/test/500')
         assert response.json() == {
-            'errors': [{'error': 'HTTPException', 'message': 'Server error'}],
+            'errors': [{'error': 'BadRequestError', 'message': 'Server error'}],
             'status_code': 500,
         }
 

@@ -33,7 +33,7 @@ class LegacyTimedAPIRoute(APIRoute):
             e,
         )
 
-        error_type = 'HTTPException'
+        error_type = 'BadRequestError'
 
         if e.status_code in (401, 403):
             if e.detail == 'Not authenticated':

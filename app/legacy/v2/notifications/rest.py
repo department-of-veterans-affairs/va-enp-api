@@ -27,6 +27,7 @@ from app.legacy.v2.notifications.utils import (
     enqueue_notification_tasks,
     send_push_notification_helper,
     validate_template,
+    validate_template_personalisation,
 )
 from app.limits import ServiceRateLimiter
 from app.logging.logging_config import logger
@@ -126,9 +127,12 @@ async def _sms_post(
         V2PostSmsResponseModel: The notification response data
     """
     logger.debug('Creating SMS notification with request data: {}', request)
-
+    service_id = context['service_id']
     notification_id: UUID4 = context.data['request_id']
-    template_row = await validate_template(request.template_id, request.get_channel(), request.personalisation)
+
+    template_row = await validate_template(request.template_id, service_id, request.get_channel())
+    validate_template_personalisation(template_row, request.personalisation)
+
     await create_notification(notification_id, template_row, request)
 
     # Get tasks for the notification using the appropriate resolver

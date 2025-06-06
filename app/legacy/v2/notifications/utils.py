@@ -2,17 +2,16 @@
 
 import json
 import re
-from typing import Any, Awaitable, Callable, Sequence
+from typing import Any, Awaitable, Callable
 
+from async_lru import alru_cache
 from fastapi import HTTPException, Request, status
-from fastapi.exceptions import RequestValidationError
 from pydantic import UUID4
 from sqlalchemy import Row
-from sqlalchemy.exc import NoResultFound
 from starlette_context import context
 from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_full_jitter
 
-from app.constants import RESPONSE_500, NotificationType
+from app.constants import FIVE_MINUTES, RESPONSE_500, NotificationType
 from app.exceptions import NonRetryableError, RetryableError
 from app.legacy.clients.sqs import SqsAsyncProducer
 from app.legacy.dao.notifications_dao import LegacyNotificationDao
@@ -50,24 +49,6 @@ class ChainedDepends:
         """
         for dep in self._dependencies:
             await dep(request)
-
-
-def raise_request_validation_error(
-    message: str,
-    loc: Sequence[str] = ('body',),
-) -> None:
-    """Raise a FastAPI-style RequestValidationError with a message and optional location.
-
-    Args:
-        message (str): The error message.
-        loc (Sequence[str]): A sequence of strings describing the field path.
-
-    Raises:
-        RequestValidationError: Handled by router to return properly structured JSON
-    """
-    error = {'loc': loc, 'msg': message, 'type': 'value_error'}
-
-    raise RequestValidationError(errors=[error])
 
 
 async def send_push_notification_helper(
@@ -128,10 +109,11 @@ async def validate_push_template(template_id: UUID4) -> None:
     raise NotImplementedError('validate_push_template has not been implemented.')
 
 
+@alru_cache(maxsize=1024, ttl=FIVE_MINUTES)
 async def validate_template(
     template_id: UUID4,
+    service_id: UUID4,
     expected_type: NotificationType,
-    personalisation: dict[str, str | int | float | list[str | int | float] | PersonalisationFileObject] | None,
 ) -> Row[Any]:
     """Validates the template with the given ID.
 
@@ -140,25 +122,32 @@ async def validate_template(
 
     Args:
         template_id (UUID4): The template_id to validate
+        service_id (UUID4): The service_id to validate
         expected_type (NotificationType): The expected type of the template
-        personalisation (dict[str, str | int | float | list[str | int | float] | PersonalisationFileObject] | None):
-            The personalisation data to validate
 
     Returns:
         Row[Any]: A template row
+
+    Raises:
+        HTTPException: If the template is not found, not of the expected type, or archived.
     """
     try:
-        template = await LegacyTemplateDao.get(template_id)
-    except NoResultFound:
+        template = await LegacyTemplateDao.get_by_id_and_service_id(template_id, service_id)
+    except NonRetryableError:
         logger.exception('Template not found with ID {}', template_id)
-        raise_request_validation_error('Template not found')
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail='Template not found',
+        )
 
     try:
         _validate_template_type(template.template_type, expected_type, template_id)
         _validate_template_active(template.archived, template_id)
-        _validate_template_personalisation(template.content, personalisation, template_id)
-    except ValueError as e:
-        raise_request_validation_error(str(e))
+    except NonRetryableError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e.log_msg),
+        ) from e
     return template
 
 
@@ -208,7 +197,7 @@ def _validate_template_type(
         template_id (UUID4): The ID of the template
 
     Raises:
-        ValueError: If the template is not of the expected type
+        NonRetryableError: If the template is not of the expected type
     """
     if template_type != expected_type:
         logger.warning(
@@ -217,7 +206,7 @@ def _validate_template_type(
             expected_type,
             template_id,
         )
-        raise ValueError(f'{template_type} template is not suitable for {expected_type} notification')
+        raise NonRetryableError(f'{template_type} template is not suitable for {expected_type} notification')
 
 
 def _validate_template_active(archived: bool, template_id: UUID4) -> None:
@@ -228,31 +217,29 @@ def _validate_template_active(archived: bool, template_id: UUID4) -> None:
         template_id (UUID4): The ID of the template
 
     Raises:
-        ValueError: If the template is archived (not active)
+        NonRetryableError: If the template is archived (not active)
 
     """
     if archived:
         logger.warning('Attempted to send using an archived template. Template {}', template_id)
-        raise ValueError('Template is not active')
+        raise NonRetryableError('Template has been deleted')
 
 
-def _validate_template_personalisation(
-    template_content: str,
+def validate_template_personalisation(
+    template: Row[Any],
     personalisation: dict[str, str | int | float | list[str | int | float] | PersonalisationFileObject] | None,
-    template_id: UUID4,
 ) -> None:
     """Validates the personalisation data against the template.
 
     Args:
-        template_content (str): The template to validate against
+        template (Row[Any]): Template row data to validate against
         personalisation (dict[str, str | int | float | list[str | int | float] | PersonalisationFileObject] | None): The personalisation data to validate
-        template_id (UUID4): The ID of the template
 
     Raises:
-        ValueError: If there are missing personalisation fields required by the template.
+        HTTPException: If there are missing personalisation fields required by the template.
 
     """
-    template_personalisation_fields = _collect_personalisation_from_template(template_content)
+    template_personalisation_fields = _collect_personalisation_from_template(template.content)
     incoming_personalisation_fields = set(personalisation.keys() if personalisation else [])
 
     # the current implementation is case-insensitive, so all fields are converted to lowercase
@@ -263,10 +250,13 @@ def _validate_template_personalisation(
     if missing_fields:
         logger.warning(
             'Attempted to send with temaplate {} while missing personalisation field(s): {}',
-            template_id,
+            template.id,
             missing_fields,
         )
-        raise ValueError(f'Missing personalisation: {", ".join(missing_fields)}')
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f'Missing personalisation: {", ".join(missing_fields)}',
+        )
 
 
 def _collect_personalisation_from_template(template_content: str) -> set[str]:
