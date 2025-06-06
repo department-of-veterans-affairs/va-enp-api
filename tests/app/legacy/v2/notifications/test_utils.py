@@ -6,7 +6,6 @@ from uuid import uuid4
 
 import pytest
 from fastapi import HTTPException, status
-from fastapi.exceptions import RequestValidationError
 from sqlalchemy import Row
 
 from app.constants import RESPONSE_500, NotificationType
@@ -104,9 +103,10 @@ class TestValidateTemplate:
         with patch(
             'app.legacy.v2.notifications.utils.LegacyTemplateDao.get_by_id_and_service_id', return_value=template
         ):
-            with pytest.raises(RequestValidationError) as exc_info:
+            with pytest.raises(HTTPException) as exc_info:
                 await validate_template(template.id, uuid4(), NotificationType.SMS)
-            assert exc_info.value.errors()[0]['msg'] == 'Template is not active'
+
+            assert exc_info.value.detail == 'Template has been deleted'
 
     async def test_validate_template_raises_exception_when_service_id(self) -> None:
         """Test validate_template raises an exception when the template is not found."""
@@ -114,13 +114,13 @@ class TestValidateTemplate:
             'app.legacy.v2.notifications.utils.LegacyTemplateDao.get_by_id_and_service_id',
             side_effect=NonRetryableError('Template not found'),
         ):
-            with pytest.raises(RequestValidationError) as exc_info:
+            with pytest.raises(HTTPException) as exc_info:
                 await validate_template(
                     uuid4(),
                     uuid4(),
                     NotificationType.SMS,
                 )
-            assert exc_info.value.errors()[0]['msg'] == 'Template not found'
+            assert exc_info.value.detail == 'Template not found'
 
     async def test_validate_template_raises_exception_when_template_not_expected_type(
         self,
@@ -132,9 +132,9 @@ class TestValidateTemplate:
         with patch(
             'app.legacy.v2.notifications.utils.LegacyTemplateDao.get_by_id_and_service_id', return_value=template
         ):
-            with pytest.raises(RequestValidationError) as exc_info:
+            with pytest.raises(HTTPException) as exc_info:
                 await validate_template(template.id, uuid4(), NotificationType.SMS)
-            assert exc_info.value.errors()[0]['msg'] == (
+            assert exc_info.value.detail == (
                 f'{NotificationType.EMAIL} template is not suitable for {NotificationType.SMS} notification'
             )
 
