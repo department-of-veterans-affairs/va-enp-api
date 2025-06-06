@@ -94,11 +94,13 @@ class SqsAsyncProducer:
             queue_name = tasks[0][0]
             task_envelope = json.dumps(self.generate_celery_tasks(tasks))
 
-        logger.debug('Enqueuing {} tasks to SQS.', len(tasks))
-        await self.enqueue_message(
-            queue_name=queue_name,
-            message=task_envelope,
-        )
+        try:
+            await self.enqueue_message(
+                queue_name=queue_name,
+                message=task_envelope,
+            )
+        except (RetryableError, NonRetryableError):
+            logger.exception('Failed to enqueue notification tasks.')
 
     async def enqueue_message(
         self,

@@ -295,10 +295,7 @@ async def enqueue_notification_tasks(
         tasks (list[tuple[str, tuple[str, UUID4]]]): The tasks to enqueue
 
     """
-    try:
-        await sqs_producer.enqueue_message_v2(tasks)
-    except (RetryableError, NonRetryableError):
-        logger.exception('Failed to enqueue notification tasks.')
+    await sqs_producer.enqueue_message_v2(tasks)
 
     # TODO: This needs a rework, will most likely just call enqueue_message and not generate_celery_task
     # enqueue_message will call something to build the message body as necessary
