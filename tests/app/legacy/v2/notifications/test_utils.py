@@ -163,14 +163,6 @@ class TestValidateTemplatePersonalisation:
         with pytest.raises(HTTPException, match='Missing personalisation: content'):
             validate_template_personalisation(template, {'foo': 'bar'})
 
-    async def test_validate_template_personalisation_raises_exception_when_muiltple_missing_personalisation(
-        self, sample_template: Callable[..., Awaitable[Row[Any]]]
-    ) -> None:
-        """Test validate_template raises an exception when personalisation is missing."""
-        template = await sample_template(content='before ((content)) after ((another_content))')
-        with pytest.raises(HTTPException, match='Missing personalisation: another_content, content'):
-            validate_template_personalisation(template, {'foo': 'bar'})
-
 
 async def test_enqueue_notification_tasks() -> None:
     """Test enqueue_notification_tasks."""

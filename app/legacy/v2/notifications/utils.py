@@ -2,11 +2,10 @@
 
 import json
 import re
-from typing import Any, Awaitable, Callable, Sequence
+from typing import Any, Awaitable, Callable
 
 from async_lru import alru_cache
 from fastapi import HTTPException, Request, status
-from fastapi.exceptions import RequestValidationError
 from pydantic import UUID4
 from sqlalchemy import Row
 from starlette_context import context
@@ -50,24 +49,6 @@ class ChainedDepends:
         """
         for dep in self._dependencies:
             await dep(request)
-
-
-def raise_request_validation_error(
-    message: str,
-    loc: Sequence[str] = ('body',),
-) -> None:
-    """Raise a FastAPI-style RequestValidationError with a message and optional location.
-
-    Args:
-        message (str): The error message.
-        loc (Sequence[str]): A sequence of strings describing the field path.
-
-    Raises:
-        RequestValidationError: Handled by router to return properly structured JSON
-    """
-    error = {'loc': loc, 'msg': message, 'type': 'value_error'}
-
-    raise RequestValidationError(errors=[error])
 
 
 async def send_push_notification_helper(
