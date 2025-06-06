@@ -290,21 +290,21 @@ class SqsAsyncProducer:
         task_bodies = {
             'task': first_task_name,
             'id': str(uuid4()),
-            'args': None,
+            'args': [],
             'kwargs': {'notification_id': str(first_notification_id)},
             'options': {'queue': first_queue_name},
             'chain': [
                 {
                     'task': task_name,
                     'id': str(uuid4()),
-                    'args': None,
+                    'args': [],
                     'kwargs': {'notification_id': str(notification_id)},
                     'options': {'queue': queue_name},
                 }
                 for queue_name, (task_name, notification_id) in tasks
             ]
             if len(tasks) > 0
-            else None,
+            else [],
         }
 
         envelope: CeleryTaskEnvelope = {
