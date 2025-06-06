@@ -264,13 +264,17 @@ class SqsAsyncProducer:
                 reply_to=str(uuid4()),
                 correlation_id=str(uuid4()),
                 delivery_mode=2,
-                delivery_info=DeliveryInfoDict(priority=0, exchange='default', routing_key=queue_name),
+                delivery_info=DeliveryInfoDict(
+                    priority=0,
+                    exchange='default',
+                    routing_key=queue_name,
+                ),
                 body_encoding='base64',
                 delivery_tag=str(uuid4()),
             ),
         }
 
-        return envelope
+        return base64.b64encode(bytes(json.dumps(envelope), 'utf-8')).decode('utf-8')
 
     @staticmethod
     def generate_celery_tasks(tasks: list[tuple[str, tuple[str, UUID4]]]) -> CeleryTaskEnvelope:
@@ -293,6 +297,7 @@ class SqsAsyncProducer:
             'args': [],
             'kwargs': {'notification_id': str(first_notification_id)},
             'options': {'queue': first_queue_name},
+            'immutable': True,
             'chain': [
                 {
                     'task': task_name,
@@ -300,6 +305,7 @@ class SqsAsyncProducer:
                     'args': [],
                     'kwargs': {'notification_id': str(notification_id)},
                     'options': {'queue': queue_name},
+                    'immutable': True,
                 }
                 for queue_name, (task_name, notification_id) in tasks
             ]
@@ -322,4 +328,4 @@ class SqsAsyncProducer:
             ),
         }
 
-        return envelope
+        return base64.b64encode(bytes(json.dumps(envelope), 'utf-8')).decode('utf-8')

@@ -1,6 +1,5 @@
 """The data access objects for notifications."""
 
-import json
 from datetime import datetime
 from typing import Any
 
@@ -20,9 +19,11 @@ from app.constants import NotificationStatus, NotificationType
 from app.db.db_init import get_read_session_with_context, get_write_session_with_context, metadata_legacy
 from app.exceptions import NonRetryableError, RetryableError
 from app.legacy.dao.recipient_identifiers_dao import RecipientIdentifiersDao
-from app.legacy.dao.utils import db_retry
+from app.legacy.dao.utils import Serializer, db_retry
 from app.legacy.v2.notifications.route_schema import PersonalisationFileObject, RecipientIdentifierModel
 from app.logging.logging_config import logger
+
+serializer = Serializer()
 
 
 class LegacyNotificationDao:
@@ -160,7 +161,7 @@ class LegacyNotificationDao:
                     created_at=datetime.now(),
                     key_type=key_type,
                     notification_status=NotificationStatus.CREATED,
-                    _personalisation=json.dumps(personalisation) if personalisation else None,
+                    _personalisation=serializer.serialize(personalisation) if personalisation else None,
                 )
                 await session.execute(stmt)
                 await session.commit()
