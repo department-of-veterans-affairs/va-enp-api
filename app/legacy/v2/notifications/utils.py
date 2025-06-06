@@ -146,17 +146,27 @@ async def validate_template(
 
     Returns:
         Row[Any]: A template row
+
+    Raises:
+        HTTPException: If the template is not found, not of the expected type, or archived.
     """
     try:
         template = await LegacyTemplateDao.get_by_id_and_service_id(template_id, service_id)
     except NonRetryableError:
         logger.exception('Template not found with ID {}', template_id)
-        raise_request_validation_error('Template not found')
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail='Template not found',
+        )
+
     try:
         _validate_template_type(template.template_type, expected_type, template_id)
         _validate_template_active(template.archived, template_id)
-    except ValueError as e:
-        raise_request_validation_error(str(e))
+    except NonRetryableError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e.log_msg),
+        ) from e
     return template
 
 
@@ -206,7 +216,7 @@ def _validate_template_type(
         template_id (UUID4): The ID of the template
 
     Raises:
-        ValueError: If the template is not of the expected type
+        NonRetryableError: If the template is not of the expected type
     """
     if template_type != expected_type:
         logger.warning(
@@ -215,7 +225,7 @@ def _validate_template_type(
             expected_type,
             template_id,
         )
-        raise ValueError(f'{template_type} template is not suitable for {expected_type} notification')
+        raise NonRetryableError(f'{template_type} template is not suitable for {expected_type} notification')
 
 
 def _validate_template_active(archived: bool, template_id: UUID4) -> None:
@@ -226,12 +236,12 @@ def _validate_template_active(archived: bool, template_id: UUID4) -> None:
         template_id (UUID4): The ID of the template
 
     Raises:
-        ValueError: If the template is archived (not active)
+        NonRetryableError: If the template is archived (not active)
 
     """
     if archived:
         logger.warning('Attempted to send using an archived template. Template {}', template_id)
-        raise ValueError('Template is not active')
+        raise NonRetryableError('Template has been deleted')
 
 
 def validate_template_personalisation(
