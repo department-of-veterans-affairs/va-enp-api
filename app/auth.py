@@ -245,7 +245,7 @@ async def _get_service_api_keys(service_id: UUID4) -> Sequence[Row[Any]]:
 
     Attempts to fetch API keys for a service from the LegacyApiKeysDao. If no keys are found,
     or if a DAO-level error occurs (retryable or non-retryable), an HTTP 403 error is raised
-    to indicate that the token is invalid due to lack of API keys.
+    to indicate that the token is invalid due to lack of associated API keys.
 
     Args:
         service_id (UUID4): The UUID of the service whose API keys are being requested.
@@ -259,10 +259,15 @@ async def _get_service_api_keys(service_id: UUID4) -> Sequence[Row[Any]]:
     try:
         api_keys = list(await LegacyApiKeysDao.get_service_api_keys(service_id))
     except (RetryableError, NonRetryableError):
-        logger.debug(
-            'No API keys found for service_id: {}',
-            service_id,
-        )
+        # In notification-api, service and API keys are queried together;
+        # DAO errors result in a "service not found" response.
+        # Here, the queries are separate. To maintain behavioral consistency,
+        # we treat DAO errors during API key lookup as "API key not found."
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=RESPONSE_LEGACY_INVALID_TOKEN_NOT_FOUND)
+
+    if not any(api_keys):
+        # Ensure consistent behavior with notification-api: return 403 if no keys are found.
+        # Note: get_service_api_keys uses .fetchall(), which does not raise an exception if no records are returned.
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=RESPONSE_LEGACY_INVALID_TOKEN_NO_KEYS)
 
     return api_keys

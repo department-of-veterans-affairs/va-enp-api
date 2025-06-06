@@ -146,15 +146,40 @@ class TestGetServiceApiKeys:
     async def test_happy_path(self, mocker: AsyncMock) -> None:
         """Test happy path.
 
+        This test verifies that _get_service_api_keys does not raise an HTTPException
+        when the DAO returns at least one truthy value. The actual contents of the
+        returned API keys are not validated—only the absence of an exception is asserted.
+
+        Args:
+            mocker (AsyncMock): Mock object
+        """
+        # Use a simple truthy value (True) to simulate a non-empty result,
+        # since bare Mocks evaluate to False in a boolean context.
+        mock_row = True
+        mock_dao = mocker.patch('app.auth.LegacyApiKeysDao.get_service_api_keys', new_callable=AsyncMock)
+        mock_dao.return_value = [mock_row]  # Ensure `any(api_keys)` evaluates to True
+
+        # Should not raise HTTPException
+        await _get_service_api_keys(uuid4())
+
+    async def test_no_api_keys(self, mocker: AsyncMock) -> None:
+        """Test happy path.
+
         Args:
             mocker (AsyncMock): Mock object
         """
         mocker.patch('app.auth.LegacyApiKeysDao.get_service_api_keys', new_callable=AsyncMock)
-        await _get_service_api_keys(uuid4())
+        with pytest.raises(HTTPException) as exc_info:
+            await _get_service_api_keys(uuid4())
+        assert exc_info.value.status_code == status.HTTP_403_FORBIDDEN
+        assert exc_info.value.detail == RESPONSE_LEGACY_INVALID_TOKEN_NO_KEYS
 
     @pytest.mark.parametrize('test_exception', [RetryableError, NonRetryableError])
-    async def test_no_api_keys(self, test_exception: Exception, mocker: AsyncMock) -> None:
-        """Test no api keys fail is compatible with notification-api.
+    async def test_dao_errors(self, test_exception: Exception, mocker: AsyncMock) -> None:
+        """Test dao failures are compatible with notification-api.
+
+        Notification-API would return service not found due to combined service and API lookup.
+        Returning api token not found is the closest matching error message in this case.
 
         Args:
             test_exception (Exception): Exception to raise
@@ -164,7 +189,7 @@ class TestGetServiceApiKeys:
         with pytest.raises(HTTPException) as exc_info:
             await _get_service_api_keys(uuid4())
         assert exc_info.value.status_code == status.HTTP_403_FORBIDDEN
-        assert exc_info.value.detail == RESPONSE_LEGACY_INVALID_TOKEN_NO_KEYS
+        assert exc_info.value.detail == RESPONSE_LEGACY_INVALID_TOKEN_NOT_FOUND
 
 
 class TestInternalVerifyServiceToken:
