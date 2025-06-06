@@ -186,6 +186,8 @@ async def create_notification(
             reference=request.reference,
             template_id=template_row.id,
             template_version=template_row.version,
+            recipient_identifiers=request.recipient_identifier,
+            personalisation=request.personalisation,
         )
     except NonRetryableError as e:
         logger.exception('Failed to create notification due to unexpected error in the database')
@@ -284,7 +286,8 @@ def _collect_personalisation_from_template(template_content: str) -> set[str]:
 
 
 async def enqueue_notification_tasks(
-    tasks: list[tuple[str, tuple[str, UUID4]]], sqs_producer: SqsAsyncProducer
+    tasks: list[tuple[str, tuple[str, UUID4]]],
+    sqs_producer: SqsAsyncProducer,
 ) -> None:
     """Queues a notification for processing.
 
@@ -293,21 +296,7 @@ async def enqueue_notification_tasks(
 
     Args:
         tasks (list[tuple[str, tuple[str, UUID4]]]): The tasks to enqueue
+        sqs_producer (SqsAsyncProducer): The SQS producer to use for enqueuing messages
 
     """
     await sqs_producer.enqueue_message_v2(tasks)
-
-    # TODO: This needs a rework, will most likely just call enqueue_message and not generate_celery_task
-    # enqueue_message will call something to build the message body as necessary
-    # for queue_name, task_args in tasks:
-    #     task_message = sqs_producer.generate_celery_task(queue_name, *task_args)
-
-    #     try:
-    #         await sqs_producer.enqueue_message(queue_name, json.dumps(task_message))
-    #     except (RetryableError, NonRetryableError) as error:
-    #         logger.exception(
-    #             'Failed to enqueue notification task for queue {} with args {}: {}',
-    #             queue_name,
-    #             task_args,
-    #             str(error),
-    #         )
