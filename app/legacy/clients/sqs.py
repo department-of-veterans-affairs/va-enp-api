@@ -29,7 +29,7 @@ class DeliveryInfoDict(TypedDict):
 class PropertiesDict(TypedDict):
     """Properties of the message sent to SQS."""
 
-    reply_to: str
+    reply_to: str | None = None
     correlation_id: str
     delivery_mode: int
     delivery_info: DeliveryInfoDict
@@ -294,6 +294,8 @@ class SqsAsyncProducer:
 
         first_queue_name, (first_task_name, first_notification_id) = tasks.pop(0)
 
+        tasks.reverse()
+
         chain_tasks = [
             {
                 'task': task_name,
@@ -308,8 +310,8 @@ class SqsAsyncProducer:
             if len(tasks) > 0
         ]
 
-        if len(chain_tasks) > 1:
-            chain_tasks[0]['callbacks'] = [chain_tasks[1]]
+        # if len(chain_tasks) > 1:
+        #     chain_tasks[0]['callbacks'] = [chain_tasks[1]]
 
         # chain_sig = {
         #     'task': 'celery.chain',
@@ -327,17 +329,22 @@ class SqsAsyncProducer:
             'kwargs': {'notification_id': str(first_notification_id)},
             'options': {'queue': first_queue_name},
             'immutable': True,
-            'callbacks': [chain_tasks[0]],
         }
 
         envelope: CeleryTaskEnvelope = {
             'body': base64.b64encode(bytes(json.dumps(task_body), 'utf-8')).decode('utf-8'),
             'content-encoding': 'utf-8',
             'content-type': 'application/json',
-            'headers': {},
+            'headers': {
+                'lang': 'py',
+                'task': first_task_name,
+                'id': task_body['id'],
+                'root_id': task_body['id'],
+                'chain': chain_tasks,
+            },
             'properties': PropertiesDict(
-                reply_to=str(uuid4()),
-                correlation_id=str(uuid4()),
+                # reply_to=str(uuid4()),
+                correlation_id=task_body['id'],
                 delivery_mode=2,
                 delivery_info=DeliveryInfoDict(priority=0, exchange='default', routing_key=first_queue_name),
                 body_encoding='base64',
