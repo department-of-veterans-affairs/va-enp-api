@@ -364,5 +364,5 @@ class SqsAsyncProducer:
             ),
         }
 
-        # return base64.b64encode(bytes(json.dumps(envelope), 'utf-8')).decode('utf-8')
-        return envelope
+        return base64.b64encode(bytes(json.dumps(envelope), 'utf-8')).decode('utf-8')
+        # return envelope
