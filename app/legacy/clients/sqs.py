@@ -332,8 +332,19 @@ class SqsAsyncProducer:
             'immutable': True,
         }
 
+        body = [
+            [],
+            {'notification_id': str(first_notification_id)},
+            {
+                'callbacks': None,
+                'errbacks': None,
+                'chain': chain_tasks,
+                'chord': None,
+            },
+        ]
+
         envelope: CeleryTaskEnvelope = {
-            'body': base64.b64encode(bytes(json.dumps(chain_tasks), 'utf-8')).decode('utf-8'),
+            'body': base64.b64encode(bytes(json.dumps(body), 'utf-8')).decode('utf-8'),
             'content-encoding': 'utf-8',
             'content-type': 'application/json',
             'headers': {
