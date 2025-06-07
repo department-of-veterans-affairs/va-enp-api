@@ -274,7 +274,8 @@ class SqsAsyncProducer:
             ),
         }
 
-        return base64.b64encode(bytes(json.dumps(envelope), 'utf-8')).decode('utf-8')
+        # return base64.b64encode(bytes(json.dumps(envelope), 'utf-8')).decode('utf-8')
+        return envelope
 
     @staticmethod
     def generate_celery_tasks(tasks: list[tuple[str, tuple[str, UUID4]]]) -> CeleryTaskEnvelope:
@@ -291,30 +292,40 @@ class SqsAsyncProducer:
         # Reverse the order to maintain the correct chain order
         tasks.reverse()
 
-        task_bodies = {
+        chain_tasks = [
+            {
+                'task': task_name,
+                # 'id': str(uuid4()),
+                'args': [],
+                'kwargs': {'notification_id': str(notification_id)},
+                'options': {'queue': queue_name},
+                'subtask_type': None,
+                'immutable': True,
+            }
+            for queue_name, (task_name, notification_id) in tasks
+            if len(tasks) > 0
+        ]
+
+        chain_sig = {
+            'task': 'celery.chain',
+            'args': [],
+            'kwargs': {'tasks': chain_tasks},
+            'options': {},
+            'subtask_type': 'chain',
+            'immutable': True,
+        }
+
+        task_body = {
             'task': first_task_name,
             'id': str(uuid4()),
-            'args': [],
+            'args': [chain_sig],
             'kwargs': {'notification_id': str(first_notification_id)},
             'options': {'queue': first_queue_name},
             'immutable': True,
-            'chain': [
-                {
-                    'task': task_name,
-                    'id': str(uuid4()),
-                    'args': [],
-                    'kwargs': {'notification_id': str(notification_id)},
-                    'options': {'queue': queue_name},
-                    'immutable': True,
-                }
-                for queue_name, (task_name, notification_id) in tasks
-            ]
-            if len(tasks) > 0
-            else [],
         }
 
         envelope: CeleryTaskEnvelope = {
-            'body': base64.b64encode(bytes(json.dumps(task_bodies), 'utf-8')).decode('utf-8'),
+            'body': base64.b64encode(bytes(json.dumps(task_body), 'utf-8')).decode('utf-8'),
             'content-encoding': 'utf-8',
             'content-type': 'application/json',
             'headers': {},
@@ -328,4 +339,5 @@ class SqsAsyncProducer:
             ),
         }
 
-        return base64.b64encode(bytes(json.dumps(envelope), 'utf-8')).decode('utf-8')
+        # return base64.b64encode(bytes(json.dumps(envelope), 'utf-8')).decode('utf-8')
+        return envelope

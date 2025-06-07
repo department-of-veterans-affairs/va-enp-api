@@ -18,7 +18,6 @@ from app.db.db_init import (
     close_db,
     init_db,
 )
-from app.legacy.clients.sqs import SqsAsyncProducer
 from app.legacy.v2.notifications.rest import v2_legacy_notification_router, v2_notification_router
 from app.logging.logging_config import CustomizeLogger, logger
 from app.state import ENPState
@@ -59,10 +58,6 @@ async def lifespan(app: CustomFastAPI) -> AsyncIterator[Never]:
     app.enp_state.redis_client_manager = redis_manager
     await redis_manager.get_client().ping()
     logger.info('...RedisClientManager initialized.')
-
-    logger.debug('Initializing the SqsAsyncProducer...')
-    app.enp_state.sqs_producer = SqsAsyncProducer()
-    logger.debug('...SqsAsyncProducer initialized.')
 
     await init_db()
 
@@ -133,3 +128,5 @@ async def get_legacy_notification(notification_id: UUID4) -> None:
 
     data = await LegacyNotificationDao.get(notification_id)
     logger.info('Notification data: {}', data._asdict())
+
+    return data._asdict()

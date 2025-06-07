@@ -31,12 +31,12 @@ class Serializer:
 
     def serialize(
         self,
-        thing_to_encrypt: object | str | bytes | dict | list | tuple | int | float | bool | None,
+        thing_to_encrypt: object | str | bytes | dict[str, str] | int | float | bool | None,
     ) -> str:
         """Serialize an object into a URL-safe string.
 
         Args:
-            thing_to_encrypt (object | str | bytes | dict | list | tuple | int | float | bool | None): The object to serialize.
+            thing_to_encrypt (object | str | bytes | dict | int | float | bool | None): The object to serialize.
 
         Returns:
             str: The serialized object as a URL-safe string.
@@ -46,13 +46,13 @@ class Serializer:
     def deserialize(
         self,
         thing_to_decrypt: str,
-    ) -> object | str | bytes | dict | list | tuple | int | float | bool | None:
+    ) -> object | str | bytes | dict[str, str] | int | float | bool | None:
         """Deserialize a URL-safe string back into an object.
 
         Args:
             thing_to_decrypt (str): The URL-safe string to deserialize.
 
         Returns:
-            object | str | bytes | dict | list | tuple | int | float | bool | None: The deserialized object.
+            object | str | bytes | dict | int | float | bool | None: The deserialized object.
         """
         return self.serializer.loads(thing_to_decrypt, salt=self.salt)

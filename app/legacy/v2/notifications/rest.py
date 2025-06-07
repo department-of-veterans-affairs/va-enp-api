@@ -94,7 +94,6 @@ async def legacy_notification_post_handler(
         ),
     ],
     sms_task_resolver: Annotated[SmsTaskResolver, Depends(get_sms_task_resolver)],
-    fastapi_request: Request,
     background_tasks: BackgroundTasks,
 ) -> V2PostSmsResponseModel:
     """Handler for an SMS notification.
@@ -108,14 +107,13 @@ async def legacy_notification_post_handler(
         V2PostSmsResponseModel: The notification response data
     """
     # Separate the middleware from the handler/response, makes testing much simpler
-    return await _sms_post(request, sms_task_resolver, background_tasks, fastapi_request)
+    return await _sms_post(request, sms_task_resolver, background_tasks)
 
 
 async def _sms_post(
     request: V2PostSmsRequestModel,
     sms_task_resolver: SmsTaskResolver,
     background_tasks: BackgroundTasks,
-    fastapi_request: Request,
 ) -> V2PostSmsResponseModel:
     """Handler for an SMS notification.
 
@@ -140,7 +138,7 @@ async def _sms_post(
     logger.debug('Found {} tasks to process, sending them to background process.', len(task_list))
 
     # create background task to enqueue the notification
-    background_tasks.add_task(enqueue_notification_tasks, task_list, fastapi_request.app.enp_state.sqs_producer)
+    background_tasks.add_task(enqueue_notification_tasks, task_list)
 
     return V2PostSmsResponseModel(
         id=notification_id,
