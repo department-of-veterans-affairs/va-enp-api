@@ -292,8 +292,8 @@ class SqsAsyncProducer:
         # [lookup-va-profile-id-tasks(optional), lookup-contact-info-tasks, deliver-sms]
         ######
 
-        # first_queue_name, (first_task_name, first_notification_id) = tasks.pop(0)
-        first_queue_name, (first_task_name, first_notification_id) = tasks[0]
+        first_queue_name, (first_task_name, first_notification_id) = tasks.pop(0)
+        # first_queue_name, (first_task_name, first_notification_id) = tasks[0]
 
         tasks.reverse()
 
