@@ -92,7 +92,7 @@ class SqsAsyncProducer:
             task_envelope = json.dumps(self.generate_celery_task(queue_name, task_name, notification_id))
         else:
             queue_name = tasks[0][0]
-            task_envelope = json.dumps(self.generate_celery_tasks(tasks))
+            task_envelope = json.dumps(self.generate_celery_task_chain(tasks))
 
         try:
             await self.enqueue_message(
@@ -278,7 +278,7 @@ class SqsAsyncProducer:
         return envelope
 
     @staticmethod
-    def generate_celery_tasks(tasks: list[tuple[str, tuple[str, UUID4]]]) -> CeleryTaskEnvelope:
+    def generate_celery_task_chain(tasks: list[tuple[str, tuple[str, UUID4]]]) -> CeleryTaskEnvelope:
         """Generate a celery task envelope for a celery task chain.
 
         Args:
@@ -287,15 +287,17 @@ class SqsAsyncProducer:
         Returns:
             CeleryTaskEnvelope: The envelope containing the task body and properties
         """
-        first_queue_name, (first_task_name, first_notification_id) = tasks.pop(0)
+        ######
+        # task order
+        # [lookup-va-profile-id-tasks(optional), lookup-contact-info-tasks, deliver-sms]
+        ######
 
-        # Reverse the order to maintain the correct chain order
-        tasks.reverse()
+        first_queue_name, (first_task_name, first_notification_id) = tasks.pop(0)
 
         chain_tasks = [
             {
                 'task': task_name,
-                # 'id': str(uuid4()),
+                'id': str(uuid4()),
                 'args': [],
                 'kwargs': {'notification_id': str(notification_id)},
                 'options': {'queue': queue_name},
@@ -306,22 +308,26 @@ class SqsAsyncProducer:
             if len(tasks) > 0
         ]
 
-        chain_sig = {
-            'task': 'celery.chain',
-            'args': [],
-            'kwargs': {'tasks': chain_tasks},
-            'options': {},
-            'subtask_type': 'chain',
-            'immutable': True,
-        }
+        if len(chain_tasks) > 1:
+            chain_tasks[0]['callbacks'] = [chain_tasks[1]]
+
+        # chain_sig = {
+        #     'task': 'celery.chain',
+        #     'args': [],
+        #     'kwargs': {'tasks': chain_tasks},
+        #     'options': {},
+        #     'subtask_type': 'chain',
+        #     'immutable': True,
+        # }
 
         task_body = {
             'task': first_task_name,
             'id': str(uuid4()),
-            'args': [chain_sig],
+            'args': [],
             'kwargs': {'notification_id': str(first_notification_id)},
             'options': {'queue': first_queue_name},
             'immutable': True,
+            'callbacks': [chain_tasks[0]],
         }
 
         envelope: CeleryTaskEnvelope = {
