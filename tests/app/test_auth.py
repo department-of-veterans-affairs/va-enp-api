@@ -147,17 +147,14 @@ class TestGetServiceApiKeys:
         """Test happy path.
 
         This test verifies that _get_service_api_keys does not raise an HTTPException
-        when the DAO returns at least one truthy value. The actual contents of the
+        when the DAO returns at least one API key. The actual contents of the
         returned API keys are not validated—only the absence of an exception is asserted.
 
         Args:
             mocker (AsyncMock): Mock object
         """
-        # Use a simple truthy value (True) to simulate a non-empty result,
-        # since bare Mocks evaluate to False in a boolean context.
-        mock_row = True
         mock_dao = mocker.patch('app.auth.LegacyApiKeysDao.get_service_api_keys', new_callable=AsyncMock)
-        mock_dao.return_value = [mock_row]  # Ensure `any(api_keys)` evaluates to True
+        mock_dao.return_value = [mocker.Mock()]
 
         # Should not raise HTTPException
         await _get_service_api_keys(uuid4())
