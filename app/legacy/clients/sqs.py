@@ -287,42 +287,12 @@ class SqsAsyncProducer:
         Returns:
             CeleryTaskEnvelope: The envelope containing the task body and properties
         """
-        ######
-        # task order
+        # task order:
         # [lookup-va-profile-id-tasks(optional), lookup-contact-info-tasks, deliver-sms]
-        ######
 
         first_queue_name, (first_task_name, first_notification_id) = tasks.pop(0)
         # first_queue_name, (first_task_name, first_notification_id) = tasks[0]
-
-        tasks.reverse()
-
-        chain_tasks = [
-            {
-                'task': task_name,
-                'id': str(uuid4()),
-                'args': [],
-                'kwargs': {'notification_id': str(notification_id)},
-                'options': {'queue': queue_name},
-                'subtask_type': None,
-                'immutable': True,
-            }
-            for queue_name, (task_name, notification_id) in tasks
-            if len(tasks) > 0
-        ]
-
-        # if len(chain_tasks) > 1:
-        #     chain_tasks[0]['callbacks'] = [chain_tasks[1]]
-
-        # chain_sig = {
-        #     'task': 'celery.chain',
-        #     'args': [],
-        #     'kwargs': {'tasks': chain_tasks},
-        #     'options': {},
-        #     'subtask_type': 'chain',
-        #     'immutable': True,
-        # }
-
+        reply_to = str(uuid4())
         task_body = {
             'task': first_task_name,
             'id': str(uuid4()),
@@ -331,6 +301,26 @@ class SqsAsyncProducer:
             'options': {'queue': first_queue_name},
             'immutable': True,
         }
+
+        # reversed to set proper chain order
+        tasks.reverse()
+
+        chain_tasks = [
+            {
+                'task': task_name,
+                'args': [],
+                'kwargs': {'notification_id': str(notification_id)},
+                'options': {
+                    'queue': queue_name,
+                    'task_id': str(uuid4()),
+                    'reply_to': reply_to,
+                },
+                'subtask_type': None,
+                'immutable': True,
+            }
+            for queue_name, (task_name, notification_id) in tasks
+            if len(tasks) > 0
+        ]
 
         body = [
             [],
@@ -344,18 +334,18 @@ class SqsAsyncProducer:
         ]
 
         envelope: CeleryTaskEnvelope = {
-            'body': base64.b64encode(bytes(json.dumps([task_body, body]), 'utf-8')).decode('utf-8'),
+            'body': base64.b64encode(bytes(json.dumps(body), 'utf-8')).decode('utf-8'),
             'content-encoding': 'utf-8',
             'content-type': 'application/json',
             'headers': {
                 'lang': 'py',
-                'task': first_task_name,
+                'task': task_body['task'],
                 'id': task_body['id'],
                 'root_id': task_body['id'],
                 'chain': chain_tasks,
             },
             'properties': PropertiesDict(
-                # reply_to=str(uuid4()),
+                reply_to=reply_to,
                 correlation_id=task_body['id'],
                 delivery_mode=2,
                 delivery_info=DeliveryInfoDict(priority=0, exchange='default', routing_key=first_queue_name),
