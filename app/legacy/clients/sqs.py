@@ -295,7 +295,7 @@ class SqsAsyncProducer:
         first_queue_name, (first_task_name, first_notification_id) = tasks.pop(0)
         # first_queue_name, (first_task_name, first_notification_id) = tasks[0]
 
-        # tasks.reverse()
+        tasks.reverse()
 
         chain_tasks = [
             {
@@ -344,7 +344,7 @@ class SqsAsyncProducer:
         ]
 
         envelope: CeleryTaskEnvelope = {
-            'body': base64.b64encode(bytes(json.dumps(body), 'utf-8')).decode('utf-8'),
+            'body': base64.b64encode(bytes(json.dumps([task_body, body]), 'utf-8')).decode('utf-8'),
             'content-encoding': 'utf-8',
             'content-type': 'application/json',
             'headers': {
