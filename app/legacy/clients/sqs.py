@@ -12,7 +12,7 @@ from pydantic import UUID4
 from types_aiobotocore_sqs import SQSClient
 from types_aiobotocore_sqs.type_defs import SendMessageResultTypeDef
 
-from app.constants import AWS_REGION, TWELVE_HOURS
+from app.constants import AWS_REGION, QUEUE_PREFIX, TWELVE_HOURS
 from app.exceptions import NonRetryableError, RetryableError
 from app.legacy.clients.utils import client_retry
 from app.logging.logging_config import logger
@@ -248,6 +248,8 @@ class SqsAsyncProducer:
         Returns:
             CeleryTaskEnvelope: The envelope containing the task body and properties
         """
+        # add prefix to queue name
+        queue_name = f'{QUEUE_PREFIX}{queue_name}'
         task_body = {
             'task': task_name,
             'id': str(uuid4()),
@@ -291,8 +293,13 @@ class SqsAsyncProducer:
         # [lookup-va-profile-id-tasks(optional), lookup-contact-info-tasks, deliver-sms]
 
         first_queue_name, (first_task_name, first_notification_id) = tasks.pop(0)
-        # first_queue_name, (first_task_name, first_notification_id) = tasks[0]
+        # add prefix to the first queue
+        first_queue_name = f'{QUEUE_PREFIX}{first_queue_name}'
+
+        # I'm not sure if this is necessary
         reply_to = str(uuid4())
+
+        # build body for the first task
         task_body = {
             'task': first_task_name,
             'id': str(uuid4()),
@@ -305,6 +312,7 @@ class SqsAsyncProducer:
         # reversed to set proper chain order
         tasks.reverse()
 
+        # create the task chain
         chain_tasks = [
             {
                 'task': task_name,
@@ -322,6 +330,7 @@ class SqsAsyncProducer:
             if len(tasks) > 0
         ]
 
+        # build the actual body used in the envelope
         body = [
             [],
             {'notification_id': str(first_notification_id)},
