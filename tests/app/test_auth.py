@@ -175,7 +175,7 @@ class TestGetServiceApiKeys:
     async def test_dao_errors(self, test_exception: Exception, mocker: AsyncMock) -> None:
         """Test dao failures are compatible with notification-api.
 
-        Notification-API would return service not found due to combined service and API lookup.
+        Notification-API uses a combined service and API lookup and return service not found for dao errors.
         Returning api token not found is the closest matching error message in this case.
 
         Args:
