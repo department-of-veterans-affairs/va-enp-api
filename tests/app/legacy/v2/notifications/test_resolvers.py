@@ -99,8 +99,6 @@ class TestIdentifierSmsTaskResolver:
             (QueueNames.SEND_SMS.value, ('deliver_sms', notification_id)),
         ]
 
-        print(expected_tasks)
-
         assert tasks == expected_tasks
 
 

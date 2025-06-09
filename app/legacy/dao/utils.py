@@ -32,28 +32,28 @@ class Serializer:
 
     def serialize(
         self,
-        thing_to_encrypt: object | str | bytes | dict[str, str] | int | float | bool | None,
+        payload: object | str | bytes | dict[str, str] | int | float | bool | None,
     ) -> str:
         """Serialize an object into a URL-safe string.
 
         Args:
-            thing_to_encrypt (object | str | bytes | dict | int | float | bool | None): The object to serialize.
+            payload (object | str | bytes | dict | int | float | bool | None): The object to serialize.
 
         Returns:
             str: The serialized object as a URL-safe string.
         """
-        return self.serializer.dumps(thing_to_encrypt, salt=self.salt)
+        return self.serializer.dumps(payload, salt=self.salt)
 
     def deserialize(
         self,
-        thing_to_decrypt: str,
+        encoded_payload: str,
     ) -> Any:  # noqa: ANN401
         """Deserialize a URL-safe string back into an object.
 
         Args:
-            thing_to_decrypt (str): The URL-safe string to deserialize.
+            encoded_payload (str): The URL-safe string to deserialize.
 
         Returns:
             object | str | bytes | dict | int | float | bool | None: The deserialized object.
         """
-        return self.serializer.loads(thing_to_decrypt, salt=self.salt)
+        return self.serializer.loads(encoded_payload, salt=self.salt)
