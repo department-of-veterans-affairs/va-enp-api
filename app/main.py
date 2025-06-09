@@ -128,5 +128,3 @@ async def get_legacy_notification(notification_id: UUID4) -> None:
 
     data = await LegacyNotificationDao.get(notification_id)
     logger.info('Notification data: {}', data._asdict())
-
-    return data._asdict()

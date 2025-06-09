@@ -297,4 +297,4 @@ async def enqueue_notification_tasks(tasks: list[tuple[str, tuple[str, UUID4]]])
 
     """
     sqs_producer = SqsAsyncProducer()
-    await sqs_producer.enqueue_message_v2(tasks)
+    await sqs_producer.enqueue_message(tasks)

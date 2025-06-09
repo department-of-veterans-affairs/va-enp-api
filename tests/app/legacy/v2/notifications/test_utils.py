@@ -178,7 +178,7 @@ async def test_enqueue_notification_tasks() -> None:
         await enqueue_notification_tasks(test_data)
 
     mock_enqueue.assert_called_once()
-    assert mock_enqueue.call_args[0][0] == q_name
+    assert mock_enqueue.call_args[0][0] == test_data
 
 
 async def test_create_notification_happy_path(mocker: AsyncMock) -> None:

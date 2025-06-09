@@ -50,4 +50,8 @@ fileignoreconfig:
   checksum: e1089a8afae943694cceca868d0c9fe5a12acc925b25f8e3f25d8aa43771313f
 - filename: app/legacy/v2/notifications/utils.py
   checksum: 43f789ba4ea77e9ee4e54c2dab02e29d3ef1098dee5ff7fcbc0f5dbb3342ac25
+- filename: app/legacy/clients/sqs.py
+  checksum: 578512c9b93f55717b13a7c1fed8d676de042e04d1ef7e8247097e84eb745ab8
+- filename: tests/app/legacy/clients/test_sqs.py
+  checksum: 4ba66df99cb553f63d9f7f1299cf3cbafa5f8d76f0fdb55685a050854b0c2c75
 version: "1.0"

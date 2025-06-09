@@ -1,6 +1,7 @@
 """Legacy dao utility helpers."""
 
 import os
+from typing import Any
 
 from itsdangerous import URLSafeSerializer
 from tenacity import retry, retry_if_exception_type, stop_after_attempt
@@ -46,7 +47,7 @@ class Serializer:
     def deserialize(
         self,
         thing_to_decrypt: str,
-    ) -> object | str | bytes | dict[str, str] | int | float | bool | None:
+    ) -> Any:  # noqa: ANN401
         """Deserialize a URL-safe string back into an object.
 
         Args:
