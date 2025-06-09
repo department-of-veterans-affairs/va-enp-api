@@ -245,7 +245,7 @@ async def _get_service_api_keys(service_id: UUID4) -> Sequence[Row[Any]]:
 
     Attempts to fetch API keys for a service from the LegacyApiKeysDao. If no keys are found,
     or if a DAO-level error occurs (retryable or non-retryable), an HTTP 403 error is raised
-    to indicate that the token is invalid due to lack of API keys.
+    to indicate that the token is invalid due to lack of associated API keys.
 
     Args:
         service_id (UUID4): The UUID of the service whose API keys are being requested.
@@ -259,10 +259,11 @@ async def _get_service_api_keys(service_id: UUID4) -> Sequence[Row[Any]]:
     try:
         api_keys = list(await LegacyApiKeysDao.get_service_api_keys(service_id))
     except (RetryableError, NonRetryableError):
-        logger.debug(
-            'No API keys found for service_id: {}',
-            service_id,
-        )
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=RESPONSE_LEGACY_INVALID_TOKEN_NO_KEYS)
+
+    if not any(api_keys):
+        # This is not redundant
+        # The DAO get_service_api_keys uses .fetchall() which does not raise an exception if no records are returned.
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=RESPONSE_LEGACY_INVALID_TOKEN_NO_KEYS)
 
     return api_keys
