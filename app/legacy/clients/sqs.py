@@ -94,6 +94,8 @@ class SqsAsyncProducer:
             queue_name = tasks[0][0]
             task_envelope = json.dumps(self.generate_celery_task_chain(tasks))
 
+        queue_name = f'{QUEUE_PREFIX}{queue_name}'
+
         try:
             await self.enqueue_message(
                 queue_name=queue_name,
