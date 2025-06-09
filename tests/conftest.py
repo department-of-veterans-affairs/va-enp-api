@@ -79,7 +79,6 @@ def client() -> ENPTestClient:
     app.include_router(router)
 
     app.enp_state.providers['aws'] = Mock(spec=ProviderAWS)
-    app.enp_state.sqs_producer = Mock()
 
     # mock redis client manager for rate limiting
     redis_mock = Mock(spec=RedisClientManager)
