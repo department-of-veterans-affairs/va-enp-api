@@ -176,7 +176,7 @@ class TestGetServiceApiKeys:
         """Test dao failures are compatible with notification-api.
 
         Notification-API uses a combined service and API lookup and return service not found for dao errors.
-        Returning api token not found is the closest matching error message in this case.
+        Returning service has no API keys is the closest matching error message in this case.
 
         Args:
             test_exception (Exception): Exception to raise
@@ -186,7 +186,7 @@ class TestGetServiceApiKeys:
         with pytest.raises(HTTPException) as exc_info:
             await _get_service_api_keys(uuid4())
         assert exc_info.value.status_code == status.HTTP_403_FORBIDDEN
-        assert exc_info.value.detail == RESPONSE_LEGACY_INVALID_TOKEN_NOT_FOUND
+        assert exc_info.value.detail == RESPONSE_LEGACY_INVALID_TOKEN_NO_KEYS
 
 
 class TestInternalVerifyServiceToken:
