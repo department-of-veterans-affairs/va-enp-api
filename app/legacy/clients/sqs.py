@@ -314,15 +314,12 @@ class SqsAsyncProducer:
         Returns:
             CeleryTaskEnvelope: The envelope containing the task body and properties
         """
-        # task order:
+        # celery task order:
         # [lookup-va-profile-id-tasks(if non va profile id), lookup-contact-info-tasks, deliver_sms]
 
         first_queue_name, (first_task_name, first_notification_id) = tasks.pop(0)
         # add prefix to the first queue
         first_queue_with_prefix = f'{QUEUE_PREFIX}{first_queue_name}'
-
-        # I'm not sure if this is necessary
-        reply_to = str(uuid4())
 
         # build body for the first task
         first_task_body = CeleryTaskDict(
@@ -348,7 +345,6 @@ class SqsAsyncProducer:
                 options={
                     'queue': queue_name,
                     'task_id': str(uuid4()),
-                    'reply_to': reply_to,
                 },
                 subtask_type=None,
                 immutable=True,
@@ -382,7 +378,6 @@ class SqsAsyncProducer:
                 chain=chain_tasks,
             ),
             'properties': PropertiesDict(
-                reply_to=reply_to,
                 correlation_id=first_task_body['id'],
                 delivery_mode=2,
                 delivery_info=DeliveryInfoDict(priority=0, exchange='default', routing_key=first_queue_with_prefix),
