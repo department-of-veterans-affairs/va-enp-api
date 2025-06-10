@@ -284,10 +284,7 @@ def _collect_personalisation_from_template(template_content: str) -> set[str]:
 
 
 async def enqueue_notification_tasks(tasks: list[tuple[str, tuple[str, UUID4]]]) -> None:
-    """Queues a notification for processing.
-
-    This function uses the SqsAsyncProducer to enqueue tasks for processing by Celery.
-    Will attempt to retry if possible.
+    """Uses the SqsAsyncProducer to enqueue tasks for processing by Celery.
 
     Args:
         tasks (list[tuple[str, tuple[str, UUID4]]]): The tasks to enqueue
