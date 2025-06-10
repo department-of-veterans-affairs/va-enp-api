@@ -18,8 +18,11 @@ from sqlalchemy.exc import (
 from app.constants import NotificationStatus, NotificationType
 from app.db.db_init import get_read_session_with_context, get_write_session_with_context, metadata_legacy
 from app.exceptions import NonRetryableError, RetryableError
-from app.legacy.dao.utils import db_retry
+from app.legacy.dao.utils import Serializer, db_retry
+from app.legacy.v2.notifications.route_schema import PersonalisationFileObject, RecipientIdentifierModel
 from app.logging.logging_config import logger
+
+serializer = Serializer()
 
 
 class LegacyNotificationDao:
@@ -84,6 +87,9 @@ class LegacyNotificationDao:
         template_version: int,
         billable_units: int = 0,
         key_type: str = 'normal',
+        recipient_identifiers: RecipientIdentifierModel | None = None,
+        personalisation: dict[str, str | int | float | list[str | int | float] | PersonalisationFileObject]
+        | None = None,
     ) -> None:
         """Public interface for creating a notification.
 
@@ -99,12 +105,28 @@ class LegacyNotificationDao:
             template_version (int): The template version
             billable_units (int, optional): How many billable units this is. Defaults to 0.
             key_type (str, optional): ApiKey type. Defaults to 'normal'.
+            recipient_identifiers (RecipientIdentifierModel | None, optional): The recipient identifiers. Defaults to None.
+            personalisation (dict[str, str | int | float | list[str | int | float] | PersonalisationFileObject] | None, optional):
+                The personalisation data for the notification. Defaults to None.
 
         Raises:
             NonRetryableError: Unable to create the notification
         """
         try:
-            await LegacyNotificationDao._insert_notification(**locals())
+            await LegacyNotificationDao._insert_notification(
+                id=id,
+                notification_type=notification_type,
+                to=to,
+                reply_to_text=reply_to_text,
+                service_id=service_id,
+                api_key_id=api_key_id,
+                reference=reference,
+                template_id=template_id,
+                template_version=template_version,
+                billable_units=billable_units,
+                key_type=key_type,
+                personalisation=personalisation,
+            )
         except (RetryableError, NonRetryableError) as e:
             # Exceeded retries or was never retryable. Downstream methods logged this
             raise NonRetryableError from e
@@ -123,6 +145,8 @@ class LegacyNotificationDao:
         template_version: int,
         billable_units: int,
         key_type: str,
+        personalisation: dict[str, str | int | float | list[str | int | float] | PersonalisationFileObject]
+        | None = None,
     ) -> None:
         legacy_notifications = metadata_legacy.tables['notifications']
         try:
@@ -141,6 +165,7 @@ class LegacyNotificationDao:
                     created_at=datetime.now(),
                     key_type=key_type,
                     notification_status=NotificationStatus.CREATED,
+                    _personalisation=serializer.serialize(personalisation) if personalisation else None,
                 )
                 await session.execute(stmt)
                 await session.commit()

@@ -84,7 +84,7 @@ class IdentifierSmsTaskResolver(SmsTaskResolver):
                 (
                     str(QueueNames.LOOKUP_VA_PROFILE_ID),
                     (
-                        'lookup_va_profile_id',
+                        'lookup-va-profile-id-tasks',
                         notification_id,
                     ),
                 )
@@ -95,7 +95,7 @@ class IdentifierSmsTaskResolver(SmsTaskResolver):
             (
                 str(QueueNames.LOOKUP_CONTACT_INFO),
                 (
-                    'lookup_contact_info',
+                    'lookup-contact-info-tasks',
                     notification_id,
                 ),
             )

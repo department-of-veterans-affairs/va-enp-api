@@ -1,8 +1,8 @@
 """Test the SQS client found in app/legacy/clients/sqs.py."""
 
-import uuid
 from typing import Any, Generator, cast
 from unittest.mock import AsyncMock
+from uuid import UUID, uuid4
 
 import botocore
 import pytest
@@ -10,11 +10,12 @@ from botocore.exceptions import ClientError
 from types_aiobotocore_sqs import SQSClient
 from types_boto3_sqs import SQSClient as SQSClientBoto3
 
-from app.constants import AWS_REGION
+from app.constants import AWS_REGION, QUEUE_PREFIX
 from app.exceptions import NonRetryableError, RetryableError
-from app.legacy.clients.sqs import SqsAsyncProducer
+from app.legacy.clients.sqs import CeleryTaskEnvelope, SqsAsyncProducer
 
 TEST_QUEUE_NAME = 'test_queue'
+TEST_QUEUE_WITH_PREFIX = f'{QUEUE_PREFIX}test_queue'
 
 
 @pytest.fixture
@@ -30,7 +31,7 @@ def setup_queue(moto_server: Generator[None, Any, None]) -> Generator[Any | str,
         botocore.session.get_session().create_client('sqs', region_name=AWS_REGION),
     )
 
-    test_queue = sqs_client.create_queue(QueueName=TEST_QUEUE_NAME)
+    test_queue = sqs_client.create_queue(QueueName=TEST_QUEUE_WITH_PREFIX)
 
     yield test_queue['QueueUrl']
 
@@ -50,19 +51,56 @@ class TestSqsAsyncProducer:
         assert str(client) == 'AWS SQS Producer Client', 'String representation should match'
 
     @staticmethod
-    async def test_sqs_producer_send_message(setup_queue: None) -> None:
-        """Test the send_message method of the SqsAsyncProducer."""
+    @pytest.mark.parametrize(
+        'test_tasks',
+        [
+            [(TEST_QUEUE_NAME, ('task_name', uuid4()))],
+            [(TEST_QUEUE_NAME, ('task_name', uuid4())), ('another_queue', ('task2_name', uuid4()))],
+        ],
+        ids=[
+            'single_task',
+            'multiple_tasks',
+        ],
+    )
+    async def test_enqueue_message(
+        setup_queue: None,
+        test_tasks: list[tuple[str, tuple[str, UUID]]],
+    ) -> None:
+        """Test the enqueue_message method of the SqsAsyncProducer."""
         producer = SqsAsyncProducer()
-        response = await producer.enqueue_message(TEST_QUEUE_NAME, 'test_message')
-        assert isinstance(response, dict), 'send_message should return a dictionary'
+
+        await producer.enqueue_message(test_tasks)
+
+    @staticmethod
+    async def test_exception_raised_in_enqueue_message(
+        moto_server: Generator[None, Any, None],
+        mocker: AsyncMock,
+    ) -> None:
+        """Test the enqueue_message method of the SqsAsyncProducer."""
+        mock_logger = mocker.patch('app.legacy.clients.sqs.logger.exception')
+        notification_id = uuid4()
+        producer = SqsAsyncProducer()
+
+        # exception raised because queue not found
+        await producer.enqueue_message([('invalid_queue', ('task_name', notification_id))])
+
+        assert mock_logger.call_count == 2
+        mock_logger.assert_called_with('Failed to enqueue task(s) for notification {}', notification_id)
+
+    @staticmethod
+    async def test_enqueue_message_private(setup_queue: None) -> None:
+        """Test the enqueue_message method of the SqsAsyncProducer."""
+        producer = SqsAsyncProducer()
+        response = await producer._enqueue_message(TEST_QUEUE_WITH_PREFIX, 'test_message')
+        assert isinstance(response, dict), 'enqueue_message should return a dictionary'
         assert 'MessageId' in response, 'Response should contain MessageId'
 
     @staticmethod
-    async def test_sqs_producer_send_message_invalid_queue(moto_server: Generator[None, Any, None]) -> None:
+    async def test_enqueue_message_invalid_queue(moto_server: Generator[None, Any, None]) -> None:
         """Test sending a message to an invalid queue."""
         producer = SqsAsyncProducer()
         with pytest.raises(NonRetryableError):
-            await producer.enqueue_message('invalid_queue', 'test_message')
+            await producer._enqueue_message('invalid_queue', 'test_message')
 
     @staticmethod
     async def test_get_queue_url_key_error() -> None:
@@ -143,18 +181,70 @@ class TestSqsAsyncProducer:
         with pytest.raises(expected_exception):
             SqsAsyncProducer._handle_client_error(client_error, 'Test error message')
 
+
+class TestSqsAscyncProducerGenerateTasks:
+    """Test the SqsAsyncProducer task envelope generation methods."""
+
     @staticmethod
     def test_generate_celery_task_fields() -> None:
         """Test the generate_celery_task function returns the expected envelope structure."""
         producer = SqsAsyncProducer()
-        queue_name = 'test_q'
-        test_args = ('task_name', uuid.uuid4())
+        test_args = ('task_name', uuid4())
 
         # mimicing how the task is called in the app
-        result = producer.generate_celery_task(queue_name, *test_args)
+        result: CeleryTaskEnvelope = producer._generate_celery_task(TEST_QUEUE_NAME, *test_args)
 
-        assert isinstance(result, dict)
+        assert isinstance(result, dict), 'Result should be a CeleryTaskEnvelope instance'
         assert 'body' in result
         assert 'properties' in result
-        assert result['properties']['delivery_info']['routing_key'] == queue_name
+        assert result['properties']['delivery_info']['routing_key'] == TEST_QUEUE_WITH_PREFIX
         assert result['content-type'] == 'application/json'
+
+    @staticmethod
+    def test_generate_celery_task_chain() -> None:
+        """Test the generate_celery_task_chain function returns the expected envelope structure."""
+        producer = SqsAsyncProducer()
+        task1_name = 'task_name'
+        task2_name = 'task2_name'
+        test_tasks = [
+            (TEST_QUEUE_NAME, (task1_name, uuid4())),
+            ('another_queue', (task2_name, uuid4())),
+        ]
+
+        # mimicing how the task is called in the app
+        result: CeleryTaskEnvelope = producer._generate_celery_task_chain(test_tasks)
+
+        assert isinstance(result, dict), 'Result should be a CeleryTaskEnvelope instance'
+        assert 'body' in result
+        assert 'properties' in result
+        assert result['properties']['delivery_info']['routing_key'] == TEST_QUEUE_WITH_PREFIX
+        assert result['headers']['task'] == task1_name
+        assert len(result['headers']['chain']) == 1
+        assert result['headers']['chain'][0]['task'] == task2_name
+
+    @staticmethod
+    def test_generate_celery_task_chain_with_3_tasks() -> None:
+        """Test the generate_celery_task_chain function returns the expected envelope structure."""
+        producer = SqsAsyncProducer()
+        task1_name = 'task_name'
+        task2_name = 'task2_name'
+        task3_name = 'task3_name'
+        test_tasks = [
+            (TEST_QUEUE_NAME, (task1_name, uuid4())),
+            ('another_queue', (task2_name, uuid4())),
+            ('third_queue', (task3_name, uuid4())),
+        ]
+
+        # mimicing how the task is called in the app
+        result: CeleryTaskEnvelope = producer._generate_celery_task_chain(test_tasks)
+
+        assert isinstance(result, dict), 'Result should be a CeleryTaskEnvelope instance'
+        assert 'body' in result
+        assert 'properties' in result
+        assert result['properties']['delivery_info']['routing_key'] == TEST_QUEUE_WITH_PREFIX
+        assert result['headers']['task'] == task1_name
+        assert len(result['headers']['chain']) == 2
+
+        # task order is reversed in the chain
+        assert result['headers']['chain'][0]['task'] == task3_name
+        assert result['headers']['chain'][1]['task'] == task2_name

@@ -75,8 +75,8 @@ class TestIdentifierSmsTaskResolver:
 
         # Check each task has the expected queue name and parameters
         expected_tasks = [
-            (QueueNames.LOOKUP_VA_PROFILE_ID, ('lookup_va_profile_id', notification_id)),
-            (QueueNames.LOOKUP_CONTACT_INFO, ('lookup_contact_info', notification_id)),
+            (QueueNames.LOOKUP_VA_PROFILE_ID, ('lookup-va-profile-id-tasks', notification_id)),
+            (QueueNames.LOOKUP_CONTACT_INFO, ('lookup-contact-info-tasks', notification_id)),
             (QueueNames.SEND_SMS, ('deliver_sms', notification_id)),
         ]
 
@@ -95,8 +95,8 @@ class TestIdentifierSmsTaskResolver:
 
         # Check each task has the expected queue name and parameters
         expected_tasks = [
-            (QueueNames.LOOKUP_CONTACT_INFO, ('lookup_contact_info', notification_id)),
-            (QueueNames.SEND_SMS, ('deliver_sms', notification_id)),
+            (QueueNames.LOOKUP_CONTACT_INFO.value, ('lookup-contact-info-tasks', notification_id)),
+            (QueueNames.SEND_SMS.value, ('deliver_sms', notification_id)),
         ]
 
         assert tasks == expected_tasks

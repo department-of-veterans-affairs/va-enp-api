@@ -1,6 +1,5 @@
 """Utilities to aid the REST Notification routes."""
 
-import json
 import re
 from typing import Any, Awaitable, Callable
 
@@ -9,12 +8,12 @@ from fastapi import HTTPException, Request, status
 from pydantic import UUID4
 from sqlalchemy import Row
 from starlette_context import context
-from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_full_jitter
 
 from app.constants import FIVE_MINUTES, RESPONSE_500, NotificationType
 from app.exceptions import NonRetryableError, RetryableError
 from app.legacy.clients.sqs import SqsAsyncProducer
 from app.legacy.dao.notifications_dao import LegacyNotificationDao
+from app.legacy.dao.recipient_identifiers_dao import RecipientIdentifiersDao
 from app.legacy.dao.templates_dao import LegacyTemplateDao
 from app.legacy.v2.notifications.route_schema import (
     PersonalisationFileObject,
@@ -24,7 +23,6 @@ from app.legacy.v2.notifications.route_schema import (
 from app.logging.logging_config import logger
 from app.providers.provider_aws import ProviderAWS
 from app.providers.provider_schemas import PushModel
-from app.utils import log_last_attempt_on_failure, log_on_retry
 
 
 class ChainedDepends:
@@ -178,7 +176,16 @@ async def create_notification(
             reference=request.reference,
             template_id=template_row.id,
             template_version=template_row.version,
+            recipient_identifiers=request.recipient_identifier,
+            personalisation=request.personalisation,
         )
+
+        if request.recipient_identifier:
+            # If recipient identifiers are provided, set them
+            await RecipientIdentifiersDao.set_recipient_identifiers(
+                notification_id=id,
+                recipient_identifiers=request.recipient_identifier,
+            )
     except NonRetryableError as e:
         logger.exception('Failed to create notification due to unexpected error in the database')
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=RESPONSE_500) from e
@@ -276,19 +283,8 @@ def _collect_personalisation_from_template(template_content: str) -> set[str]:
     return set(matches)
 
 
-@retry(
-    before_sleep=log_on_retry,
-    reraise=True,
-    retry_error_callback=log_last_attempt_on_failure,
-    retry=retry_if_exception_type(RetryableError),
-    stop=stop_after_attempt(10),
-    wait=wait_full_jitter(multiplier=1, max=60),
-)
 async def enqueue_notification_tasks(tasks: list[tuple[str, tuple[str, UUID4]]]) -> None:
-    """Queues a notification for processing.
-
-    This function uses the SqsAsyncProducer to enqueue tasks for processing by Celery.
-    Will attempt to retry if possible.
+    """Uses the SqsAsyncProducer to enqueue tasks for processing by Celery.
 
     Args:
         tasks (list[tuple[str, tuple[str, UUID4]]]): The tasks to enqueue
@@ -296,7 +292,6 @@ async def enqueue_notification_tasks(tasks: list[tuple[str, tuple[str, UUID4]]])
     """
     sqs_producer = SqsAsyncProducer()
 
-    for queue_name, task_args in tasks:
-        task_message = sqs_producer.generate_celery_task(queue_name, *task_args)
-
-        await sqs_producer.enqueue_message(queue_name, json.dumps(task_message))
+    # Does not raise an exception on failure, expect the notification to "replay" after 24.25 hours.
+    # This mechanism is run on a cron schedule.
+    await sqs_producer.enqueue_message(tasks)

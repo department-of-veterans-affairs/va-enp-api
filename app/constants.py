@@ -4,7 +4,7 @@ import os
 from enum import StrEnum
 
 ENV = os.getenv('ENV', 'local')
-DEPLOYMENT_ENVS = ('dev', 'perf', 'staging', 'prod')
+DEPLOYMENT_ENVS = {'dev', 'perf', 'staging', 'prod'}
 
 # AWS Configuration
 AWS_REGION = os.getenv('AWS_REGION', 'us-east-1')
@@ -69,9 +69,9 @@ QUEUE_PREFIX = f'{ENV}-notification-'
 class QueueNames(StrEnum):
     """Celery queue names."""
 
-    LOOKUP_CONTACT_INFO = f'{QUEUE_PREFIX}lookup-contact-info-tasks'
-    LOOKUP_VA_PROFILE_ID = f'{QUEUE_PREFIX}lookup-va-profile-id-tasks'
-    SEND_SMS = f'{QUEUE_PREFIX}send-sms-tasks'
+    LOOKUP_CONTACT_INFO = 'lookup-contact-info-tasks'
+    LOOKUP_VA_PROFILE_ID = 'lookup-va-profile-id-tasks'
+    SEND_SMS = 'send-sms-tasks'
 
 
 # Legacy auth responses

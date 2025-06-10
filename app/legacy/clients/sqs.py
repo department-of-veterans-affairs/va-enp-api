@@ -2,18 +2,32 @@
 
 import base64
 import json
-from typing import Any, TypedDict
+from typing import Any, NotRequired, TypedDict
 from uuid import uuid4
 
 from aiobotocore.session import ClientCreatorContext, get_session
+from async_lru import alru_cache
 from botocore.exceptions import ClientError
 from pydantic import UUID4
 from types_aiobotocore_sqs import SQSClient
 from types_aiobotocore_sqs.type_defs import SendMessageResultTypeDef
 
-from app.constants import AWS_REGION
+from app.constants import AWS_REGION, QUEUE_PREFIX, TWELVE_HOURS
 from app.exceptions import NonRetryableError, RetryableError
+from app.legacy.clients.utils import client_retry
 from app.logging.logging_config import logger
+
+
+class CeleryTaskDict(TypedDict):
+    """Dictionary representing a Celery task."""
+
+    task: str
+    id: str
+    args: list[str]
+    kwargs: dict[str, str]
+    options: dict[str, str]
+    subtask_type: None
+    immutable: bool
 
 
 class DeliveryInfoDict(TypedDict):
@@ -27,12 +41,22 @@ class DeliveryInfoDict(TypedDict):
 class PropertiesDict(TypedDict):
     """Properties of the message sent to SQS."""
 
-    reply_to: str
+    reply_to: NotRequired[str]
     correlation_id: str
     delivery_mode: int
     delivery_info: DeliveryInfoDict
     body_encoding: str
     delivery_tag: str
+
+
+class CeleryHeaderDict(TypedDict):
+    """Headers for the Celery task envelope."""
+
+    lang: str
+    task: str
+    id: str
+    root_id: str
+    chain: list[CeleryTaskDict]
 
 
 # Defined without using a class to enable proper keys (keys contain hyphens)
@@ -42,7 +66,8 @@ CeleryTaskEnvelope = TypedDict(
         'body': str,
         'content-encoding': str,
         'content-type': str,
-        'headers': dict[str, Any],
+        # headers can be an empty dict or a CeleryHeaderDict
+        'headers': CeleryHeaderDict | dict[Any, Any],
         'properties': PropertiesDict,
     },
 )
@@ -76,7 +101,35 @@ class SqsAsyncProducer:
 
         return self._client
 
-    async def enqueue_message(
+    async def enqueue_message(self, tasks: list[tuple[str, tuple[str, UUID4]]]) -> None:
+        """Enqueue multiple messages to SQS.
+
+        Args:
+            tasks (list[tuple[str, tuple[str, UUID4]]]): List of tuples containing queue name and task details
+        """
+        if len(tasks) == 1:
+            # build body for 1 task
+            queue_name, (task_name, notification_id) = tasks[0]
+            task_envelope = json.dumps(self._generate_celery_task(queue_name, task_name, notification_id))
+        else:
+            # build body for multiple tasks
+            # get the first queue name
+            queue_name, (_, notification_id) = tasks[0]
+            task_envelope = json.dumps(self._generate_celery_task_chain(tasks))
+
+        queue_name = f'{QUEUE_PREFIX}{queue_name}'
+
+        try:
+            await self._enqueue_message(
+                queue_name=queue_name,
+                message=task_envelope,
+            )
+        except (RetryableError, NonRetryableError):
+            # Does not raise an exception on failure, expect the notification to "replay" after 24.25 hours.
+            # This mechanism is run on a cron schedule.
+            logger.exception('Failed to enqueue task(s) for notification {}', notification_id)
+
+    async def _enqueue_message(
         self,
         queue_name: str,
         message: str,
@@ -103,6 +156,8 @@ class SqsAsyncProducer:
 
         return response
 
+    @client_retry
+    @alru_cache(maxsize=1024, ttl=TWELVE_HOURS)
     async def _get_queue_url(
         self,
         sqs_client: SQSClient,
@@ -120,7 +175,6 @@ class SqsAsyncProducer:
         Raises:
             NonRetryableError: If the queue URL cannot be retrieved
         """
-        # async with self.sqs_client_context as sqs_client:
         try:
             response = await sqs_client.get_queue_url(QueueName=queue_name)
             q_url = response['QueueUrl']
@@ -141,6 +195,7 @@ class SqsAsyncProducer:
 
         return q_url
 
+    @client_retry
     async def _send_message_to_queue(
         self,
         sqs_client: SQSClient,
@@ -203,7 +258,7 @@ class SqsAsyncProducer:
             raise NonRetryableError(err_msg) from error
 
     @staticmethod
-    def generate_celery_task(
+    def _generate_celery_task(
         queue_name: str,
         task_name: str,
         notification_id: UUID4,
@@ -218,8 +273,10 @@ class SqsAsyncProducer:
             notification_id (UUID4): The ID of the notification
 
         Returns:
-            CeleryTaskEnvelope: The envelope containing the task body and properties
+            CeleryTaskEnvelope: The dictionary envelope containing the task body and properties
         """
+        # add prefix to queue name
+        queue_name = f'{QUEUE_PREFIX}{queue_name}'
         task_body = {
             'task': task_name,
             'id': str(uuid4()),
@@ -236,7 +293,97 @@ class SqsAsyncProducer:
                 reply_to=str(uuid4()),
                 correlation_id=str(uuid4()),
                 delivery_mode=2,
-                delivery_info=DeliveryInfoDict(priority=0, exchange='default', routing_key=queue_name),
+                delivery_info=DeliveryInfoDict(
+                    priority=0,
+                    exchange='default',
+                    routing_key=queue_name,
+                ),
+                body_encoding='base64',
+                delivery_tag=str(uuid4()),
+            ),
+        }
+
+        return envelope
+
+    @staticmethod
+    def _generate_celery_task_chain(tasks: list[tuple[str, tuple[str, UUID4]]]) -> CeleryTaskEnvelope:
+        """Generate a celery task envelope for a celery task chain.
+
+        Args:
+            tasks (list[tuple[str, tuple[str, UUID4]]]): List of tuples containing queue name and task details
+
+        Returns:
+            CeleryTaskEnvelope: The envelope containing the task body and properties
+        """
+        # celery task order:
+        # [lookup-va-profile-id-tasks(if non va profile id), lookup-contact-info-tasks, deliver_sms]
+
+        first_queue_name, (first_task_name, first_notification_id) = tasks.pop(0)
+        # add prefix to the first queue
+        first_queue_with_prefix = f'{QUEUE_PREFIX}{first_queue_name}'
+
+        # build body for the first task
+        first_task_body = CeleryTaskDict(
+            task=first_task_name,
+            id=str(uuid4()),
+            args=[],
+            kwargs={'notification_id': str(first_notification_id)},
+            options={'queue': first_queue_with_prefix},
+            subtask_type=None,
+            immutable=True,
+        )
+
+        # reversed to set proper chain order, celery pops from the end of the list
+        tasks.reverse()
+
+        # create the task chain, a list of CeleryTaskDicts
+        chain_tasks = [
+            CeleryTaskDict(
+                task=task_name,
+                id=str(uuid4()),
+                args=[],
+                kwargs={'notification_id': str(notification_id)},
+                options={
+                    'queue': queue_name,
+                    'task_id': str(uuid4()),
+                },
+                subtask_type=None,
+                immutable=True,
+            )
+            for queue_name, (task_name, notification_id) in tasks
+        ]
+
+        # build the body used in the envelope
+        envelope_body = [
+            # args for the first task
+            [],
+            # kwargs for the first task
+            {'notification_id': str(first_notification_id)},
+            # follow-up info from the first task
+            {
+                'callbacks': None,
+                'errbacks': None,
+                'chain': chain_tasks,
+                'chord': None,
+            },
+        ]
+
+        # create the envelope to send to SQS
+        envelope: CeleryTaskEnvelope = {
+            'body': base64.b64encode(bytes(json.dumps(envelope_body), 'utf-8')).decode('utf-8'),
+            'content-encoding': 'utf-8',
+            'content-type': 'application/json',
+            'headers': CeleryHeaderDict(
+                lang='py',
+                task=first_task_body['task'],
+                id=first_task_body['id'],
+                root_id=first_task_body['id'],
+                chain=chain_tasks,
+            ),
+            'properties': PropertiesDict(
+                correlation_id=first_task_body['id'],
+                delivery_mode=2,
+                delivery_info=DeliveryInfoDict(priority=0, exchange='default', routing_key=first_queue_with_prefix),
                 body_encoding='base64',
                 delivery_tag=str(uuid4()),
             ),

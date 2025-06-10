@@ -11,21 +11,22 @@ requires-poetry = "2.1.3"
 [tool.poetry.dependencies]
 python = "^3.13"
 aiobotocore = "*"
+async-lru = "*"
 fastapi = {extras = ["standard"], version = "*"}
-pyjwt = "*"
 gunicorn = "*"
+itsdangerous = "*"
 loguru = "*"
 phonenumbers = "*"
 psycopg = {extras = ["binary"], version = "*"}
 pydantic = "*"
 pydantic_extra_types = "*"
+pyjwt = "*"
+redis = "*"
 sqlalchemy = {extras = ["asyncio"], version = "*"}
 starlette_context = "*"
 tenacity = "*"
 types-aiobotocore = {extras = ["essential"], version = "*"}
 uvicorn-worker = "*"
-redis = "^6.2.0"
-async-lru = "*"
 
 [tool.poetry.group.test]
 optional = true
@@ -36,7 +37,6 @@ pytest-cov = "*"
 pytest = "*"
 pytest-asyncio = "*"
 pytest-mock = "*"
-itsdangerous = "*"
 
 [tool.poetry.group.static_tools]
 optional = true
@@ -65,7 +65,7 @@ omit = [
     "app/logging/*",
     "app/main.py",
     "tests/app/test_main.py",
-    "app/legacy/dao/*",  # Need to be able to add to the database before we can remove this
+    "app/legacy/dao/*",  # TODO: Remove this when adding tests for DAO modules.
 ]
 
 [tool.coverage.report]
