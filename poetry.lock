@@ -2296,14 +2296,14 @@ files = [
 
 [[package]]
 name = "phonenumbers"
-version = "9.0.4"
+version = "9.0.7"
 description = "Python version of Google's common library for parsing, formatting, storing and validating international phone numbers."
 optional = false
 python-versions = "*"
 groups = ["main"]
 files = [
-    {file = "phonenumbers-9.0.4-py2.py3-none-any.whl", hash = "sha256:ac8aa9d4679da5078547aeb159d78c2b60f8d0fb4eafdc7cf464069039b30ccd"},
-    {file = "phonenumbers-9.0.4.tar.gz", hash = "sha256:b1530fc2a7b67e4c37c63e8e736c7e6efe2fed283c1bbb5c08c4511ec0c160ed"},
+    {file = "phonenumbers-9.0.7-py2.py3-none-any.whl", hash = "sha256:306eb14d1eaeb82230a08aa1614d04c93322b65b1ded2fff585161ed7eca39fc"},
+    {file = "phonenumbers-9.0.7.tar.gz", hash = "sha256:d4cc2aa36cbf9b0004c370f406d1510ddef56bba9e5f759471ef47e998d8a2f9"},
 ]
 
 [[package]]
