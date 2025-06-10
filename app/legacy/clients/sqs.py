@@ -107,7 +107,6 @@ class SqsAsyncProducer:
         Args:
             tasks (list[tuple[str, tuple[str, UUID4]]]): List of tuples containing queue name and task details
         """
-        queue_name = ''
         if len(tasks) == 1:
             # build body for 1 task
             queue_name, (task_name, notification_id) = tasks[0]
@@ -115,7 +114,7 @@ class SqsAsyncProducer:
         else:
             # build body for multiple tasks
             # get the first queue name
-            queue_name = tasks[0][0]
+            queue_name, (_, notification_id) = tasks[0]
             task_envelope = json.dumps(self._generate_celery_task_chain(tasks))
 
         queue_name = f'{QUEUE_PREFIX}{queue_name}'
@@ -126,7 +125,9 @@ class SqsAsyncProducer:
                 message=task_envelope,
             )
         except (RetryableError, NonRetryableError):
-            logger.exception('Failed to enqueue notification task(s).')
+            # Does not raise an exception on failure, expect the notification to "replay" after 24.25 hours.
+            # This mechanism is run on a cron schedule.
+            logger.exception('Failed to enqueue task(s) for notification {}', notification_id)
 
     async def _enqueue_message(
         self,
@@ -350,13 +351,15 @@ class SqsAsyncProducer:
                 immutable=True,
             )
             for queue_name, (task_name, notification_id) in tasks
-            if len(tasks) > 0
         ]
 
         # build the body used in the envelope
         envelope_body = [
+            # args for the first task
             [],
+            # kwargs for the first task
             {'notification_id': str(first_notification_id)},
+            # follow-up info from the first task
             {
                 'callbacks': None,
                 'errbacks': None,

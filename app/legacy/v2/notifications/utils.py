@@ -13,6 +13,7 @@ from app.constants import FIVE_MINUTES, RESPONSE_500, NotificationType
 from app.exceptions import NonRetryableError, RetryableError
 from app.legacy.clients.sqs import SqsAsyncProducer
 from app.legacy.dao.notifications_dao import LegacyNotificationDao
+from app.legacy.dao.recipient_identifiers_dao import RecipientIdentifiersDao
 from app.legacy.dao.templates_dao import LegacyTemplateDao
 from app.legacy.v2.notifications.route_schema import (
     PersonalisationFileObject,
@@ -178,6 +179,13 @@ async def create_notification(
             recipient_identifiers=request.recipient_identifier,
             personalisation=request.personalisation,
         )
+
+        if request.recipient_identifier:
+            # If recipient identifiers are provided, set them
+            await RecipientIdentifiersDao.set_recipient_identifiers(
+                notification_id=id,
+                recipient_identifiers=request.recipient_identifier,
+            )
     except NonRetryableError as e:
         logger.exception('Failed to create notification due to unexpected error in the database')
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=RESPONSE_500) from e
@@ -283,8 +291,10 @@ async def enqueue_notification_tasks(tasks: list[tuple[str, tuple[str, UUID4]]])
 
     Args:
         tasks (list[tuple[str, tuple[str, UUID4]]]): The tasks to enqueue
-        sqs_producer (SqsAsyncProducer): The SQS producer to use for enqueuing messages
 
     """
     sqs_producer = SqsAsyncProducer()
+
+    # Does not raise an exception on failure, expect the notification to "replay" after 24.25 hours.
+    # This mechanism is run on a cron schedule.
     await sqs_producer.enqueue_message(tasks)

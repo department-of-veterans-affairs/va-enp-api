@@ -8,10 +8,14 @@ import pytest
 from fastapi import HTTPException, status
 from sqlalchemy import Row
 
-from app.constants import RESPONSE_500, NotificationType
+from app.constants import RESPONSE_500, IdentifierType, NotificationType
 from app.exceptions import NonRetryableError
 from app.legacy.clients.sqs import SqsAsyncProducer
-from app.legacy.v2.notifications.route_schema import PersonalisationFileObject, V2PostSmsRequestModel
+from app.legacy.v2.notifications.route_schema import (
+    PersonalisationFileObject,
+    RecipientIdentifierModel,
+    V2PostSmsRequestModel,
+)
 from app.legacy.v2.notifications.utils import (
     create_notification,
     enqueue_notification_tasks,
@@ -190,6 +194,28 @@ async def test_create_notification_happy_path(mocker: AsyncMock) -> None:
     mocker.patch('app.legacy.v2.notifications.route_schema.context', return_value=mock_context)
 
     request = V2PostSmsRequestModel(phone_number='+18005550101', template_id=uuid4())
+    await create_notification(uuid4(), mocker.AsyncMock(), request)
+
+
+async def test_create_notification_with_recipient_id(mocker: AsyncMock) -> None:
+    """Validate functionality of create_notification.
+
+    Args:
+        mocker (AsyncMock): Mock object
+    """
+    mocker.patch('app.legacy.v2.notifications.utils.LegacyNotificationDao.create_notification')
+    mocker.patch('app.legacy.v2.notifications.utils.RecipientIdentifiersDao.set_recipient_identifiers')
+    mocker.patch('app.legacy.v2.notifications.route_schema.LegacyServiceSmsSenderDao.get_service_default')
+    mock_context = mocker.patch('app.legacy.v2.notifications.utils.context')
+    mock_context['api_key_id'] = uuid4()
+    mock_context['service_id'] = uuid4()
+    mocker.patch('app.legacy.v2.notifications.route_schema.context', return_value=mock_context)
+
+    request = V2PostSmsRequestModel(
+        phone_number='+18005550101',
+        template_id=uuid4(),
+        recipient_identifier=RecipientIdentifierModel(id_type=IdentifierType.PID, id_value='123456789'),
+    )
     await create_notification(uuid4(), mocker.AsyncMock(), request)
 
 

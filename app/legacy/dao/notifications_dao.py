@@ -18,7 +18,6 @@ from sqlalchemy.exc import (
 from app.constants import NotificationStatus, NotificationType
 from app.db.db_init import get_read_session_with_context, get_write_session_with_context, metadata_legacy
 from app.exceptions import NonRetryableError, RetryableError
-from app.legacy.dao.recipient_identifiers_dao import RecipientIdentifiersDao
 from app.legacy.dao.utils import Serializer, db_retry
 from app.legacy.v2.notifications.route_schema import PersonalisationFileObject, RecipientIdentifierModel
 from app.logging.logging_config import logger
@@ -114,14 +113,20 @@ class LegacyNotificationDao:
             NonRetryableError: Unable to create the notification
         """
         try:
-            await LegacyNotificationDao._insert_notification(**locals())
-
-            if recipient_identifiers:
-                # If recipient identifiers are provided, set them
-                await RecipientIdentifiersDao.set_recipient_identifiers(
-                    notification_id=id,
-                    recipient_identifiers=recipient_identifiers,
-                )
+            await LegacyNotificationDao._insert_notification(
+                id=id,
+                notification_type=notification_type,
+                to=to,
+                reply_to_text=reply_to_text,
+                service_id=service_id,
+                api_key_id=api_key_id,
+                reference=reference,
+                template_id=template_id,
+                template_version=template_version,
+                billable_units=billable_units,
+                key_type=key_type,
+                personalisation=personalisation,
+            )
         except (RetryableError, NonRetryableError) as e:
             # Exceeded retries or was never retryable. Downstream methods logged this
             raise NonRetryableError from e
@@ -140,7 +145,6 @@ class LegacyNotificationDao:
         template_version: int,
         billable_units: int,
         key_type: str,
-        recipient_identifiers: RecipientIdentifierModel | None = None,
         personalisation: dict[str, str | int | float | list[str | int | float] | PersonalisationFileObject]
         | None = None,
     ) -> None:

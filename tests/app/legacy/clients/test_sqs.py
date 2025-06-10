@@ -1,8 +1,8 @@
 """Test the SQS client found in app/legacy/clients/sqs.py."""
 
-import uuid
 from typing import Any, Generator, cast
 from unittest.mock import AsyncMock
+from uuid import UUID, uuid4
 
 import botocore
 import pytest
@@ -54,13 +54,17 @@ class TestSqsAsyncProducer:
     @pytest.mark.parametrize(
         'test_tasks',
         [
-            [(TEST_QUEUE_NAME, ('task_name', uuid.uuid4())), ('another_queue', ('task2_name', uuid.uuid4()))],
-            [(TEST_QUEUE_NAME, ('task_name', uuid.uuid4()))],
+            [(TEST_QUEUE_NAME, ('task_name', uuid4()))],
+            [(TEST_QUEUE_NAME, ('task_name', uuid4())), ('another_queue', ('task2_name', uuid4()))],
+        ],
+        ids=[
+            'single_task',
+            'multiple_tasks',
         ],
     )
-    async def test_sqs_producer_enqueue_message(
+    async def test_enqueue_message(
         setup_queue: None,
-        test_tasks: list[tuple[str, tuple[str, uuid.UUID]]],
+        test_tasks: list[tuple[str, tuple[str, UUID]]],
     ) -> None:
         """Test the enqueue_message method of the SqsAsyncProducer."""
         producer = SqsAsyncProducer()
@@ -68,15 +72,23 @@ class TestSqsAsyncProducer:
         await producer.enqueue_message(test_tasks)
 
     @staticmethod
-    async def test_exception_raised_in_enqueue_message(moto_server: Generator[None, Any, None]) -> None:
+    async def test_exception_raised_in_enqueue_message(
+        moto_server: Generator[None, Any, None],
+        mocker: AsyncMock,
+    ) -> None:
         """Test the enqueue_message method of the SqsAsyncProducer."""
+        mock_logger = mocker.patch('app.legacy.clients.sqs.logger.exception')
+        notification_id = uuid4()
         producer = SqsAsyncProducer()
 
         # exception raised because queue not found
-        await producer.enqueue_message([('invalid_queue', ('task_name', uuid.uuid4()))])
+        await producer.enqueue_message([('invalid_queue', ('task_name', notification_id))])
+
+        assert mock_logger.call_count == 2
+        mock_logger.assert_called_with('Failed to enqueue task(s) for notification {}', notification_id)
 
     @staticmethod
-    async def test_sqs_producer_enqueue_message_private(setup_queue: None) -> None:
+    async def test_enqueue_message_private(setup_queue: None) -> None:
         """Test the enqueue_message method of the SqsAsyncProducer."""
         producer = SqsAsyncProducer()
         response = await producer._enqueue_message(TEST_QUEUE_WITH_PREFIX, 'test_message')
@@ -84,7 +96,7 @@ class TestSqsAsyncProducer:
         assert 'MessageId' in response, 'Response should contain MessageId'
 
     @staticmethod
-    async def test_sqs_producer_enqueue_message_invalid_queue(moto_server: Generator[None, Any, None]) -> None:
+    async def test_enqueue_message_invalid_queue(moto_server: Generator[None, Any, None]) -> None:
         """Test sending a message to an invalid queue."""
         producer = SqsAsyncProducer()
         with pytest.raises(NonRetryableError):
@@ -177,7 +189,7 @@ class TestSqsAscyncProducerGenerateTasks:
     def test_generate_celery_task_fields() -> None:
         """Test the generate_celery_task function returns the expected envelope structure."""
         producer = SqsAsyncProducer()
-        test_args = ('task_name', uuid.uuid4())
+        test_args = ('task_name', uuid4())
 
         # mimicing how the task is called in the app
         result: CeleryTaskEnvelope = producer._generate_celery_task(TEST_QUEUE_NAME, *test_args)
@@ -195,8 +207,8 @@ class TestSqsAscyncProducerGenerateTasks:
         task1_name = 'task_name'
         task2_name = 'task2_name'
         test_tasks = [
-            (TEST_QUEUE_NAME, (task1_name, uuid.uuid4())),
-            ('another_queue', (task2_name, uuid.uuid4())),
+            (TEST_QUEUE_NAME, (task1_name, uuid4())),
+            ('another_queue', (task2_name, uuid4())),
         ]
 
         # mimicing how the task is called in the app
@@ -218,9 +230,9 @@ class TestSqsAscyncProducerGenerateTasks:
         task2_name = 'task2_name'
         task3_name = 'task3_name'
         test_tasks = [
-            (TEST_QUEUE_NAME, (task1_name, uuid.uuid4())),
-            ('another_queue', (task2_name, uuid.uuid4())),
-            ('third_queue', (task3_name, uuid.uuid4())),
+            (TEST_QUEUE_NAME, (task1_name, uuid4())),
+            ('another_queue', (task2_name, uuid4())),
+            ('third_queue', (task3_name, uuid4())),
         ]
 
         # mimicing how the task is called in the app
