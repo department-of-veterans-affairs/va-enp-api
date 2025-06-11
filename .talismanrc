@@ -1,7 +1,7 @@
 scopeconfig:
   - scopename: poetry-lockfile
     scopepattern:
-      - poetry.lock
+      - poetry.lock  # Still needs to be in the fileignoreconfig section
 
 fileignoreconfig:
 - filename: cd/dev.env
