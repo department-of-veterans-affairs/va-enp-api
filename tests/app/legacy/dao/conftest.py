@@ -11,7 +11,7 @@ from app.db.db_init import get_write_session_with_context, metadata_legacy
 
 
 @pytest.fixture
-async def prepared_service(
+async def commit_service(
     sample_service: Callable[[async_scoped_session[AsyncSession]], Awaitable[Row[Any]]],
 ) -> AsyncGenerator[Row[Any], None]:
     """Fixture that creates, commits, and yields a sample service row for integration tests.
