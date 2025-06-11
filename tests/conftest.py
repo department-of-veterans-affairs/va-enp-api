@@ -209,7 +209,9 @@ def pytest_sessionfinish(
         session (Any): The pytest session, not DB related
         exitstatus (Any): Unknown but mandatory
     """
-    asyncio.run(_validate_and_clean_tables(session))
+    # Have to use the current event loop
+    loop = asyncio.get_event_loop()
+    loop.run_until_complete(_validate_and_clean_tables(session))
 
 
 async def _validate_and_clean_tables(pt_session: pytest.Session) -> None:  # pragma: no cover
