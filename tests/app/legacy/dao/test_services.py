@@ -54,7 +54,12 @@ class TestLegacyServiceDao:
         caught_exception: Exception,
         raised_exception: type[Exception],
     ) -> None:
-        """Test that _get raises the correct custom error when a specific SQLAlchemy exception occurs."""
+        """Test that _get raises the correct custom error when a specific SQLAlchemy exception occurs.
+
+        Args:
+            caught_exception (Exception): The exception our code caught
+            raised_exception (type[Exception]): The exception our code raised
+        """
         service_id = uuid4()
 
         # Patch the session context and simulate the exception during execution
