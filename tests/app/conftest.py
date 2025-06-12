@@ -29,7 +29,7 @@ async def test_init_db() -> AsyncGenerator[None, None]:
 
 
 @pytest.fixture
-async def test_db_session() -> AsyncGenerator[AsyncSession, None]:
+async def no_commit_session() -> AsyncGenerator[AsyncSession, None]:
     """Yield a transactional, read-write database session.
 
     Tests that use this fixture should not need to worry about rolling back database changes.
