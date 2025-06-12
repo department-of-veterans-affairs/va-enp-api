@@ -65,7 +65,12 @@ omit = [
     "app/logging/*",
     "app/main.py",
     "tests/app/test_main.py",
-    "app/legacy/dao/*",  # TODO: Remove this when adding tests for DAO modules.
+    "app/legacy/dao/api_keys_dao.py",
+    "app/legacy/dao/notifications_dao.py",
+    "app/legacy/dao/recipient_identifiers_dao.py",
+    "app/legacy/dao/service_sms_sender_dao.py",
+    "app/legacy/dao/templates_dao.py",
+    "app/legacy/dao/utils.py",
 ]
 
 [tool.coverage.report]
