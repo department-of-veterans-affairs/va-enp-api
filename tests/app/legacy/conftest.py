@@ -17,12 +17,12 @@ from tests.app.legacy.dao.test_api_keys import encode_and_sign
 
 @pytest.fixture
 def sample_user(
-    test_db_session: AsyncSession,
+    no_commit_session: AsyncSession,
 ) -> Callable[..., Awaitable[Row[Any]]]:
     """Generates a sample User - Does not commit to the database.
 
     Args:
-        test_db_session (AsyncSession): A non-commit test session
+        no_commit_session (AsyncSession): A non-commit test session
 
     Returns:
         Callable[..., Awaitable[Row[Any]]]: The function to create a User
@@ -40,7 +40,7 @@ def sample_user(
         blocked: bool = False,
     ) -> Row[Any]:
         id = id or uuid4()
-        session = session or test_db_session
+        session = session or no_commit_session
         legacy_users = metadata_legacy.tables['users']
 
         # No need for the values to be in a separate dictionary because they have all the data already
@@ -63,13 +63,13 @@ def sample_user(
 
 @pytest.fixture
 def sample_service(
-    test_db_session: AsyncSession,
+    no_commit_session: AsyncSession,
     sample_user: Callable[..., Awaitable[Row[Any]]],
 ) -> Callable[..., Awaitable[Row[Any]]]:
     """Generates a sample Service - Does not commit to the database.
 
     Args:
-        test_db_session (AsyncSession): A non-commit test session
+        no_commit_session (AsyncSession): A non-commit test session
         sample_user (Callable[..., Awaitable[Row[Any]]]): Generator fixture for Users
 
     Returns:
@@ -92,7 +92,7 @@ def sample_service(
         version: int = 0,
     ) -> Row[Any]:
         id = id or uuid4()
-        session = session or test_db_session
+        session = session or no_commit_session
         legacy_services = metadata_legacy.tables['services']
         data = {
             'id': id,
@@ -126,13 +126,13 @@ def sample_service(
 
 @pytest.fixture
 def sample_api_key(
-    test_db_session: AsyncSession,
+    no_commit_session: AsyncSession,
     sample_service: Callable[..., Awaitable[Row[Any]]],
 ) -> Callable[..., Awaitable[Row[Any]]]:
     """Generates a sample API Key - Does not commit to the database.
 
     Args:
-        test_db_session (AsyncSession): A non-commit test session
+        no_commit_session (AsyncSession): A non-commit test session
         sample_service (Callable[..., Awaitable[Row[Any]]]): Generator fixture for Services
 
     Returns:
@@ -153,7 +153,7 @@ def sample_api_key(
         version: int = 0,
     ) -> Row[Any]:
         id = id or uuid4()
-        session = session or test_db_session
+        session = session or no_commit_session
         legacy_api_keys = metadata_legacy.tables['api_keys']
         legacy_key_type = metadata_legacy.tables['key_types']
         data = {
@@ -195,13 +195,13 @@ def sample_api_key(
 
 @pytest.fixture
 def sample_template(
-    test_db_session: AsyncSession,
+    no_commit_session: AsyncSession,
     sample_service: Callable[..., Awaitable[Row[Any]]],
 ) -> Callable[..., Coroutine[Any, Any, Row[Any]]]:
     """Generates a sample Template - Does not commit to the database.
 
     Args:
-        test_db_session (AsyncSession): A non-commit test session
+        no_commit_session (AsyncSession): A non-commit test session
         sample_service (Callable[..., Awaitable[Row[Any]]]): Generator fixture for Services
 
     Returns:
@@ -240,7 +240,7 @@ def sample_template(
             'version': version,
         }
 
-        session = session or test_db_session
+        session = session or no_commit_session
 
         if service_id is None:
             service = await sample_service(session, uuid4())
@@ -272,12 +272,12 @@ def sample_template(
 
 @pytest.fixture
 def sample_service_sms_sender(
-    test_db_session: AsyncSession,
+    no_commit_session: AsyncSession,
 ) -> Callable[..., Awaitable[Row[Any]]]:
     """Generates a sample ServiceSmsSender - Does not commit to the database.
 
     Args:
-        test_db_session (AsyncSession): A non-commit test session
+        no_commit_session (AsyncSession): A non-commit test session
 
     Returns:
         Callable[..., Awaitable[Row[Any]]]: The function to create an ServiceSmsSender
@@ -293,7 +293,7 @@ def sample_service_sms_sender(
         sms_sender: str | None = None,
     ) -> Row[Any]:
         id = id or uuid4()
-        session = session or test_db_session
+        session = session or no_commit_session
         legacy_service_sms_senders = metadata_legacy.tables['service_sms_senders']
 
         # No need for the values to be in a separate dictionary because they have all the data already

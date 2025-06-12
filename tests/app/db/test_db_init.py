@@ -36,9 +36,9 @@ def test_get_db_session_none(engine_type: str) -> None:
         get_db_session(None, engine_type)
 
 
-async def test_test_db_session(test_db_session: AsyncSession) -> None:
+async def test_no_commit_session(no_commit_session: AsyncSession) -> None:
     """Ensure the session fixture can be used as a session."""
-    await test_db_session.execute(READ_QUERY)
+    await no_commit_session.execute(READ_QUERY)
 
 
 async def test_get_db_session_write() -> None:

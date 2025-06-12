@@ -364,7 +364,8 @@ class V2PostSmsRequestModel(V2PostNotificationRequestModel):
 
         """
         if self.phone_number is None and self.recipient_identifier is None:
-            raise ValueError('You must specify at least one of phone_number or recipient identifier.')
+            # Backwards compatability with notification-api
+            raise ValueError('Please provide either a phone number or recipient identifier.')
         return self
 
     async def get_reply_to_text(self) -> str:
