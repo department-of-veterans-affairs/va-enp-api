@@ -51,6 +51,50 @@ async def commit_service(
 
 
 @pytest.fixture
+async def commit_template(
+    commit_service: Row[Any],
+    sample_template: Callable[..., Awaitable[Row[Any]]],
+) -> AsyncGenerator[Row[Any], None]:
+    """Fixture that creates, commits, and yields a sample template row for integration tests.
+
+    This fixture is intended for DAO-level tests that require a fully persisted template row.
+    It ensures that the template and its related user/service are committed to the database,
+    and then cleans up both template records after the test to preserve database isolation.
+
+    Setup:
+        - Uses `commit_service` to provide a committed service and user.
+        - Invokes the `sample_template` factory to create a template and template history.
+        - Commits the template to the database so it is queryable in test logic.
+
+    Teardown:
+        - Deletes the template and its history from the legacy schema after the test completes.
+        - The committed service and user are cleaned up by the `commit_service` fixture.
+
+    Args:
+        commit_service (Row[Any]): A committed service row with associated user data.
+        sample_template (Callable[..., Awaitable[Row[Any]]]): A coroutine factory that creates a template row.
+
+    Yields:
+        Row[Any]: A SQLAlchemy Core row representing the inserted template.
+    """
+    # setup
+    async with get_write_session_with_context() as session:
+        template = await sample_template(session=session, service_id=commit_service.id)
+        await session.commit()
+
+    yield template
+
+    # teardown
+    legacy_templates = metadata_legacy.tables['templates']
+    legacy_templates_hist = metadata_legacy.tables['templates_history']
+
+    async with get_write_session_with_context() as session:
+        await session.execute(delete(legacy_templates_hist).where(legacy_templates_hist.c.id == template.id))
+        await session.execute(delete(legacy_templates).where(legacy_templates.c.id == template.id))
+        await session.commit()
+
+
+@pytest.fixture
 async def prepared_api_key(
     sample_service: Callable[[async_scoped_session[AsyncSession]], Awaitable[Row[Any]]],
     sample_api_key: Callable[..., Awaitable[Row[Any]]],
