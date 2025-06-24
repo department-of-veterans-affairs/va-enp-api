@@ -51,6 +51,46 @@ async def commit_service(
 
 
 @pytest.fixture
+async def commit_service_sms_sender(
+    commit_service: Row[Any],
+    sample_service_sms_sender: Callable[..., Awaitable[Row[Any]]],
+) -> AsyncGenerator[Row[Any], None]:
+    """Fixture that creates, commits, and yields a sample service_sms_sender row for integration tests.
+
+    This fixture is intended for DAO-level tests that require a fully persisted service_sms_sender row.
+    It ensures that the service_sms_sender is committed to the database and then
+    cleans up the record after the test to preserve database isolation.
+
+    Setup:
+        - Invokes the `sample_service_sms_sender` factory to create a service_sms_sender.
+        - Commits the service_sms_sender to the database so it is queryable in test logic.
+
+    Teardown:
+        - Deletes the service_sms_sender from the legacy schema after the test completes.
+
+    Args:
+        commit_service (Row[Any]): A fixture that provides a committed service row.
+        sample_service_sms_sender (Callable): A coroutine factory that creates and returns a service row.
+
+    Yields:
+        Row[Any]: A SQLAlchemy Core row representing the inserted service_sms_sender.
+    """
+    # setup
+    async with get_write_session_with_context() as session:
+        sms_sender = await sample_service_sms_sender(commit_service.id, session)
+        await session.commit()
+
+    yield sms_sender
+
+    # teardown
+    legacy_sms_sender = metadata_legacy.tables['service_sms_senders']
+
+    async with get_write_session_with_context() as session:
+        await session.execute(delete(legacy_sms_sender).where(legacy_sms_sender.c.id == sms_sender.id))
+        await session.commit()
+
+
+@pytest.fixture
 async def prepared_api_key(
     sample_service: Callable[[async_scoped_session[AsyncSession]], Awaitable[Row[Any]]],
     sample_api_key: Callable[..., Awaitable[Row[Any]]],

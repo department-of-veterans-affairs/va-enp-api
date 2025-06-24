@@ -68,7 +68,6 @@ omit = [
     "app/legacy/dao/api_keys_dao.py",
     "app/legacy/dao/notifications_dao.py",
     "app/legacy/dao/recipient_identifiers_dao.py",
-    "app/legacy/dao/service_sms_sender_dao.py",
     "app/legacy/dao/templates_dao.py",
     "app/legacy/dao/utils.py",
 ]
