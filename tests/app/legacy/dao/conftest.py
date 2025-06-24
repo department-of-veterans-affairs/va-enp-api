@@ -51,6 +51,54 @@ async def commit_service(
 
 
 @pytest.fixture
+async def commit_template(
+    sample_service: Callable[[async_scoped_session[AsyncSession]], Awaitable[Row[Any]]],
+    sample_template: Callable[..., Awaitable[Row[Any]]],
+) -> AsyncGenerator[Row[Any], None]:
+    """Fixture that creates, commits, and yields a sample tempalte row for integration tests.
+
+    This fixture is intended for DAO-level tests that require a fully persisted tempalte row.
+    It ensures that the tempalte and its related user are committed to the database and then
+    cleans up both records after the test to preserve database isolation.
+
+    Setup:
+        - Invokes the `sample_service` factory to create a service and its related user.
+        - Invokes the `sample_template` factory to create a template and template history.
+        - Commits the service and tempalte to the database so it is queryable in test logic.
+
+    Teardown:
+        - Deletes the template, service, and user from the legacy schema after the test completes.
+
+    Args:
+        sample_service (Callable): A coroutine factory that creates and returns a service row.
+        sample_template (Callable): A coroutine factory that creates and returns a template row.
+
+    Yields:
+        Row[Any]: A SQLAlchemy Core row representing the inserted template.
+    """
+    # setup
+    async with get_write_session_with_context() as session:
+        service = await sample_service(session)
+        template = await sample_template(session=session, service_id=service.id)
+        await session.commit()
+
+    yield template
+
+    # teardown
+    legacy_users = metadata_legacy.tables['users']
+    legacy_services = metadata_legacy.tables['services']
+    legacy_templates = metadata_legacy.tables['templates']
+    legacy_templates_hist = metadata_legacy.tables['templates_history']
+
+    async with get_write_session_with_context() as session:
+        await session.execute(delete(legacy_templates_hist).where(legacy_templates_hist.c.id == template.id))
+        await session.execute(delete(legacy_templates).where(legacy_templates.c.id == template.id))
+        await session.execute(delete(legacy_services).where(legacy_services.c.id == service.id))
+        await session.execute(delete(legacy_users).where(legacy_users.c.id == service.created_by_id))
+        await session.commit()
+
+
+@pytest.fixture
 async def prepared_api_key(
     sample_service: Callable[[async_scoped_session[AsyncSession]], Awaitable[Row[Any]]],
     sample_api_key: Callable[..., Awaitable[Row[Any]]],
