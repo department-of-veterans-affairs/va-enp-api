@@ -21,13 +21,13 @@ from app.legacy.dao.templates_dao import LegacyTemplateDao
 
 
 class TestLegacyTemplateDaoGet:
-    """Test class for LegacyTemplateDao Get by ID method."""
+    """Test class for LegacyTemplateDao.get (by ID) method."""
 
     async def test_get_happy_path(self, commit_template: Row[Any]) -> None:
         """Test the ability to get a template from the database.
 
         Args:
-            commit_template (Row[Any]): Template that was commit to the database
+            commit_template (Row[Any]): Template that was committed to the database
         """
         template_row = await LegacyTemplateDao.get(commit_template.id)
         assert template_row.id == commit_template.id
@@ -73,13 +73,13 @@ class TestLegacyTemplateDaoGet:
 
 
 class TestLegacyTemplateDaoGetByIdAndServiceId:
-    """Test class for LegacyTemplateDao methods."""
+    """Test class for LegacyTemplateDao.get_by_id_and_service_id method."""
 
     async def test_get_happy_path(self, commit_template: Row[Any]) -> None:
         """Test the ability to get a template from the database.
 
         Args:
-            commit_template (Row[Any]): Template that was commit to the database
+            commit_template (Row[Any]): Template that was committed to the database
         """
         template_row = await LegacyTemplateDao.get_by_id_and_service_id(commit_template.id, commit_template.service_id)
         assert template_row.id == commit_template.id
@@ -91,6 +91,13 @@ class TestLegacyTemplateDaoGetByIdAndServiceId:
 
         with pytest.raises(NonRetryableError):
             await LegacyTemplateDao.get_by_id_and_service_id(template_id, service_id)
+
+    async def test_get_non_existent_template_service_id(self, commit_template: Row[Any]) -> None:
+        """Should raise NoResultFound when template with correct service id does not exist in DB."""
+        service_id = uuid4()
+
+        with pytest.raises(NonRetryableError):
+            await LegacyTemplateDao.get_by_id_and_service_id(commit_template.id, service_id)
 
     @pytest.mark.parametrize(
         ('caught_exception', 'raised_exception'),
