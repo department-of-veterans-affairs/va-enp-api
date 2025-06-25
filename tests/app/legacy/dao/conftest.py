@@ -106,11 +106,13 @@ async def commit_service_sms_sender(
     cleans up the record after the test to preserve database isolation.
 
     Setup:
+        - Uses `commit_service` to provide a committed service.
         - Invokes the `sample_service_sms_sender` factory to create a service_sms_sender.
         - Commits the service_sms_sender to the database so it is queryable in test logic.
 
     Teardown:
         - Deletes the service_sms_sender from the legacy schema after the test completes.
+        - The committed service is cleaned up by the `commit_service` fixture.
 
     Args:
         commit_service (Row[Any]): A fixture that provides a committed service row.
@@ -121,7 +123,7 @@ async def commit_service_sms_sender(
     """
     # setup
     async with get_write_session_with_context() as session:
-        sms_sender = await sample_service_sms_sender(commit_service.id, session)
+        sms_sender = await sample_service_sms_sender(service_id=commit_service.id, session=session)
         await session.commit()
 
     yield sms_sender
