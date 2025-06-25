@@ -176,7 +176,6 @@ async def create_notification(
             reference=request.reference,
             template_id=template_row.id,
             template_version=template_row.version,
-            recipient_identifiers=request.recipient_identifier,
             personalisation=request.personalisation,
         )
 

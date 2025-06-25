@@ -37,7 +37,7 @@ fileignoreconfig:
 - filename: app/constants.py
   checksum: 99d65949b954a7f3dc7fd28decf413ad488d512fed167d945ae99da097d6967f
 - filename: tests/app/legacy/conftest.py
-  checksum: 934b3750f1ece758e527f077005b53e9220f1ac075f6c2ac0362e636d663980e
+  checksum: d0e0373f23fdfcae717d6fa48d195aa679ae2a8c0c691e82514ea619bd490446
 - filename: app/legacy/dao/notifications_dao.py
   checksum: 7baa74d634ad0f8357b6c9c870ceff7d8976d116844d99798349e36cad43919d
 - filename: app/auth.py
