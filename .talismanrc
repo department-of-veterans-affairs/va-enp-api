@@ -58,4 +58,6 @@ fileignoreconfig:
   checksum: 578512c9b93f55717b13a7c1fed8d676de042e04d1ef7e8247097e84eb745ab8
 - filename: tests/app/legacy/clients/test_sqs.py
   checksum: 4ba66df99cb553f63d9f7f1299cf3cbafa5f8d76f0fdb55685a050854b0c2c75
+- filename: tests/app/legacy/dao/test_notifications.py
+  checksum: 0966bcea3a2fc90902eb80b80aff0bc05a1351ed6c08b444b2d73cd129fbfded
 version: "1.0"
