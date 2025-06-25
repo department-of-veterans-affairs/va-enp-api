@@ -116,7 +116,7 @@ async def commit_service_sms_sender(
 
     Args:
         commit_service (Row[Any]): A fixture that provides a committed service row.
-        sample_service_sms_sender (Callable): A coroutine factory that creates and returns a service row.
+        sample_service_sms_sender (Callable): A coroutine factory that creates and returns a service_sms_sender row.
 
     Yields:
         Row[Any]: A SQLAlchemy Core row representing the inserted service_sms_sender.
