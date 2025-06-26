@@ -138,35 +138,39 @@ async def commit_service_sms_sender(
 
 @pytest.fixture
 async def commit_notification(
-    sample_notification: Callable[..., Awaitable[Row[Any]]],
     commit_template: Row[Any],
     sample_api_key: Callable[..., Awaitable[Row[Any]]],
+    sample_notification: Callable[..., Awaitable[Row[Any]]],
 ) -> AsyncGenerator[Row[Any], None]:
-    """Fixture that creates, commits, and yields a sample service_sms_sender row for integration tests.
+    """Fixture that creates, commits, and yields a sample notification row for integration tests.
 
-    This fixture is intended for DAO-level tests that require a fully persisted service_sms_sender row.
-    It ensures that the service_sms_sender is committed to the database and then
-    cleans up the record after the test to preserve database isolation.
+    This fixture is intended for DAO-level tests that require a fully persisted notification row.
+    It ensures that the notification is committed to the database and then
+    cleans up the record and dependencies after the test to preserve database isolation.
 
     Setup:
-        - Uses `commit_service` to provide a committed service.
-        - Invokes the `sample_service_sms_sender` factory to create a service_sms_sender.
-        - Commits the service_sms_sender to the database so it is queryable in test logic.
+        - Uses `commit_template` to provide a committed template.
+          - `commit_template` is relied on to create service and user.
+        - Invokes the `sample_api_key` factory to create an api_key.
+          - Sample api_key committed manually to ensure consistent service_id references.
+        - Invokes the `sample_notification` factory to create a notification.
+        - Commits the api_key and notification to the database so they are queryable in test logic.
 
     Teardown:
-        - Deletes the service_sms_sender from the legacy schema after the test completes.
-        - The committed service is cleaned up by the `commit_service` fixture.
+        - Deletes the api_key and notification from the legacy schema after the test completes.
+        - The committed service, template, and user are cleaned up by the `commit_template` fixture.
 
     Args:
-        sample_notification: (Callable): A coroutine factory that creates and returns a notification row.
         commit_template (Row[Any]): A fixture that provides a committed template row, creating a service and user in addition.
         sample_api_key (Callable): A coroutine factory that creates and returns a api_key row.
+        sample_notification: (Callable): A coroutine factory that creates and returns a notification row.
 
     Yields:
-        Row[Any]: A SQLAlchemy Core row representing the inserted service_sms_sender.
+        Row[Any]: A SQLAlchemy Core row representing the inserted notification.
     """
     # setup
     async with get_write_session_with_context() as session:
+        # using sample_api_key to allow passing in existing service_id
         api_key = await sample_api_key(
             session=session,
             service_id=commit_template.service_id,
@@ -191,9 +195,8 @@ async def commit_notification(
         await session.commit()
 
 
-# TODO: rename to commit
 @pytest.fixture
-async def prepared_api_key(
+async def commit_api_key(
     sample_service: Callable[[async_scoped_session[AsyncSession]], Awaitable[Row[Any]]],
     sample_api_key: Callable[..., Awaitable[Row[Any]]],
 ) -> AsyncGenerator[Row[Any], None]:

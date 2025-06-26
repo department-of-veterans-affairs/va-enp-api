@@ -37,7 +37,7 @@ class TestLegacyNotificationDaoGet:
         assert notification_row.id == commit_notification.id
 
     async def test_get_non_existent_notification(self) -> None:
-        """Should raise NoResultFound when notification does not exist in DB."""
+        """Should raise NonRetryableError when notification does not exist in DB."""
         with pytest.raises(NonRetryableError):
             await LegacyNotificationDao.get(uuid4())
 
@@ -126,28 +126,29 @@ class TestLegacyNotificationDaoCreateNotification:
             await session.commit()
 
     @pytest.mark.parametrize(
-        ('caught_exception', 'raised_exception'),
+        'caught_exception',
         [
-            (IntegrityError('stmt', 'params', Exception('orig')), NonRetryableError),
-            (IntegrityError('duplicate', 'params', Exception('orig')), NonRetryableError),
-            (DataError('stmt', 'params', Exception('orig')), NonRetryableError),
-            (DataError('duplicate', 'params', Exception('orig')), NonRetryableError),
-            (OperationalError('stmt', 'params', Exception('orig')), NonRetryableError),
-            (InterfaceError('stmt', 'params', Exception('orig')), NonRetryableError),
-            (TimeoutError(), NonRetryableError),
-            (SQLAlchemyError('some generic error'), NonRetryableError),
+            IntegrityError('stmt', 'params', Exception('orig')),
+            IntegrityError('duplicate', 'params', Exception('orig')),
+            DataError('stmt', 'params', Exception('orig')),
+            DataError('duplicate', 'params', Exception('orig')),
+            OperationalError('stmt', 'params', Exception('orig')),
+            InterfaceError('stmt', 'params', Exception('orig')),
+            TimeoutError(),
+            SQLAlchemyError('some generic error'),
         ],
     )
     async def test_create_notification_exception_handling(
         self,
         caught_exception: Exception,
-        raised_exception: type[Exception],
     ) -> None:
         """Test that _insert_notification raises the correct custom error when a specific SQLAlchemy exception occurs.
 
+        Top level method should only raise NonRetryableError since lower level _insert_notification either
+        exhausted all retires or it was not a retryable exception.
+
         Args:
             caught_exception (Exception): The exception our code caught
-            raised_exception (type[Exception]): The exception our code raised
         """
         # Patch the session context and simulate the exception during execution
         with patch('app.legacy.dao.notifications_dao.get_write_session_with_context') as mock_session_ctx:
@@ -155,7 +156,7 @@ class TestLegacyNotificationDaoCreateNotification:
             mock_session.execute.side_effect = caught_exception
             mock_session_ctx.return_value.__aenter__.return_value = mock_session
 
-            with pytest.raises(raised_exception):
+            with pytest.raises(NonRetryableError):
                 await LegacyNotificationDao.create_notification(
                     id=uuid4(),
                     notification_type=NotificationType.SMS,
@@ -237,26 +238,27 @@ class TestLegacyNotificationDaoDeleteNotification:
         await LegacyNotificationDao.delete_notification(uuid4())
 
     @pytest.mark.parametrize(
-        ('caught_exception', 'raised_exception'),
+        'caught_exception',
         [
-            (IntegrityError('stmt', 'params', Exception('orig')), NonRetryableError),
-            (DataError('stmt', 'params', Exception('orig')), NonRetryableError),
-            (OperationalError('stmt', 'params', Exception('orig')), NonRetryableError),
-            (InterfaceError('stmt', 'params', Exception('orig')), NonRetryableError),
-            (TimeoutError(), NonRetryableError),
-            (SQLAlchemyError('some generic error'), NonRetryableError),
+            IntegrityError('stmt', 'params', Exception('orig')),
+            DataError('stmt', 'params', Exception('orig')),
+            OperationalError('stmt', 'params', Exception('orig')),
+            InterfaceError('stmt', 'params', Exception('orig')),
+            TimeoutError(),
+            SQLAlchemyError('some generic error'),
         ],
     )
     async def test_delete_notification_exception_handling(
         self,
         caught_exception: Exception,
-        raised_exception: type[Exception],
     ) -> None:
-        """Test that _insert_notification raises the correct custom error when a specific SQLAlchemy exception occurs.
+        """Test that delete_notification raises the correct custom error when a specific SQLAlchemy exception occurs.
+
+        Top level method should only raise NonRetryableError since lower level _delete either
+        exhausted all retires or it was not a retryable exception.
 
         Args:
             caught_exception (Exception): The exception our code caught
-            raised_exception (type[Exception]): The exception our code raised
         """
         # Patch the session context and simulate the exception during execution
         with patch('app.legacy.dao.notifications_dao.get_write_session_with_context') as mock_session_ctx:
@@ -264,7 +266,7 @@ class TestLegacyNotificationDaoDeleteNotification:
             mock_session.execute.side_effect = caught_exception
             mock_session_ctx.return_value.__aenter__.return_value = mock_session
 
-            with pytest.raises(raised_exception):
+            with pytest.raises(NonRetryableError):
                 await LegacyNotificationDao.delete_notification(uuid4())
 
     @pytest.mark.parametrize(
@@ -283,7 +285,7 @@ class TestLegacyNotificationDaoDeleteNotification:
         caught_exception: Exception,
         raised_exception: type[Exception],
     ) -> None:
-        """Test that _insert_notification raises the correct custom error when a specific SQLAlchemy exception occurs.
+        """Test that _delete raises the correct custom error when a specific SQLAlchemy exception occurs.
 
         Args:
             caught_exception (Exception): The exception our code caught
