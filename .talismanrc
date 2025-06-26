@@ -15,7 +15,7 @@ fileignoreconfig:
 - filename: postman/enp-api.postman_collection.json
   checksum: a75beb668be832bdb38484e044987be0ace21a597fa1aa30ba837d3bfc94a0c7
 - filename: tests/app/legacy/dao/conftest.py
-  checksum: c82f4eb2f484f6465fa50bb5bbbff6152c84fe4071e3724a0d91124049a2fad9
+  checksum: 302831b4c3ed1c07d8ace36625922aeb5bdbeb2de5c0119786b6cf23ac5dc19f
 - filename: app/legacy/dao/api_keys_dao.py
   checksum: f263dd3ff80dba091d18ed8032cce1fa3f5330afd050535cdf56d68c8841b908
 - filename: tests/app/providers/__init__.py
@@ -25,11 +25,11 @@ fileignoreconfig:
 - filename: tests/conftest.py
   checksum: 44a2d6e8de7940335bb84a487d3377b5339bb99219b95aca66f368dff960d537
 - filename: tests/app/legacy/test_samples.py
-  checksum: a1ba3739af869483479432aefcae8b1152e1a28f105b69b95e8fa3e02f4c8f0d
+  checksum: b8f01af0ac1b89af71d329d048a27a7e7a8f3bd33a94fe204162eb01433b0917
 - filename: app/legacy/dao/api_key_dao.py
   checksum: 9eb496d3ae4238193baf5c5627d8d186beeda815133e9b4e1bc6e56ce57a3802
 - filename: tests/app/legacy/dao/test_api_keys.py
-  checksum: c08a73f7e31069462f1ed336e33485ee9ef4bdae9ff70d0691684df361777fc7
+  checksum: 68c0b40f5a2c8ad7f993693c271aee8b11df284933c4ae945c54da565f8dcf7a
 - filename: tests/app/legacy/v2/notifications/test_auth.py
   checksum: 9a46795e0124515bc5960deee90d0a7531aaff989c39b4ecc93ab8c9f1969942
 - filename: .env.local
@@ -37,7 +37,7 @@ fileignoreconfig:
 - filename: app/constants.py
   checksum: 99d65949b954a7f3dc7fd28decf413ad488d512fed167d945ae99da097d6967f
 - filename: tests/app/legacy/conftest.py
-  checksum: 934b3750f1ece758e527f077005b53e9220f1ac075f6c2ac0362e636d663980e
+  checksum: d0e0373f23fdfcae717d6fa48d195aa679ae2a8c0c691e82514ea619bd490446
 - filename: app/legacy/dao/notifications_dao.py
   checksum: 7baa74d634ad0f8357b6c9c870ceff7d8976d116844d99798349e36cad43919d
 - filename: app/auth.py
@@ -58,4 +58,6 @@ fileignoreconfig:
   checksum: 578512c9b93f55717b13a7c1fed8d676de042e04d1ef7e8247097e84eb745ab8
 - filename: tests/app/legacy/clients/test_sqs.py
   checksum: 4ba66df99cb553f63d9f7f1299cf3cbafa5f8d76f0fdb55685a050854b0c2c75
+- filename: tests/app/legacy/dao/test_notifications.py
+  checksum: 0966bcea3a2fc90902eb80b80aff0bc05a1351ed6c08b444b2d73cd129fbfded
 version: "1.0"
