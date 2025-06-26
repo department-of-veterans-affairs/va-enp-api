@@ -80,7 +80,7 @@ class InterceptHandler(logging.Handler):
 
 
 class CustomizeLogger:
-    """Customizes and configures Loguru logging for FastAPI, Uvicorn, and Gunicorn."""
+    """Customizes and configures Loguru logging for FastAPI and Uvicorn."""
 
     @classmethod
     def make_logger(cls) -> None:
@@ -91,7 +91,6 @@ class CustomizeLogger:
         # Configure specific Loguru loggers for FastAPI, Uvicorn, and Gunicorn
         cls._configure_fastapi_logger()
         cls._configure_uvicorn_logger()
-        cls._configure_gunicorn_logger()
 
     @classmethod
     def customize_logging(
@@ -142,14 +141,3 @@ class CustomizeLogger:
             # Set to False to avoid duplicate logs
             uvicorn_logger.propagate = False
         loguru_logger.info('Uvicorn logger has been configured with Loguru.')
-
-    @classmethod
-    def _configure_gunicorn_logger(cls) -> None:
-        """Configure Gunicorn to use Loguru for error and access logs."""
-        for logger_name in ('gunicorn.error', 'gunicorn.access'):
-            gunicorn_logger = logging.getLogger(logger_name)
-            gunicorn_logger.handlers = [InterceptHandler()]
-
-            # Set to False to avoid duplicate logs
-            gunicorn_logger.propagate = False
-        loguru_logger.info('Gunicorn logger has been configured with Loguru.')
