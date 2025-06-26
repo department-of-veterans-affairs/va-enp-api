@@ -216,3 +216,84 @@ class TestLegacyNotificationDaoCreateNotification:
                     key_type='normal',
                     personalisation=None,
                 )
+
+
+class TestLegacyNotificationDaoDeleteNotification:
+    """Test class for LegacyNotificationDao.delete_notification method."""
+
+    async def test_get_happy_path(self, commit_notification: Row[Any]) -> None:
+        """Test the ability to delete a notification from the database.
+
+        Args:
+            commit_notification (Row[Any]): Notification that was committed to the database
+        """
+        await LegacyNotificationDao.delete_notification(commit_notification.id)
+
+        with pytest.raises(NonRetryableError):
+            await LegacyNotificationDao.get(commit_notification.id)
+
+    async def test_delete_non_existent_notification(self) -> None:
+        """Should not raise NonRetryableError when notification does not exist in DB."""
+        await LegacyNotificationDao.delete_notification(uuid4())
+
+    @pytest.mark.parametrize(
+        ('caught_exception', 'raised_exception'),
+        [
+            (IntegrityError('stmt', 'params', Exception('orig')), NonRetryableError),
+            (DataError('stmt', 'params', Exception('orig')), NonRetryableError),
+            (OperationalError('stmt', 'params', Exception('orig')), NonRetryableError),
+            (InterfaceError('stmt', 'params', Exception('orig')), NonRetryableError),
+            (TimeoutError(), NonRetryableError),
+            (SQLAlchemyError('some generic error'), NonRetryableError),
+        ],
+    )
+    async def test_delete_notification_exception_handling(
+        self,
+        caught_exception: Exception,
+        raised_exception: type[Exception],
+    ) -> None:
+        """Test that _insert_notification raises the correct custom error when a specific SQLAlchemy exception occurs.
+
+        Args:
+            caught_exception (Exception): The exception our code caught
+            raised_exception (type[Exception]): The exception our code raised
+        """
+        # Patch the session context and simulate the exception during execution
+        with patch('app.legacy.dao.notifications_dao.get_write_session_with_context') as mock_session_ctx:
+            mock_session = AsyncMock()
+            mock_session.execute.side_effect = caught_exception
+            mock_session_ctx.return_value.__aenter__.return_value = mock_session
+
+            with pytest.raises(raised_exception):
+                await LegacyNotificationDao.delete_notification(uuid4())
+
+    @pytest.mark.parametrize(
+        ('caught_exception', 'raised_exception'),
+        [
+            (IntegrityError('stmt', 'params', Exception('orig')), NonRetryableError),
+            (DataError('stmt', 'params', Exception('orig')), NonRetryableError),
+            (OperationalError('stmt', 'params', Exception('orig')), RetryableError),
+            (InterfaceError('stmt', 'params', Exception('orig')), RetryableError),
+            (TimeoutError(), RetryableError),
+            (SQLAlchemyError('some generic error'), NonRetryableError),
+        ],
+    )
+    async def test_delete_exception_handling(
+        self,
+        caught_exception: Exception,
+        raised_exception: type[Exception],
+    ) -> None:
+        """Test that _insert_notification raises the correct custom error when a specific SQLAlchemy exception occurs.
+
+        Args:
+            caught_exception (Exception): The exception our code caught
+            raised_exception (type[Exception]): The exception our code raised
+        """
+        # Patch the session context and simulate the exception during execution
+        with patch('app.legacy.dao.notifications_dao.get_write_session_with_context') as mock_session_ctx:
+            mock_session = AsyncMock()
+            mock_session.execute.side_effect = caught_exception
+            mock_session_ctx.return_value.__aenter__.return_value = mock_session
+
+            with pytest.raises(raised_exception):
+                await LegacyNotificationDao._delete(uuid4())
