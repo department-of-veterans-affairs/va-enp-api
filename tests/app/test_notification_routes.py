@@ -4,7 +4,7 @@ from unittest.mock import AsyncMock, Mock
 from uuid import uuid4
 
 import pytest
-from fastapi import status
+from fastapi import HTTPException, status
 
 from tests.conftest import ENPTestClient
 
@@ -54,8 +54,6 @@ class TestGetNotificationRoutes:
         mocker.patch('app.auth.JWTBearerAdmin.__call__')
 
         # Mock daily rate limiter to reject request (daily limit exceeded)
-        from fastapi import HTTPException
-
         mocker.patch(
             'app.limits.DailyRateLimiter.__call__',
             side_effect=HTTPException(status_code=429, detail='Daily rate limit exceeded'),
