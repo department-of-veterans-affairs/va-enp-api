@@ -12,7 +12,7 @@ from starlette.requests import Request as StarletteRequest
 from app.clients.redis_client import RedisClientManager
 from app.constants import RESPONSE_429
 from app.exceptions import NonRetryableError, RetryableError
-from app.limits import ServiceRateLimiter
+from app.limits import DailyRateLimiter, ServiceRateLimiter
 
 
 @pytest.fixture
@@ -130,3 +130,94 @@ class TestServiceRateLimiter:
             limiter.limit,
             limiter.window,
         )
+
+
+class TestDailyRateLimiter:
+    """Test the daily rate limiter."""
+
+    def test_build_daily_key_format(self) -> None:
+        """Test that _build_daily_key generates the correct Redis key format."""
+        limiter = DailyRateLimiter()
+        assert limiter._build_daily_key('service-id', 'api-key-id') == 'remaining-daily-limit-service-id-api-key-id'
+
+    async def test_allows_request_under_daily_limit(
+        self,
+        mock_context: Tuple[str, str],
+        make_request_with_redis: Callable[[Mock], StarletteRequest],
+    ) -> None:
+        """Should allow the request when consume daily token returns True (token was consumed)."""
+        service_id, api_key_id = mock_context
+        limiter = DailyRateLimiter()
+
+        redis_mock = Mock(spec=RedisClientManager)
+        redis_mock.consume_daily_rate_limit_token = AsyncMock(return_value=True)
+
+        request = make_request_with_redis(redis_mock)
+
+        await limiter(request)
+
+        redis_mock.consume_daily_rate_limit_token.assert_awaited_once_with(
+            f'remaining-daily-limit-{service_id}-{api_key_id}',
+            limiter.daily_limit,
+        )
+
+    async def test_blocks_request_over_daily_limit(
+        self,
+        mock_context: Tuple[str, str],
+        make_request_with_redis: Callable[[Mock], StarletteRequest],
+    ) -> None:
+        """Should raise 429 when consume daily token returns False (daily limit exceeded)."""
+        limiter = DailyRateLimiter()
+
+        redis_mock = Mock(spec=RedisClientManager)
+        redis_mock.consume_daily_rate_limit_token = AsyncMock(return_value=False)
+
+        request = make_request_with_redis(redis_mock)
+
+        with pytest.raises(HTTPException) as exc_info:
+            await limiter(request)
+
+        assert exc_info.value.detail == 'Daily rate limit exceeded'
+        assert exc_info.value.status_code == status.HTTP_429_TOO_MANY_REQUESTS
+
+    @pytest.mark.parametrize(
+        'raises',
+        [
+            NonRetryableError('non-retryable failure'),
+            RetryableError('temporary failure'),
+        ],
+    )
+    async def test_fails_open_on_redis_errors(
+        self,
+        mock_context: Tuple[str, str],
+        make_request_with_redis: Callable[[Mock], StarletteRequest],
+        raises: Exception,
+    ) -> None:
+        """Should allow the request when consume daily token throws NonRetryable or RetryableError (fail-open)."""
+        service_id, api_key_id = mock_context
+        limiter = DailyRateLimiter()
+
+        redis_mock = Mock(spec=RedisClientManager)
+        redis_mock.consume_daily_rate_limit_token = AsyncMock(side_effect=raises)
+
+        request = make_request_with_redis(redis_mock)
+
+        # Should not raise an exception - fail open
+        await limiter(request)
+
+        redis_mock.consume_daily_rate_limit_token.assert_awaited_once_with(
+            f'remaining-daily-limit-{service_id}-{api_key_id}',
+            limiter.daily_limit,
+        )
+
+    def test_daily_limit_initialization_from_env(self) -> None:
+        """Test that daily limit is properly initialized from environment variable."""
+        with patch('app.limits.DAILY_RATE_LIMIT', 500):
+            limiter = DailyRateLimiter()
+            assert limiter.daily_limit == 500
+
+    def test_daily_limit_initialization_default(self) -> None:
+        """Test that daily limit uses default value when environment variable is not set."""
+        with patch('app.limits.DAILY_RATE_LIMIT', 1000):
+            limiter = DailyRateLimiter()
+            assert limiter.daily_limit == 1000

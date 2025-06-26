@@ -60,9 +60,10 @@ class TestPushRouter:
             },
             'personalisation': 'not_a_dict',
         }
-        # Bypass auth and rate limiter, this is testing request data
+        # Bypass auth and rate limiters, this is testing request data
         mocker.patch('app.auth.verify_service_token')
         mocker.patch('app.limits.ServiceRateLimiter.__call__')
+        mocker.patch('app.limits.DailyRateLimiter.__call__')
         response = client.post(_push_path, json=invalid_request)
 
         assert response.status_code == status.HTTP_400_BAD_REQUEST
@@ -95,9 +96,10 @@ class TestPush:
             personalisation={'name': 'John'},
         )
 
-        # Bypass auth and rate limiter, this is testing request data
+        # Bypass auth and rate limiters, this is testing request data
         mocker.patch('app.auth.verify_service_token')
         mocker.patch('app.limits.ServiceRateLimiter.__call__')
+        mocker.patch('app.limits.DailyRateLimiter.__call__')
         response = client.post(_push_path, json=request.model_dump())
 
         assert response.status_code == status.HTTP_201_CREATED
@@ -426,9 +428,10 @@ class TestSmsValidation:
             route (str): Route under test
             mocker (AsyncMock): Mock object
         """
-        # Bypass auth and rate limiter, this is testing request data
+        # Bypass auth and rate limiters, this is testing request data
         mocker.patch('app.auth.verify_service_token')
         mocker.patch('app.limits.ServiceRateLimiter.__call__')
+        mocker.patch('app.limits.DailyRateLimiter.__call__')
         response = client.post(route)
 
         assert response.status_code == status.HTTP_400_BAD_REQUEST
