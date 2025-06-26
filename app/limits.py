@@ -68,7 +68,7 @@ class ServiceRateLimiter:
                 service_id,
                 api_key_id,
             )
-            # default to allow, we don't want to limit is redis is having problems
+            # default to allow, we don't want to limit if redis is having problems
             allowed = True
 
         if not allowed:
