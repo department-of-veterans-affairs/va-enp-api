@@ -100,6 +100,7 @@ class TestLegacyNotificationDaoCreateNotification:
 
         notification_id = uuid4()
 
+        # test
         await LegacyNotificationDao.create_notification(
             id=notification_id,
             notification_type=NotificationType.SMS,
@@ -117,6 +118,8 @@ class TestLegacyNotificationDaoCreateNotification:
 
         assert notification_row.id == notification_id
 
+        # teardown
+        # template, service, and user teardown handled by commit_template
         legacy_api_keys = metadata_legacy.tables['api_keys']
         legacy_notifications = metadata_legacy.tables['notifications']
 
