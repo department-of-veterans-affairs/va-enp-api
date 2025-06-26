@@ -1,6 +1,6 @@
 fileignoreconfig:
 - filename: .env.local
-  checksum: ed24d69efdd40fdfcc7125dc54a2b61bbcd00d1022190f68e0e2b6f4667a11aa
+  checksum: ebf2eb28e4dcfbfea34c6806762e4daf3fdca4fb86f04660c07742b7d133cc05
 - filename: app/auth.py
   checksum: c9c26cb7334788e91988fd0feac92e636a2d0ca3cfb135e56ece73ffc10c7c77
 - filename: app/clients/redis_client.py
