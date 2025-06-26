@@ -38,7 +38,7 @@ fileignoreconfig:
 - filename: tests/app/legacy/v2/notifications/test_auth.py
   checksum: 9a46795e0124515bc5960deee90d0a7531aaff989c39b4ecc93ab8c9f1969942
 - filename: tests/app/legacy/v2/notifications/test_rest.py
-  checksum: db33353264f3694934b202e14be1d61aebc802205964c2127a0b415edcc97fa3
+  checksum: 860fdb5ad9ca5d69700efc65c3011c526df8337e9337e31acb50a0116656e027
 - filename: tests/app/legacy/v2/notifications/test_utils.py
   checksum: 5fb1309c8fc73b6e23103e5cb72591de1c3811dcae3a6f196f3c31327af986c3
 - filename: tests/app/providers/__init__.py
