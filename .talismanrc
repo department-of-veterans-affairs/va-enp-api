@@ -20,7 +20,7 @@ fileignoreconfig:
 - filename: app/limits.py
   checksum: 8a24633cb1da1cc9f6e0edb0069f1757eeb056599bc5b35fc362073d37c51b82
 - filename: cd/dev.env
-  checksum: ddf9ec032a1e7059e818735f25a0e5555db5e1f5cbd3096ac853f479bdd7e535
+  checksum: 4aaf2833d488edc75e842efea72dbc425e1b6ce8377449a0d0e2dd8fc1b75bbb
 - filename: cd/perf.env
   checksum: 6b5ba337d04b22246f4553919201fc47080dd502018c7199db0d9f5e23307d8b
 - filename: ci/.env.docker
