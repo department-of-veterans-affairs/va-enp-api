@@ -295,20 +295,24 @@ class TestWindowedRateLimitStrategy:
 
     def test_daily_expiry_calculation(self) -> None:
         """Test that daily expiry correctly calculates seconds until midnight UTC."""
+        import datetime
+        from unittest.mock import patch
+
         strategy = WindowedRateLimitStrategy(limit=1000, window_type=WindowType.DAILY)
 
-        # Mock current time to a specific moment
-        with patch('app.limits.datetime') as mock_datetime:
-            # Set current time to 2023-06-27 14:30:00 UTC
-            mock_now = mock_datetime.datetime.now.return_value
-            mock_now.replace.return_value = mock_datetime.datetime(2023, 6, 28, 0, 0, 0, 0)
-            mock_datetime.timedelta.return_value = mock_datetime.datetime(2023, 6, 28, 0, 0, 0, 0) - mock_now
-            mock_datetime.datetime.side_effect = lambda *args, **kwargs: mock_datetime.datetime
+        # Mock datetime.datetime.now to return a fixed time: 2023-06-27 14:30:00 UTC
+        fixed_time = datetime.datetime(2023, 6, 27, 14, 30, 0, tzinfo=datetime.timezone.utc)
 
-            # Should calculate seconds until next midnight
+        with patch('app.limits.datetime.datetime') as mock_datetime:
+            mock_datetime.now.return_value = fixed_time
+            mock_datetime.timedelta = datetime.timedelta
+            mock_datetime.timezone = datetime.timezone
+
+            # Should calculate seconds until next midnight (2023-06-28 00:00:00)
+            # From 14:30:00 to midnight = 9.5 hours = 34,200 seconds
             expiry = strategy._calculate_daily_expiry()
             assert isinstance(expiry, int)
-            assert expiry > 0
+            assert expiry == 34200  # 9.5 hours in seconds
 
     def test_get_error_message_fixed_window(self) -> None:
         """Test error message for fixed window rate limits."""
