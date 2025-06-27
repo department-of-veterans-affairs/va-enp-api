@@ -56,7 +56,7 @@ fileignoreconfig:
 - filename: tests/app/test_auth.py
   checksum: 2147731d18bff8dfbda3d713fb4dec148b157121bbc8ff318ea9b55a6efeb338
 - filename: tests/app/test_limits.py
-  checksum: 2df7c9114a322e65307c133b50e620ac97dc57b955929680aacca8a63cb7304b
+  checksum: d67c28a6e84ffed4a42c423576909d63ace0427b4dfda60a16f582fe634cd48b
 - filename: tests/conftest.py
   checksum: c39c4b3e4777417f7b302794e869c272c2175d27dbc5236f85d4ecf9668dbe0d
 - filename: tests/napi_table_data.toml

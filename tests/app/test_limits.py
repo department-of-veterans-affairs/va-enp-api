@@ -59,12 +59,13 @@ def make_request_with_redis() -> Callable[[Mock], StarletteRequest]:
 
 
 class TestServiceRateLimiter:
-    """Test the service rate limiter."""
+    """Test the service rate limiter factory function."""
 
     def test_build_key_format(self) -> None:
-        """Test that _build_key generates the correct Redis key format."""
+        """Test that the service rate limiter generates the correct Redis key format."""
         limiter = ServiceRateLimiter()
-        assert limiter._build_key('service-id', 'api-key-id') == 'rate-limit-service-id-api-key-id'
+        key = limiter.get_key('service-id', 'api-key-id')
+        assert key == 'rate-limit-service-id-api-key-id'
 
     async def test_allows_request(
         self,
@@ -139,12 +140,13 @@ class TestServiceRateLimiter:
 
 
 class TestDailyRateLimiter:
-    """Test the daily rate limiter."""
+    """Test the daily rate limiter factory function."""
 
     def test_build_daily_key_format(self) -> None:
-        """Test that _build_daily_key generates the correct Redis key format."""
+        """Test that the daily rate limiter generates the correct Redis key format."""
         limiter = DailyRateLimiter()
-        assert limiter._build_daily_key('service-id', 'api-key-id') == 'remaining-daily-limit-service-id-api-key-id'
+        key = limiter.get_key('service-id', 'api-key-id')
+        assert key == 'remaining-daily-limit-service-id-api-key-id'
 
     async def test_allows_request_under_daily_limit(
         self,

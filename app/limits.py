@@ -242,60 +242,23 @@ class RateLimiter:
         )
 
 
-# Backward compatibility classes that maintain the same interface as before
-class ServiceRateLimiter(RateLimiter):
-    """FastAPI dependency that enforces service-level rate limiting.
+# Factory functions for common rate limiter configurations
+def ServiceRateLimiter() -> RateLimiter:
+    """Create a service-level rate limiter using environment variables.
 
-    Uses environment variables to define a global rate limit (count) and window (seconds).
-    Rate limiting is skipped if required request state values are missing.
-    If Redis is unavailable, requests are allowed (fail-open behavior).
+    Returns:
+        RateLimiter configured for service-level rate limiting
     """
-
-    def __init__(self) -> None:
-        """Initialize rate limit values from environment variables."""
-        strategy = ServiceRateLimitStrategy()
-        super().__init__(strategy, fail_open=True)
-
-    @property
-    def window(self) -> int:
-        """Get the window from the strategy for backward compatibility."""
-        return self.strategy.window or OBSERVATION_PERIOD
-
-    def _build_key(self, service_id: str, api_key_id: str) -> str:
-        """Construct Redis key for tracking per service/API key combination.
-
-        Args:
-            service_id: The service identifier
-            api_key_id: The API key identifier
-
-        Returns:
-            The Redis key for tracking this rate limit
-        """
-        return self.strategy.get_key(service_id, api_key_id)
+    strategy = ServiceRateLimitStrategy()
+    return RateLimiter(strategy, fail_open=True)
 
 
-class DailyRateLimiter(RateLimiter):
-    """FastAPI dependency that enforces daily rate limiting per service/API key.
+def DailyRateLimiter() -> RateLimiter:
+    """Create a daily rate limiter using environment variables.
 
-    Uses environment variables to define a daily rate limit (count) per service/API key combination.
-    Rate limiting is skipped if required request state values are missing.
-    If Redis is unavailable, requests are allowed (fail-open behavior).
+    Returns:
+        RateLimiter configured for daily rate limiting
     """
-
-    def __init__(self) -> None:
-        """Initialize daily rate limit values from environment variables."""
-        daily_limit = int(os.getenv('DAILY_RATE_LIMIT', 1000))
-        strategy = DailyRateLimitStrategy(daily_limit)
-        super().__init__(strategy, fail_open=True)
-
-    def _build_daily_key(self, service_id: str, api_key_id: str) -> str:
-        """Construct Redis key for daily tracking per service/API key combination.
-
-        Args:
-            service_id: The service identifier.
-            api_key_id: The API key identifier.
-
-        Returns:
-            str: A Redis key in the format 'remaining-daily-limit-{service_id}-{api_key_id}'.
-        """
-        return self.strategy.get_key(service_id, api_key_id)
+    daily_limit = int(os.getenv('DAILY_RATE_LIMIT', 1000))
+    strategy = DailyRateLimitStrategy(daily_limit)
+    return RateLimiter(strategy, fail_open=True)
