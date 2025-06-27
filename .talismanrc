@@ -46,7 +46,7 @@ fileignoreconfig:
 - filename: tests/app/legacy/v2/notifications/test_auth.py
   checksum: 9a46795e0124515bc5960deee90d0a7531aaff989c39b4ecc93ab8c9f1969942
 - filename: tests/app/legacy/v2/notifications/test_rest.py
-  checksum: fafb6d2a6808d080179b1b767c6a3f199e9b07f9a576f6c06796ed30aa8e6a2c
+  checksum: 5aa8322b93a48058bda58e0b4d2c6f4f87a47fe13b3adc354d018a3facc59254
 - filename: tests/app/legacy/v2/notifications/test_utils.py
   checksum: 5fb1309c8fc73b6e23103e5cb72591de1c3811dcae3a6f196f3c31327af986c3
 - filename: tests/app/providers/__init__.py
@@ -57,6 +57,8 @@ fileignoreconfig:
   checksum: 2147731d18bff8dfbda3d713fb4dec148b157121bbc8ff318ea9b55a6efeb338
 - filename: tests/app/test_limits.py
   checksum: d67c28a6e84ffed4a42c423576909d63ace0427b4dfda60a16f582fe634cd48b
+- filename: tests/app/test_notification_routes.py
+  checksum: 250ef90e1af49fbd86b7eb6311f4731a86f73b4c40cc691e07c7ae4bce00d845
 - filename: tests/conftest.py
   checksum: c39c4b3e4777417f7b302794e869c272c2175d27dbc5236f85d4ecf9668dbe0d
 - filename: tests/napi_table_data.toml

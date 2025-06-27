@@ -31,8 +31,11 @@ class TestGetNotificationRoutes:
         # Mock auth and dependencies
         mocker.patch('app.auth.JWTBearerAdmin.__call__')
 
-        # Mock the daily rate limiter to allow request
-        mocker.patch('app.limits.DailyRateLimiter.__call__')
+        # Mock the rate limiter's __call__ method to bypass context access
+        async def mock_rate_limiter_call(self: object, request: object) -> None:
+            pass  # Do nothing, allow the request
+
+        mocker.patch('app.limits.RateLimiter.__call__', mock_rate_limiter_call)
 
         # Mock the actual notification retrieval to avoid DB dependencies
         mock_dao = mocker.patch('app.legacy.dao.notifications_dao.LegacyNotificationDao.get')
@@ -53,11 +56,11 @@ class TestGetNotificationRoutes:
         # Mock auth to pass
         mocker.patch('app.auth.JWTBearerAdmin.__call__')
 
-        # Mock daily rate limiter to reject request (daily limit exceeded)
-        mocker.patch(
-            'app.limits.DailyRateLimiter.__call__',
-            side_effect=HTTPException(status_code=429, detail='Daily rate limit exceeded'),
-        )
+        # Mock the rate limiter's __call__ method to raise HTTPException for rate limiting
+        def mock_rate_limiter_blocking(self: object, request: object) -> None:
+            raise HTTPException(status_code=429, detail='Daily rate limit exceeded')
+
+        mocker.patch('app.limits.RateLimiter.__call__', mock_rate_limiter_blocking)
 
         response = client.get(f'/legacy/notifications/{valid_notification_id}')
 
@@ -75,8 +78,11 @@ class TestGetNotificationRoutes:
         # Mock auth to pass
         mocker.patch('app.auth.JWTBearerAdmin.__call__')
 
-        # Mock daily rate limiter to have Redis connection issues but allow request (fail-open)
-        mocker.patch('app.limits.DailyRateLimiter.__call__')
+        # Mock the rate limiter's __call__ method to allow requests (fail-open behavior)
+        async def mock_rate_limiter_failopen(self: object, request: object) -> None:
+            pass  # Do nothing, allow the request (simulating fail-open)
+
+        mocker.patch('app.limits.RateLimiter.__call__', mock_rate_limiter_failopen)
 
         # Mock the actual notification retrieval
         mock_dao = mocker.patch('app.legacy.dao.notifications_dao.LegacyNotificationDao.get')

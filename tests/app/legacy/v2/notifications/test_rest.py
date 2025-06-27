@@ -62,8 +62,23 @@ class TestPushRouter:
         }
         # Bypass auth and rate limiters, this is testing request data
         mocker.patch('app.auth.verify_service_token')
-        mocker.patch('app.limits.ServiceRateLimiter.__call__')
-        mocker.patch('app.limits.DailyRateLimiter.__call__')
+
+        # Mock the context to provide the required values for rate limiting
+        mock_context = {
+            'request_id': 'test-request-id',
+            'service_id': 'test-service-id',
+            'api_key_id': 'test-api-key-id',
+        }
+        mocker.patch('app.limits.context', mock_context)
+
+        # Mock Redis client to allow rate limiting to pass (return True for rate limit checks)
+        mock_redis = Mock()
+        mock_redis.consume_rate_limit_token = AsyncMock(return_value=True)
+        mock_redis.consume_daily_rate_limit_token = AsyncMock(return_value=True)
+
+        # Mock the Redis client manager on the app
+        mocker.patch.object(client.app.enp_state, 'redis_client_manager', mock_redis)
+
         response = client.post(_push_path, json=invalid_request)
 
         assert response.status_code == status.HTTP_400_BAD_REQUEST
@@ -98,8 +113,23 @@ class TestPush:
 
         # Bypass auth and rate limiters, this is testing request data
         mocker.patch('app.auth.verify_service_token')
-        mocker.patch('app.limits.ServiceRateLimiter.__call__')
-        mocker.patch('app.limits.DailyRateLimiter.__call__')
+
+        # Mock the context to provide the required values for rate limiting
+        mock_context = {
+            'request_id': 'test-request-id-2',
+            'service_id': 'test-service-id-2',
+            'api_key_id': 'test-api-key-id-2',
+        }
+        mocker.patch('app.limits.context', mock_context)
+
+        # Mock Redis client to allow rate limiting to pass (return True for rate limit checks)
+        mock_redis = Mock()
+        mock_redis.consume_rate_limit_token = AsyncMock(return_value=True)
+        mock_redis.consume_daily_rate_limit_token = AsyncMock(return_value=True)
+
+        # Mock the Redis client manager on the app
+        mocker.patch.object(client.app.enp_state, 'redis_client_manager', mock_redis)
+
         response = client.post(_push_path, json=request.model_dump())
 
         assert response.status_code == status.HTTP_201_CREATED
@@ -430,8 +460,23 @@ class TestSmsValidation:
         """
         # Bypass auth and rate limiters, this is testing request data
         mocker.patch('app.auth.verify_service_token')
-        mocker.patch('app.limits.ServiceRateLimiter.__call__')
-        mocker.patch('app.limits.DailyRateLimiter.__call__')
+
+        # Mock the context to provide the required values for rate limiting
+        mock_context = {
+            'request_id': 'test-request-id-3',
+            'service_id': 'test-service-id-3',
+            'api_key_id': 'test-api-key-id-3',
+        }
+        mocker.patch('app.limits.context', mock_context)
+
+        # Mock Redis client to allow rate limiting to pass (return True for rate limit checks)
+        mock_redis = Mock()
+        mock_redis.consume_rate_limit_token = AsyncMock(return_value=True)
+        mock_redis.consume_daily_rate_limit_token = AsyncMock(return_value=True)
+
+        # Mock the Redis client manager on the app
+        mocker.patch.object(client.app.enp_state, 'redis_client_manager', mock_redis)
+
         response = client.post(route)
 
         assert response.status_code == status.HTTP_400_BAD_REQUEST
