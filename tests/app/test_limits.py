@@ -212,12 +212,16 @@ class TestDailyRateLimiter:
 
     def test_daily_limit_initialization_from_env(self) -> None:
         """Test that daily limit is properly initialized from environment variable."""
-        with patch('app.limits.DAILY_RATE_LIMIT', 500):
+        with patch('app.limits.os.getenv') as mock_getenv:
+            mock_getenv.return_value = '500'
             limiter = DailyRateLimiter()
             assert limiter.daily_limit == 500
+            mock_getenv.assert_called_with('DAILY_RATE_LIMIT', 1000)
 
     def test_daily_limit_initialization_default(self) -> None:
         """Test that daily limit uses default value when environment variable is not set."""
-        with patch('app.limits.DAILY_RATE_LIMIT', 1000):
+        with patch('app.limits.os.getenv') as mock_getenv:
+            mock_getenv.return_value = '1000'  # Simulating default value
             limiter = DailyRateLimiter()
             assert limiter.daily_limit == 1000
+            mock_getenv.assert_called_with('DAILY_RATE_LIMIT', 1000)
