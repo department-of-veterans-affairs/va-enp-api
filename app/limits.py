@@ -274,26 +274,3 @@ def DailyRateLimiter() -> RateLimiter:
     daily_limit = int(os.getenv('DAILY_RATE_LIMIT', 1000))
     strategy = WindowedRateLimitStrategy(daily_limit, WindowType.DAILY)
     return RateLimiter(strategy, fail_open=True)
-
-
-# Unified factory function for flexible windowed rate limiting
-def WindowedRateLimiter(limit: int, window_type: WindowType, window_duration: int | None = None) -> RateLimiter:
-    """Create a windowed rate limiter with flexible window types.
-
-    Args:
-        limit: The rate limit (number of requests)
-        window_type: The type of window (FIXED, DAILY)
-        window_duration: Duration in seconds for FIXED windows (ignored for DAILY windows)
-
-    Returns:
-        RateLimiter configured for windowed rate limiting
-
-    Examples:
-        # Fixed 30-second window with 5 requests
-        limiter = WindowedRateLimiter(5, WindowType.FIXED, 30)
-
-        # Daily window with 1000 requests
-        limiter = WindowedRateLimiter(1000, WindowType.DAILY)
-    """
-    strategy = WindowedRateLimitStrategy(limit, window_type, window_duration)
-    return RateLimiter(strategy, fail_open=True)

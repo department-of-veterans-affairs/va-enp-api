@@ -16,7 +16,6 @@ from app.limits import (
     DailyRateLimiter,
     RateLimiter,
     ServiceRateLimiter,
-    WindowedRateLimiter,
     WindowedRateLimitStrategy,
     WindowType,
 )
@@ -293,31 +292,3 @@ class TestWindowedRateLimitStrategy:
         # Should raise ValueError for unsupported window type
         with pytest.raises(ValueError, match='Unsupported window type: unsupported'):
             strategy._calculate_window_expiry()
-
-
-class TestWindowedRateLimiterFactory:
-    """Test the WindowedRateLimiter factory function."""
-
-    def test_creates_fixed_window_limiter(self) -> None:
-        """Test creating a fixed window rate limiter."""
-        limiter = WindowedRateLimiter(limit=5, window_type=WindowType.FIXED, window_duration=30)
-
-        assert limiter.limit == 5
-        assert limiter.window == 30
-        # Cast to concrete type to access specific attributes
-        strategy = limiter.strategy
-        assert isinstance(strategy, WindowedRateLimitStrategy)
-        assert strategy.window_type == WindowType.FIXED
-        assert strategy.window_duration == 30
-
-    def test_creates_daily_window_limiter(self) -> None:
-        """Test creating a daily window rate limiter."""
-        limiter = WindowedRateLimiter(limit=1000, window_type=WindowType.DAILY)
-
-        assert limiter.limit == 1000
-        assert limiter.window is None  # Daily windows don't have a fixed window
-        # Cast to concrete type to access specific attributes
-        strategy = limiter.strategy
-        assert isinstance(strategy, WindowedRateLimitStrategy)
-        assert strategy.window_type == WindowType.DAILY
-        assert strategy.window_duration is None
