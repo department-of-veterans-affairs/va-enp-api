@@ -170,7 +170,8 @@ class RateLimiter:
 
     Uses a strategy pattern to support different types of rate limiting (service-level, daily, etc.).
     Rate limiting is skipped if required request state values are missing.
-    If Redis is unavailable, requests are allowed (fail-open behavior).
+    By default, if Redis is unavailable, requests are allowed through (fail-open behavior).
+    This can be configured to block requests instead (fail-closed behavior).
     """
 
     def __init__(self, strategy: RateLimitStrategy, fail_open: bool = True) -> None:
@@ -178,7 +179,8 @@ class RateLimiter:
 
         Args:
             strategy: The rate limiting strategy to use
-            fail_open: Whether to allow requests when Redis fails (True) or block them (False)
+            fail_open: Whether to allow requests when Redis fails. True = allow requests
+                (fail-open), False = block requests with 429 error (fail-closed)
         """
         self.strategy = strategy
         self.fail_open = fail_open
@@ -254,6 +256,7 @@ def ServiceRateLimiter() -> RateLimiter:
     """Create a service-level rate limiter using environment variables.
 
     Uses RATE_LIMIT (default: 5) requests per OBSERVATION_PERIOD (default: 30) seconds.
+    Configured with fail-open behavior (allows requests when Redis is unavailable).
 
     Returns:
         RateLimiter configured for service-level rate limiting
@@ -266,6 +269,7 @@ def DailyRateLimiter() -> RateLimiter:
     """Create a daily rate limiter using environment variables.
 
     Uses DAILY_RATE_LIMIT (default: 1000) requests per day, resetting at midnight UTC.
+    Configured with fail-open behavior (allows requests when Redis is unavailable).
 
     Returns:
         RateLimiter configured for daily rate limiting
