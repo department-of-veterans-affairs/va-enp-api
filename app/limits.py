@@ -176,35 +176,6 @@ class RateLimiter:
         self.strategy = strategy
         self.fail_open = fail_open
 
-    @classmethod
-    def for_service(cls, limit: int = RATE_LIMIT, window: int = OBSERVATION_PERIOD) -> 'RateLimiter':
-        """Create a rate limiter for service-level rate limiting.
-
-        Args:
-            limit: The rate limit (number of requests)
-            window: The time window in seconds
-
-        Returns:
-            A RateLimiter configured for service-level rate limiting
-        """
-        strategy = ServiceRateLimitStrategy(limit, window)
-        return cls(strategy, fail_open=True)
-
-    @classmethod
-    def for_daily(cls, daily_limit: int | None = None) -> 'RateLimiter':
-        """Create a rate limiter for daily rate limiting.
-
-        Args:
-            daily_limit: The daily rate limit. If None, reads from DAILY_RATE_LIMIT env var
-
-        Returns:
-            A RateLimiter configured for daily rate limiting
-        """
-        if daily_limit is None:
-            daily_limit = int(os.getenv('DAILY_RATE_LIMIT', 1000))
-        strategy = DailyRateLimitStrategy(daily_limit)
-        return cls(strategy, fail_open=True)
-
     @property
     def limit(self) -> int:
         """Get the rate limit from the strategy."""

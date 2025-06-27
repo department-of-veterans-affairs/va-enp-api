@@ -234,54 +234,30 @@ class TestDailyRateLimiter:
 
 
 class TestRateLimiter:
-    """Test the new flexible RateLimiter class."""
+    """Test the RateLimiter class with different strategies."""
 
-    def test_for_service_factory_method(self) -> None:
-        """Test that for_service creates a RateLimiter with ServiceRateLimitStrategy."""
-        limiter = RateLimiter.for_service(limit=10, window=60)
-
-        assert limiter.limit == 10
+    def test_window_property_with_service_strategy(self) -> None:
+        """Test that window property returns the correct value for service strategy."""
+        strategy = ServiceRateLimitStrategy(limit=10, window=60)
+        limiter = RateLimiter(strategy)
         assert limiter.window == 60
-        assert isinstance(limiter.strategy, ServiceRateLimitStrategy)
-        assert limiter.fail_open is True
 
-    def test_for_service_factory_method_defaults(self) -> None:
-        """Test that for_service uses default values when not specified."""
-        limiter = RateLimiter.for_service()
-
-        assert limiter.limit == 5  # RATE_LIMIT default
-        assert limiter.window == 30  # OBSERVATION_PERIOD default
-        assert isinstance(limiter.strategy, ServiceRateLimitStrategy)
-
-    def test_for_daily_factory_method(self) -> None:
-        """Test that for_daily creates a RateLimiter with DailyRateLimitStrategy."""
-        limiter = RateLimiter.for_daily(daily_limit=500)
-
-        assert limiter.limit == 500
-        assert limiter.window is None  # Daily limiter doesn't have a window
-        assert isinstance(limiter.strategy, DailyRateLimitStrategy)
-        assert limiter.fail_open is True
-
-    def test_for_daily_factory_method_default(self) -> None:
-        """Test that for_daily reads from environment when daily_limit is None."""
-        limiter = RateLimiter.for_daily()
-
-        assert limiter.limit == 1000  # DAILY_RATE_LIMIT default
-        assert isinstance(limiter.strategy, DailyRateLimitStrategy)
+    def test_window_property_with_daily_strategy(self) -> None:
+        """Test that window property returns None for daily strategy."""
+        strategy = DailyRateLimitStrategy(daily_limit=1000)
+        limiter = RateLimiter(strategy)
+        assert limiter.window is None
 
     def test_get_key_delegates_to_strategy(self) -> None:
         """Test that get_key delegates to the underlying strategy."""
-        limiter = RateLimiter.for_service()
+        # Test with service strategy
+        service_strategy = ServiceRateLimitStrategy(limit=5, window=30)
+        limiter = RateLimiter(service_strategy)
         key = limiter.get_key('test-service', 'test-api-key')
-
         assert key == 'rate-limit-test-service-test-api-key'
 
-    def test_window_property_for_service_limiter(self) -> None:
-        """Test that window property returns the window for service limiters."""
-        limiter = RateLimiter.for_service(window=120)
-        assert limiter.window == 120
-
-    def test_window_property_for_daily_limiter(self) -> None:
-        """Test that window property returns None for daily limiters."""
-        limiter = RateLimiter.for_daily()
-        assert limiter.window is None
+        # Test with daily strategy
+        daily_strategy = DailyRateLimitStrategy(daily_limit=1000)
+        limiter = RateLimiter(daily_strategy)
+        key = limiter.get_key('test-service', 'test-api-key')
+        assert key == 'remaining-daily-limit-test-service-test-api-key'
