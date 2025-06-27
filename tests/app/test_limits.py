@@ -147,7 +147,7 @@ class TestDailyRateLimiter:
         """Test that the daily rate limiter generates the correct Redis key format."""
         limiter = DailyRateLimiter()
         key = limiter.get_key('service-id', 'api-key-id')
-        assert key == 'rate-limit-daily-service-id-api-key-id'
+        assert key == 'remaining-daily-limit-service-id-api-key-id'
 
     async def test_allows_request_under_daily_limit(
         self,
@@ -168,7 +168,7 @@ class TestDailyRateLimiter:
         # Should call consume_rate_limit_token with daily key and window expiry
         redis_mock.consume_rate_limit_token.assert_awaited_once()
         call_args = redis_mock.consume_rate_limit_token.call_args
-        assert call_args[0][0] == f'rate-limit-daily-{service_id}-{api_key_id}'  # key
+        assert call_args[0][0] == f'remaining-daily-limit-{service_id}-{api_key_id}'  # key
         assert call_args[0][1] == limiter.limit  # limit
         assert isinstance(call_args[0][2], int)  # window_expiry (seconds until midnight)
 
@@ -219,7 +219,7 @@ class TestDailyRateLimiter:
         # Should call consume_rate_limit_token with daily key and window expiry
         redis_mock.consume_rate_limit_token.assert_awaited_once()
         call_args = redis_mock.consume_rate_limit_token.call_args
-        assert call_args[0][0] == f'rate-limit-daily-{service_id}-{api_key_id}'  # key
+        assert call_args[0][0] == f'remaining-daily-limit-{service_id}-{api_key_id}'  # key
 
     def test_limit_initialization_from_env(self) -> None:
         """Test that daily limit is properly initialized from environment variable."""
@@ -265,7 +265,7 @@ class TestRateLimiter:
         daily_strategy = WindowedRateLimitStrategy(limit=1000, window_type=WindowType.DAILY)
         limiter = RateLimiter(daily_strategy)
         key = limiter.get_key('test-service', 'test-api-key')
-        assert key == 'rate-limit-daily-test-service-test-api-key'
+        assert key == 'remaining-daily-limit-test-service-test-api-key'
 
 
 class TestWindowedRateLimitStrategy:
