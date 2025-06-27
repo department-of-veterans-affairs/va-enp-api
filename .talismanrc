@@ -4,7 +4,7 @@ fileignoreconfig:
 - filename: app/auth.py
   checksum: c9c26cb7334788e91988fd0feac92e636a2d0ca3cfb135e56ece73ffc10c7c77
 - filename: app/clients/redis_client.py
-  checksum: 49631fc726fa8ec8b379870cd9fbb027f94dbe18ecae1ea381a2a169ba21fca7
+  checksum: 13413b6015aeb87628bb063c9a8dd6ca8d883866e41e2128cef5f1e4185c4973
 - filename: app/constants.py
   checksum: 99d65949b954a7f3dc7fd28decf413ad488d512fed167d945ae99da097d6967f
 - filename: app/legacy/clients/sqs.py
@@ -18,7 +18,7 @@ fileignoreconfig:
 - filename: app/legacy/v2/notifications/utils.py
   checksum: 43f789ba4ea77e9ee4e54c2dab02e29d3ef1098dee5ff7fcbc0f5dbb3342ac25
 - filename: app/limits.py
-  checksum: 8a24633cb1da1cc9f6e0edb0069f1757eeb056599bc5b35fc362073d37c51b82
+  checksum: 3eb7c0866dc778f74bf827c6764b65d179fcda1439a579818f797c986d08dfdc
 - filename: cd/dev.env
   checksum: 4234d82d9e024fed72a36db9f1fc4c278d417ba70b4844f4daa8d16f9021e30a
 - filename: cd/perf.env

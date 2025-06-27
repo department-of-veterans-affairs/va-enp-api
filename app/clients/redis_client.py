@@ -90,12 +90,29 @@ class RedisClientManager:
 
         try:
             client = self.get_client()
-            await client.set(name=key, value=limit, ex=window, nx=True)
+
+            # Log the initial state
+            logger.debug(f'Rate limit check - key: {key}, limit: {limit}, window: {window}')
+
+            # Check if key exists before setting
+            key_exists = await client.exists(key)
+            logger.debug(f'Rate limit - key exists: {key_exists}')
+
+            # Set the key to limit value if it doesn't exist
+            set_result = await client.set(name=key, value=limit, ex=window, nx=True)
+            logger.debug(f'Rate limit - set result (nx=True): {set_result}')
+
+            # Get current value
             current = await client.get(key)
+            logger.debug(f'Rate limit - current value: {current}')
 
             if current and int(current) > 0:
-                await client.decrby(name=key, amount=1)
+                # Decrement and get new value
+                new_value = await client.decrby(name=key, amount=1)
+                logger.debug(f'Rate limit - after decrement: {new_value}')
                 is_allowed = True
+            else:
+                logger.debug(f'Rate limit - blocked (current: {current})')
 
         except (ConnectionError, TimeoutError) as e:
             raise RetryableError('Redis rate limit operation failed (connection issue)') from e
