@@ -292,7 +292,7 @@ class TestWindowedRateLimitStrategy:
 
         # Should raise ValueError for unsupported window type
         with pytest.raises(ValueError, match='Unsupported window type: unsupported'):
-            strategy._calculate_calendar_window_expiry()
+            strategy._calculate_window_expiry()
 
 
 class TestWindowedRateLimiterFactory:

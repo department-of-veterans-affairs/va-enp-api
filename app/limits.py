@@ -113,38 +113,25 @@ class WindowedRateLimitStrategy(RateLimitStrategy):
 
         Returns:
             The expiry time in seconds for the window
-        """
-        if self.window_type == WindowType.FIXED:
-            # For FIXED windows, we know window_duration is not None due to validation in __init__
-            return self.window_duration  # type: ignore[return-value]
-
-        return self._calculate_calendar_window_expiry()
-
-    def _calculate_calendar_window_expiry(self) -> int:
-        """Calculate expiry time for calendar-based windows.
-
-        Returns:
-            The expiry time in seconds for calendar windows
 
         Raises:
             ValueError: If an unsupported window type is used
         """
-        now_utc = datetime.datetime.now(datetime.timezone.utc)
-
-        if self.window_type == WindowType.DAILY:
-            return self._calculate_daily_expiry(now_utc)
+        if self.window_type == WindowType.FIXED:
+            # For FIXED windows, we know window_duration is not None due to validation in __init__
+            return self.window_duration  # type: ignore[return-value]
+        elif self.window_type == WindowType.DAILY:
+            return self._calculate_daily_expiry()
         else:
             raise ValueError(f'Unsupported window type: {self.window_type}')
 
-    def _calculate_daily_expiry(self, now_utc: datetime.datetime) -> int:
+    def _calculate_daily_expiry(self) -> int:
         """Calculate expiry for daily windows (reset at midnight UTC).
-
-        Args:
-            now_utc: Current UTC datetime
 
         Returns:
             Seconds until midnight UTC
         """
+        now_utc = datetime.datetime.now(datetime.timezone.utc)
         next_reset = (now_utc + datetime.timedelta(days=1)).replace(hour=0, minute=0, second=0, microsecond=0)
         return int((next_reset - now_utc).total_seconds())
 
