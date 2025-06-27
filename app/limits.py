@@ -19,6 +19,11 @@ DAILY_RATE_LIMIT = int(os.getenv('DAILY_RATE_LIMIT', 1000))
 class RateLimitStrategy(ABC):
     """Abstract base class for rate limiting strategies."""
 
+    def __init__(self) -> None:
+        """Initialize the strategy."""
+        self.limit: int
+        self.window: int | None = None
+
     @abstractmethod
     async def is_allowed(self, redis: RedisClientManager, service_id: str, api_key_id: str) -> bool:
         """Check if the request is allowed under this rate limiting strategy.
@@ -66,6 +71,7 @@ class ServiceRateLimitStrategy(RateLimitStrategy):
             limit: The rate limit (number of requests)
             window: The time window in seconds
         """
+        super().__init__()
         self.limit = limit
         self.window = window
 
@@ -93,7 +99,8 @@ class ServiceRateLimitStrategy(RateLimitStrategy):
             True if the request is allowed, False if rate limited
         """
         key = self.get_key(service_id, api_key_id)
-        return await redis.consume_rate_limit_token(key, self.limit, self.window)
+        window = self.window or OBSERVATION_PERIOD  # Fallback to default if somehow None
+        return await redis.consume_rate_limit_token(key, self.limit, window)
 
     def get_error_message(self) -> str:
         """Get error message for service rate limit exceeded.
@@ -113,7 +120,8 @@ class DailyRateLimitStrategy(RateLimitStrategy):
         Args:
             daily_limit: The daily rate limit value
         """
-        self.daily_limit = daily_limit
+        super().__init__()
+        self.limit = daily_limit
 
     def get_key(self, service_id: str, api_key_id: str) -> str:
         """Construct Redis key for daily tracking per service/API key combination.
@@ -139,7 +147,7 @@ class DailyRateLimitStrategy(RateLimitStrategy):
             True if the request is allowed, False if rate limited
         """
         key = self.get_key(service_id, api_key_id)
-        return await redis.consume_daily_rate_limit_token(key, self.daily_limit)
+        return await redis.consume_daily_rate_limit_token(key, self.limit)
 
     def get_error_message(self) -> str:
         """Get error message for daily rate limit exceeded.
@@ -215,12 +223,12 @@ class ServiceRateLimiter(BaseRateLimiter):
     @property
     def limit(self) -> int:
         """Get the rate limit from the strategy for backward compatibility."""
-        return self.strategy.limit  # type: ignore[attr-defined,no-any-return]
+        return self.strategy.limit
 
     @property
     def window(self) -> int:
         """Get the window from the strategy for backward compatibility."""
-        return self.strategy.window  # type: ignore[attr-defined,no-any-return]
+        return self.strategy.window or OBSERVATION_PERIOD
 
     def _build_key(self, service_id: str, api_key_id: str) -> str:
         """Construct the Redis key for tracking request count.
@@ -267,7 +275,7 @@ class DailyRateLimiter(BaseRateLimiter):
     @property
     def daily_limit(self) -> int:
         """Get the daily limit from the strategy for backward compatibility."""
-        return self.strategy.daily_limit  # type: ignore[attr-defined,no-any-return]
+        return self.strategy.limit
 
     def _build_daily_key(self, service_id: str, api_key_id: str) -> str:
         """Construct Redis key for daily tracking per service/API key combination.
