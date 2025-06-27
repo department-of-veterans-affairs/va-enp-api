@@ -58,7 +58,7 @@ fileignoreconfig:
 - filename: tests/app/test_limits.py
   checksum: 63cfe4d25b509b3ece3cd53d72c5e5be6dccebd6ac6d07afdbcb8e166add0e2e
 - filename: tests/app/test_notification_routes.py
-  checksum: 250ef90e1af49fbd86b7eb6311f4731a86f73b4c40cc691e07c7ae4bce00d845
+  checksum: 678efefdf3eddd0fae370a3c18aaf581e96945d20640aa980e50fb9b6ff752e2
 - filename: tests/conftest.py
   checksum: c39c4b3e4777417f7b302794e869c272c2175d27dbc5236f85d4ecf9668dbe0d
 - filename: tests/helpers/api_test_helpers.py

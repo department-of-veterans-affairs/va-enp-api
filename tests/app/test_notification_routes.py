@@ -74,13 +74,13 @@ class TestGetNotificationRoutes:
         valid_notification_id: str,
         mocker: AsyncMock,
     ) -> None:
-        """Test that GET notification route fails open when daily rate limiter has Redis errors."""
+        """Test that GET notification route fails open (allows requests) when daily rate limiter has Redis errors."""
         # Mock auth to pass
         mocker.patch('app.auth.JWTBearerAdmin.__call__')
 
         # Mock the rate limiter's __call__ method to allow requests (fail-open behavior)
         async def mock_rate_limiter_failopen(self: object, request: object) -> None:
-            pass  # Do nothing, allow the request (simulating fail-open)
+            pass  # Do nothing, allow the request (simulating fail-open behavior)
 
         mocker.patch('app.limits.RateLimiter.__call__', mock_rate_limiter_failopen)
 
