@@ -1,6 +1,5 @@
 """Redis client manager that encapsulates Redis interactions and handles retryable/non-retryable errors."""
 
-import datetime
 from typing import Awaitable, Callable, TypeVar
 
 from loguru import logger
@@ -102,55 +101,6 @@ class RedisClientManager:
             raise RetryableError('Redis rate limit operation failed (connection issue)') from e
         except RedisError as e:
             raise NonRetryableError('Redis rate limit operation failed') from e
-
-        return is_allowed
-
-    @redis_retry()
-    async def consume_daily_rate_limit_token(self, key: str, limit: int) -> bool:
-        """Attempt to consume a token for daily rate limiting using remaining limit tracking.
-
-        This method uses Redis to enforce daily rate limits by:
-        - Setting the key to the specified limit with TTL expiration at midnight UTC if it doesn't exist.
-        - Checking the remaining token count.
-        - Decrementing the token count if available.
-
-        Args:
-            key (str): The Redis key used to track the daily remaining limit counter.
-            limit (int): The maximum number of allowed actions per day.
-
-        Returns:
-            bool: True if a token was successfully consumed (i.e., not rate limited),
-                  False if the daily rate limit has been exceeded.
-
-        Raises:
-            RetryableError: If the Redis operation fails due to a transient issue (e.g., timeout or connection loss).
-            NonRetryableError: If the Redis operation fails in a non-recoverable way.
-        """
-        is_allowed = False
-
-        try:
-            client = self.get_client()
-
-            # Calculate seconds until midnight UTC for TTL
-            now_utc = datetime.datetime.now(datetime.timezone.utc)
-            midnight_utc = (now_utc + datetime.timedelta(days=1)).replace(hour=0, minute=0, second=0, microsecond=0)
-            seconds_until_midnight = int((midnight_utc - now_utc).total_seconds())
-
-            # Set the key to the limit with TTL expiration at midnight UTC if it doesn't exist
-            await client.set(name=key, value=limit, ex=seconds_until_midnight, nx=True)
-
-            # Check current remaining count
-            current = await client.get(key)
-
-            if current and int(current) > 0:
-                # Atomically decrement if tokens are available
-                await client.decrby(name=key, amount=1)
-                is_allowed = True
-
-        except (ConnectionError, TimeoutError) as e:
-            raise RetryableError('Redis daily rate limit operation failed (connection issue)') from e
-        except RedisError as e:
-            raise NonRetryableError('Redis daily rate limit operation failed') from e
 
         return is_allowed
 

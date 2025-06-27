@@ -74,7 +74,6 @@ class TestPushRouter:
         # Mock Redis client to allow rate limiting to pass (return True for rate limit checks)
         mock_redis = Mock()
         mock_redis.consume_rate_limit_token = AsyncMock(return_value=True)
-        mock_redis.consume_daily_rate_limit_token = AsyncMock(return_value=True)
 
         # Mock the Redis client manager on the app
         mocker.patch.object(client.app.enp_state, 'redis_client_manager', mock_redis)
@@ -125,7 +124,6 @@ class TestPush:
         # Mock Redis client to allow rate limiting to pass (return True for rate limit checks)
         mock_redis = Mock()
         mock_redis.consume_rate_limit_token = AsyncMock(return_value=True)
-        mock_redis.consume_daily_rate_limit_token = AsyncMock(return_value=True)
 
         # Mock the Redis client manager on the app
         mocker.patch.object(client.app.enp_state, 'redis_client_manager', mock_redis)
@@ -472,7 +470,6 @@ class TestSmsValidation:
         # Mock Redis client to allow rate limiting to pass (return True for rate limit checks)
         mock_redis = Mock()
         mock_redis.consume_rate_limit_token = AsyncMock(return_value=True)
-        mock_redis.consume_daily_rate_limit_token = AsyncMock(return_value=True)
 
         # Mock the Redis client manager on the app
         mocker.patch.object(client.app.enp_state, 'redis_client_manager', mock_redis)
