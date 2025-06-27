@@ -109,8 +109,7 @@ class WindowedRateLimitStrategy(RateLimitStrategy):
             return f'remaining-daily-limit-{service_id}-{api_key_id}'
         else:
             # For FIXED and other window types, use the original format
-            window_suffix = self.window_type.value
-            return f'rate-limit-{window_suffix}-{service_id}-{api_key_id}'
+            return f'rate-limit-{service_id}-{api_key_id}'
 
     def _calculate_window_expiry(self) -> int:
         """Calculate the expiry time for the current window.

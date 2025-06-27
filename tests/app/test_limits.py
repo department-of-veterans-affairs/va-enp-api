@@ -65,7 +65,7 @@ class TestServiceRateLimiter:
         """Test that the service rate limiter generates the correct Redis key format."""
         limiter = ServiceRateLimiter()
         key = limiter.get_key('service-id', 'api-key-id')
-        assert key == 'rate-limit-fixed-service-id-api-key-id'
+        assert key == 'rate-limit-service-id-api-key-id'
 
     async def test_allows_request(
         self,
@@ -84,7 +84,7 @@ class TestServiceRateLimiter:
         await limiter(request)
 
         redis_mock.consume_rate_limit_token.assert_awaited_once_with(
-            f'rate-limit-fixed-{service_id}-{api_key_id}',
+            f'rate-limit-{service_id}-{api_key_id}',
             limiter.limit,
             limiter.window,
         )
@@ -133,7 +133,7 @@ class TestServiceRateLimiter:
         await limiter(request)
 
         redis_mock.consume_rate_limit_token.assert_awaited_once_with(
-            f'rate-limit-fixed-{service_id}-{api_key_id}',
+            f'rate-limit-{service_id}-{api_key_id}',
             limiter.limit,
             limiter.window,
         )
@@ -258,7 +258,7 @@ class TestRateLimiter:
         service_strategy = WindowedRateLimitStrategy(limit=5, window_type=WindowType.FIXED, window_duration=30)
         limiter = RateLimiter(service_strategy)
         key = limiter.get_key('test-service', 'test-api-key')
-        assert key == 'rate-limit-fixed-test-service-test-api-key'
+        assert key == 'rate-limit-test-service-test-api-key'
 
         # Test with daily strategy
         daily_strategy = WindowedRateLimitStrategy(limit=1000, window_type=WindowType.DAILY)
@@ -325,7 +325,7 @@ class TestWindowedRateLimitStrategy:
         # Test fixed window key
         fixed_strategy = WindowedRateLimitStrategy(limit=5, window_type=WindowType.FIXED, window_duration=30)
         fixed_key = fixed_strategy.get_key('test-service', 'test-api-key')
-        assert fixed_key == 'rate-limit-fixed-test-service-test-api-key'
+        assert fixed_key == 'rate-limit-test-service-test-api-key'
 
         # Test daily window key
         daily_strategy = WindowedRateLimitStrategy(limit=1000, window_type=WindowType.DAILY)
@@ -342,9 +342,7 @@ class TestWindowedRateLimitStrategy:
         result = await strategy.is_allowed(redis_mock, 'test-service', 'test-api-key')
 
         assert result is True
-        redis_mock.consume_rate_limit_token.assert_awaited_once_with(
-            'rate-limit-fixed-test-service-test-api-key', 5, 30
-        )
+        redis_mock.consume_rate_limit_token.assert_awaited_once_with('rate-limit-test-service-test-api-key', 5, 30)
 
     @pytest.mark.parametrize(
         ('window_type', 'expected_expiry_type'),
