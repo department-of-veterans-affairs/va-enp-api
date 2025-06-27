@@ -13,7 +13,6 @@ python = "^3.13"
 aiobotocore = "*"
 async-lru = "*"
 fastapi = {extras = ["standard"], version = "*"}
-gunicorn = "*"
 itsdangerous = "*"
 loguru = "*"
 phonenumbers = "*"
@@ -66,7 +65,6 @@ omit = [
     "app/main.py",
     "tests/app/test_main.py",
     "app/legacy/dao/api_keys_dao.py",
-    "app/legacy/dao/notifications_dao.py",
     "app/legacy/dao/recipient_identifiers_dao.py",
     "app/legacy/dao/utils.py",
 ]

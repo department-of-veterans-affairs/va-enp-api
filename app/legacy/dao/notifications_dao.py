@@ -19,7 +19,7 @@ from app.constants import NotificationStatus, NotificationType
 from app.db.db_init import get_read_session_with_context, get_write_session_with_context, metadata_legacy
 from app.exceptions import NonRetryableError, RetryableError
 from app.legacy.dao.utils import Serializer, db_retry
-from app.legacy.v2.notifications.route_schema import PersonalisationFileObject, RecipientIdentifierModel
+from app.legacy.v2.notifications.route_schema import PersonalisationFileObject
 from app.logging.logging_config import logger
 
 serializer = Serializer()
@@ -87,7 +87,6 @@ class LegacyNotificationDao:
         template_version: int,
         billable_units: int = 0,
         key_type: str = 'normal',
-        recipient_identifiers: RecipientIdentifierModel | None = None,
         personalisation: dict[str, str | int | float | list[str | int | float] | PersonalisationFileObject]
         | None = None,
     ) -> None:
@@ -105,7 +104,6 @@ class LegacyNotificationDao:
             template_version (int): The template version
             billable_units (int, optional): How many billable units this is. Defaults to 0.
             key_type (str, optional): ApiKey type. Defaults to 'normal'.
-            recipient_identifiers (RecipientIdentifierModel | None, optional): The recipient identifiers. Defaults to None.
             personalisation (dict[str, str | int | float | list[str | int | float] | PersonalisationFileObject] | None, optional):
                 The personalisation data for the notification. Defaults to None.
 

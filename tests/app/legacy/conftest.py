@@ -10,9 +10,13 @@ from pydantic import UUID4
 from sqlalchemy import Row, insert, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.constants import NotificationType
+from app.constants import NotificationStatus, NotificationType
 from app.db.db_init import metadata_legacy
+from app.legacy.dao.utils import Serializer
+from app.legacy.v2.notifications.route_schema import PersonalisationFileObject
 from tests.app.legacy.dao.test_api_keys import encode_and_sign
+
+serializer = Serializer()
 
 
 @pytest.fixture
@@ -308,5 +312,94 @@ def sample_service_sms_sender(
         await session.execute(insert_stmt)
         select_stmt = select(legacy_service_sms_senders).where(legacy_service_sms_senders.c.id == id)
         return (await session.execute(select_stmt)).one()
+
+    return _wrapper
+
+
+@pytest.fixture
+def sample_notification(
+    no_commit_session: AsyncSession,
+    sample_service: Callable[..., Awaitable[Row[Any]]],
+    sample_api_key: Callable[..., Awaitable[Row[Any]]],
+    sample_template: Callable[..., Awaitable[Row[Any]]],
+) -> Callable[..., Awaitable[Row[Any]]]:
+    """Generates a sample Notification - Does not commit to the database.
+
+    Args:
+        no_commit_session (AsyncSession): A non-commit test session
+        sample_service (Callable[..., Awaitable[Row[Any]]]): Generator fixture for Services
+        sample_api_key (Callable[..., Awaitable[Row[Any]]]): Generator fixture for API keys
+        sample_template (Callable[..., Awaitable[Row[Any]]]): Generator fixture for Templates
+
+    Returns:
+        Callable[..., Awaitable[Row[Any]]]:: The function to create a Notification
+    """
+
+    async def _wrapper(
+        session: AsyncSession | None = None,
+        id: UUID4 | None = None,
+        notification_type: NotificationType | None = None,
+        to: str | None = None,
+        reply_to_text: str | None = None,
+        service_id: UUID4 | None = None,
+        api_key_id: UUID4 | None = None,
+        reference: str | None = None,
+        template_id: UUID4 | None = None,
+        billable_units: int = 0,
+        personalisation: dict[str, str | int | float | list[str | int | float] | PersonalisationFileObject]
+        | None = None,
+    ) -> Row[Any]:
+        id = id or uuid4()
+        session = session or no_commit_session
+        legacy_notifications = metadata_legacy.tables['notifications']
+
+        data = {
+            'id': id,
+            'notification_type': notification_type or NotificationType.SMS,
+            'to': to,
+            'reply_to_text': reply_to_text,
+            'reference': reference,
+            'billable_units': billable_units,
+            'created_at': datetime.now(),
+            'notification_status': NotificationStatus.CREATED,
+            '_personalisation': serializer.serialize(personalisation) if personalisation else None,
+        }
+
+        if service_id is None:
+            service = await sample_service(session, uuid4())
+            data['service_id'] = service.id
+        else:
+            legacy_services = metadata_legacy.tables['services']
+            select_service_stmt = select(legacy_services).where(legacy_services.c.id == service_id)
+            service = (await session.execute(select_service_stmt)).one()
+
+        if api_key_id is None:
+            api_key = await sample_api_key(session, uuid4(), service_id=service_id)
+            data['api_key_id'] = api_key.id
+        else:
+            legacy_api_keys = metadata_legacy.tables['api_keys']
+            select_api_key_stmt = select(legacy_api_keys).where(legacy_api_keys.c.id == api_key_id)
+            api_key = (await session.execute(select_api_key_stmt)).one()
+
+        data['key_type'] = api_key.key_type
+
+        if template_id is None:
+            template = await sample_template(session, uuid4(), service_id=service_id)
+            data['template_id'] = template.id
+        else:
+            legacy_templates = metadata_legacy.tables['templates']
+            select_template_stmt = select(legacy_templates).where(legacy_templates.c.id == template_id)
+            template = (await session.execute(select_template_stmt)).one()
+
+        data['template_version'] = template.version
+
+        # Insert without commit
+        insert_stmt = insert(legacy_notifications).values(**data)
+        await session.execute(insert_stmt)
+
+        # Get the new object
+        select_stmt = select(legacy_notifications).where(legacy_notifications.c.id == id)
+        notification = (await session.execute(select_stmt)).one()
+        return notification
 
     return _wrapper

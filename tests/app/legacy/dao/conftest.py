@@ -137,7 +137,66 @@ async def commit_service_sms_sender(
 
 
 @pytest.fixture
-async def prepared_api_key(
+async def commit_notification(
+    commit_template: Row[Any],
+    sample_api_key: Callable[..., Awaitable[Row[Any]]],
+    sample_notification: Callable[..., Awaitable[Row[Any]]],
+) -> AsyncGenerator[Row[Any], None]:
+    """Fixture that creates, commits, and yields a sample notification row for integration tests.
+
+    This fixture is intended for DAO-level tests that require a fully persisted notification row.
+    It ensures that the notification is committed to the database and then
+    cleans up the record and dependencies after the test to preserve database isolation.
+
+    Setup:
+        - Uses `commit_template` to provide a committed template.
+          - `commit_template` is relied on to create service and user.
+        - Invokes the `sample_api_key` factory to create an api_key.
+          - Sample api_key committed manually to ensure consistent service_id references.
+        - Invokes the `sample_notification` factory to create a notification.
+        - Commits the api_key and notification to the database so they are queryable in test logic.
+
+    Teardown:
+        - Deletes the api_key and notification from the legacy schema after the test completes.
+        - The committed service, template, and user are cleaned up by the `commit_template` fixture.
+
+    Args:
+        commit_template (Row[Any]): A fixture that provides a committed template row, creating a service and user in addition.
+        sample_api_key (Callable): A coroutine factory that creates and returns a api_key row.
+        sample_notification: (Callable): A coroutine factory that creates and returns a notification row.
+
+    Yields:
+        Row[Any]: A SQLAlchemy Core row representing the inserted notification.
+    """
+    # setup
+    async with get_write_session_with_context() as session:
+        # using sample_api_key to allow passing in existing service_id
+        api_key = await sample_api_key(
+            session=session,
+            service_id=commit_template.service_id,
+        )
+        notification = await sample_notification(
+            session=session,
+            service_id=commit_template.service_id,
+            api_key_id=api_key.id,
+            template_id=commit_template.id,
+        )
+        await session.commit()
+
+    yield notification
+
+    # teardown
+    legacy_notifications = metadata_legacy.tables['notifications']
+    legacy_api_keys = metadata_legacy.tables['api_keys']
+
+    async with get_write_session_with_context() as session:
+        await session.execute(delete(legacy_notifications).where(legacy_notifications.c.id == notification.id))
+        await session.execute(delete(legacy_api_keys).where(legacy_api_keys.c.id == api_key.id))
+        await session.commit()
+
+
+@pytest.fixture
+async def commit_api_key(
     sample_service: Callable[[async_scoped_session[AsyncSession]], Awaitable[Row[Any]]],
     sample_api_key: Callable[..., Awaitable[Row[Any]]],
 ) -> AsyncGenerator[Row[Any], None]:

@@ -20,7 +20,6 @@ def test_make_logger() -> None:
         # Create references to the loggers before calling make_logger
         fastapi_logger = logging.getLogger('fastapi')
         uvicorn_loggers = [logging.getLogger(name) for name in ('uvicorn', 'uvicorn.access', 'uvicorn.error')]
-        gunicorn_loggers = [logging.getLogger(name) for name in ('gunicorn.error', 'gunicorn.access')]
 
         # Call the method under test
         CustomizeLogger.make_logger()
@@ -45,5 +44,5 @@ def test_make_logger() -> None:
         # Verify that the InterceptHandler was added to the appropriate loggers
         assert all(isinstance(handler, InterceptHandler) for handler in fastapi_logger.handlers)
 
-        for logger in uvicorn_loggers + gunicorn_loggers:
+        for logger in uvicorn_loggers:
             assert all(isinstance(handler, InterceptHandler) for handler in logger.handlers)

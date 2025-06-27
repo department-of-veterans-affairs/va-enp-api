@@ -47,24 +47,24 @@ class TestLegacyApiKeysDao:
     without relying on mocks or in-memory substitutes.
     """
 
-    async def test_get_api_keys(self, prepared_api_key: Row[Any]) -> None:
+    async def test_get_api_keys(self, commit_api_key: Row[Any]) -> None:
         """Test that API keys can be retrieved by service ID.
 
-        Given a committed API key associated with a sample service (via the prepared_api_key fixture),
+        Given a committed API key associated with a sample service (via the commit_api_key fixture),
         this test verifies that LegacyApiKeysDao.get_service_api_keys correctly returns the expected key.
 
         Asserts:
             - Exactly one API key is returned for the service
             - The returned key's ID and name match the inserted key
         """
-        keys = await LegacyApiKeysDao.get_service_api_keys(prepared_api_key.service_id)
+        keys = await LegacyApiKeysDao.get_service_api_keys(commit_api_key.service_id)
 
         assert len(keys) == 1, 'prepared service should only have one api key'
 
         api_key = keys[0]
 
-        for column in prepared_api_key._mapping.keys():
-            expected = prepared_api_key._mapping[column]
+        for column in commit_api_key._mapping.keys():
+            expected = commit_api_key._mapping[column]
             actual = api_key._mapping[column]
             assert actual == expected, f'{column} mismatch: expected {expected}, got {actual}'
 
