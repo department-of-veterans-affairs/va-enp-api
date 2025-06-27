@@ -18,7 +18,7 @@ fileignoreconfig:
 - filename: app/legacy/v2/notifications/utils.py
   checksum: 43f789ba4ea77e9ee4e54c2dab02e29d3ef1098dee5ff7fcbc0f5dbb3342ac25
 - filename: app/limits.py
-  checksum: 3e4df2e5982267034646d1850a75f1d4aeba031ce36de50c3adad9f8feefc1ee
+  checksum: bb53b941785107b7a9a0a34a56f48fc9330bf5ab4f3a1961c89d081dbb6604eb
 - filename: cd/dev.env
   checksum: ddf9ec032a1e7059e818735f25a0e5555db5e1f5cbd3096ac853f479bdd7e535
 - filename: cd/perf.env
