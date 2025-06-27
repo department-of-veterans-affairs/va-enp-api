@@ -18,7 +18,7 @@ fileignoreconfig:
 - filename: app/legacy/v2/notifications/utils.py
   checksum: 43f789ba4ea77e9ee4e54c2dab02e29d3ef1098dee5ff7fcbc0f5dbb3342ac25
 - filename: app/limits.py
-  checksum: bb53b941785107b7a9a0a34a56f48fc9330bf5ab4f3a1961c89d081dbb6604eb
+  checksum: 2981c402528944705760413c20a4768017594312c40a86867fc9904250dea0f3
 - filename: cd/dev.env
   checksum: ddf9ec032a1e7059e818735f25a0e5555db5e1f5cbd3096ac853f479bdd7e535
 - filename: cd/perf.env
@@ -56,7 +56,7 @@ fileignoreconfig:
 - filename: tests/app/test_auth.py
   checksum: 2147731d18bff8dfbda3d713fb4dec148b157121bbc8ff318ea9b55a6efeb338
 - filename: tests/app/test_limits.py
-  checksum: 2ed8c4ef3c48365773556e89422e21e6cc5fc07df404a23a59e6237e365356f3
+  checksum: 0f50129e1c838189437d481afc7f6b239fd718ab4cf0cc91eaac49ac33591b20
 - filename: tests/conftest.py
   checksum: c39c4b3e4777417f7b302794e869c272c2175d27dbc5236f85d4ecf9668dbe0d
 - filename: tests/napi_table_data.toml

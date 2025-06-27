@@ -158,8 +158,13 @@ class DailyRateLimitStrategy(RateLimitStrategy):
         return 'Daily rate limit exceeded'
 
 
-class BaseRateLimiter(ABC):
-    """Base class for rate limiters following SOLID principles."""
+class RateLimiter:
+    """FastAPI dependency that enforces rate limiting using configurable strategies.
+
+    Uses a strategy pattern to support different types of rate limiting (service-level, daily, etc.).
+    Rate limiting is skipped if required request state values are missing.
+    If Redis is unavailable, requests are allowed (fail-open behavior).
+    """
 
     def __init__(self, strategy: RateLimitStrategy, fail_open: bool = True) -> None:
         """Initialize with a rate limiting strategy.
@@ -170,6 +175,45 @@ class BaseRateLimiter(ABC):
         """
         self.strategy = strategy
         self.fail_open = fail_open
+
+    @classmethod
+    def for_service(cls, limit: int = RATE_LIMIT, window: int = OBSERVATION_PERIOD) -> 'RateLimiter':
+        """Create a rate limiter for service-level rate limiting.
+
+        Args:
+            limit: The rate limit (number of requests)
+            window: The time window in seconds
+
+        Returns:
+            A RateLimiter configured for service-level rate limiting
+        """
+        strategy = ServiceRateLimitStrategy(limit, window)
+        return cls(strategy, fail_open=True)
+
+    @classmethod
+    def for_daily(cls, daily_limit: int | None = None) -> 'RateLimiter':
+        """Create a rate limiter for daily rate limiting.
+
+        Args:
+            daily_limit: The daily rate limit. If None, reads from DAILY_RATE_LIMIT env var
+
+        Returns:
+            A RateLimiter configured for daily rate limiting
+        """
+        if daily_limit is None:
+            daily_limit = int(os.getenv('DAILY_RATE_LIMIT', 1000))
+        strategy = DailyRateLimitStrategy(daily_limit)
+        return cls(strategy, fail_open=True)
+
+    @property
+    def limit(self) -> int:
+        """Get the rate limit from the strategy."""
+        return self.strategy.limit
+
+    @property
+    def window(self) -> int | None:
+        """Get the window from the strategy (for service rate limiting)."""
+        return getattr(self.strategy, 'window', None)
 
     async def __call__(self, request: Request) -> None:
         """Enforce rate limiting based on the configured strategy.
@@ -196,27 +240,8 @@ class BaseRateLimiter(ABC):
             self._log_rate_limited(request_id, service_id, api_key_id)
             raise HTTPException(status_code=status.HTTP_429_TOO_MANY_REQUESTS, detail=self.strategy.get_error_message())
 
-    @abstractmethod
-    def _log_error(self, request_id: str, service_id: str, api_key_id: str) -> None:
-        """Log rate limiting errors."""
-        ...  # pragma: no cover
-
-    @abstractmethod
-    def _log_rate_limited(self, request_id: str, service_id: str, api_key_id: str) -> None:
-        """Log when requests are rate limited."""
-        ...  # pragma: no cover
-
-
-class RateLimiter(BaseRateLimiter):
-    """Generic rate limiter with common functionality for different rate limiting strategies."""
-
-    @property
-    def limit(self) -> int:
-        """Get the rate limit from the strategy."""
-        return self.strategy.limit
-
-    def _build_key(self, service_id: str, api_key_id: str) -> str:
-        """Construct Redis key for tracking per service/API key combination.
+    def get_key(self, service_id: str, api_key_id: str) -> str:
+        """Get the Redis key for this rate limiter's strategy.
 
         Args:
             service_id: The service identifier
@@ -246,6 +271,7 @@ class RateLimiter(BaseRateLimiter):
         )
 
 
+# Backward compatibility classes that maintain the same interface as before
 class ServiceRateLimiter(RateLimiter):
     """FastAPI dependency that enforces service-level rate limiting.
 
@@ -264,14 +290,17 @@ class ServiceRateLimiter(RateLimiter):
         """Get the window from the strategy for backward compatibility."""
         return self.strategy.window or OBSERVATION_PERIOD
 
-    def _log_rate_limited(self, request_id: str, service_id: str, api_key_id: str) -> None:
-        """Log when requests are rate limited."""
-        logger.debug(
-            'Request rate limited for throughput for request_id: {}, service_id: {}, api_key_id: {}',
-            request_id,
-            service_id,
-            api_key_id,
-        )
+    def _build_key(self, service_id: str, api_key_id: str) -> str:
+        """Construct Redis key for tracking per service/API key combination.
+
+        Args:
+            service_id: The service identifier
+            api_key_id: The API key identifier
+
+        Returns:
+            The Redis key for tracking this rate limit
+        """
+        return self.strategy.get_key(service_id, api_key_id)
 
 
 class DailyRateLimiter(RateLimiter):
@@ -284,15 +313,9 @@ class DailyRateLimiter(RateLimiter):
 
     def __init__(self) -> None:
         """Initialize daily rate limit values from environment variables."""
-        # Read the daily limit from environment at instantiation time
         daily_limit = int(os.getenv('DAILY_RATE_LIMIT', 1000))
         strategy = DailyRateLimitStrategy(daily_limit)
         super().__init__(strategy, fail_open=True)
-
-    @property
-    def daily_limit(self) -> int:
-        """Get the daily limit from the strategy for backward compatibility."""
-        return self.strategy.limit
 
     def _build_daily_key(self, service_id: str, api_key_id: str) -> str:
         """Construct Redis key for daily tracking per service/API key combination.

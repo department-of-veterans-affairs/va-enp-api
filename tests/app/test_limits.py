@@ -12,7 +12,13 @@ from starlette.requests import Request as StarletteRequest
 from app.clients.redis_client import RedisClientManager
 from app.constants import RESPONSE_429
 from app.exceptions import NonRetryableError, RetryableError
-from app.limits import DailyRateLimiter, ServiceRateLimiter
+from app.limits import (
+    DailyRateLimiter,
+    DailyRateLimitStrategy,
+    RateLimiter,
+    ServiceRateLimiter,
+    ServiceRateLimitStrategy,
+)
 
 
 @pytest.fixture
@@ -158,7 +164,7 @@ class TestDailyRateLimiter:
 
         redis_mock.consume_daily_rate_limit_token.assert_awaited_once_with(
             f'remaining-daily-limit-{service_id}-{api_key_id}',
-            limiter.daily_limit,
+            limiter.limit,
         )
 
     async def test_blocks_request_over_daily_limit(
@@ -207,21 +213,75 @@ class TestDailyRateLimiter:
 
         redis_mock.consume_daily_rate_limit_token.assert_awaited_once_with(
             f'remaining-daily-limit-{service_id}-{api_key_id}',
-            limiter.daily_limit,
+            limiter.limit,
         )
 
-    def test_daily_limit_initialization_from_env(self) -> None:
+    def test_limit_initialization_from_env(self) -> None:
         """Test that daily limit is properly initialized from environment variable."""
         with patch('app.limits.os.getenv') as mock_getenv:
             mock_getenv.return_value = '500'
             limiter = DailyRateLimiter()
-            assert limiter.daily_limit == 500
+            assert limiter.limit == 500
             mock_getenv.assert_called_with('DAILY_RATE_LIMIT', 1000)
 
-    def test_daily_limit_initialization_default(self) -> None:
+    def test_limit_initialization_default(self) -> None:
         """Test that daily limit uses default value when environment variable is not set."""
         with patch('app.limits.os.getenv') as mock_getenv:
             mock_getenv.return_value = '1000'  # Simulating default value
             limiter = DailyRateLimiter()
-            assert limiter.daily_limit == 1000
+            assert limiter.limit == 1000
             mock_getenv.assert_called_with('DAILY_RATE_LIMIT', 1000)
+
+
+class TestRateLimiter:
+    """Test the new flexible RateLimiter class."""
+
+    def test_for_service_factory_method(self) -> None:
+        """Test that for_service creates a RateLimiter with ServiceRateLimitStrategy."""
+        limiter = RateLimiter.for_service(limit=10, window=60)
+
+        assert limiter.limit == 10
+        assert limiter.window == 60
+        assert isinstance(limiter.strategy, ServiceRateLimitStrategy)
+        assert limiter.fail_open is True
+
+    def test_for_service_factory_method_defaults(self) -> None:
+        """Test that for_service uses default values when not specified."""
+        limiter = RateLimiter.for_service()
+
+        assert limiter.limit == 5  # RATE_LIMIT default
+        assert limiter.window == 30  # OBSERVATION_PERIOD default
+        assert isinstance(limiter.strategy, ServiceRateLimitStrategy)
+
+    def test_for_daily_factory_method(self) -> None:
+        """Test that for_daily creates a RateLimiter with DailyRateLimitStrategy."""
+        limiter = RateLimiter.for_daily(daily_limit=500)
+
+        assert limiter.limit == 500
+        assert limiter.window is None  # Daily limiter doesn't have a window
+        assert isinstance(limiter.strategy, DailyRateLimitStrategy)
+        assert limiter.fail_open is True
+
+    def test_for_daily_factory_method_default(self) -> None:
+        """Test that for_daily reads from environment when daily_limit is None."""
+        limiter = RateLimiter.for_daily()
+
+        assert limiter.limit == 1000  # DAILY_RATE_LIMIT default
+        assert isinstance(limiter.strategy, DailyRateLimitStrategy)
+
+    def test_get_key_delegates_to_strategy(self) -> None:
+        """Test that get_key delegates to the underlying strategy."""
+        limiter = RateLimiter.for_service()
+        key = limiter.get_key('test-service', 'test-api-key')
+
+        assert key == 'rate-limit-test-service-test-api-key'
+
+    def test_window_property_for_service_limiter(self) -> None:
+        """Test that window property returns the window for service limiters."""
+        limiter = RateLimiter.for_service(window=120)
+        assert limiter.window == 120
+
+    def test_window_property_for_daily_limiter(self) -> None:
+        """Test that window property returns None for daily limiters."""
+        limiter = RateLimiter.for_daily()
+        assert limiter.window is None
