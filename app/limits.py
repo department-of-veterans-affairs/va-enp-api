@@ -1,7 +1,9 @@
 """Rate limiting dependency."""
 
+import datetime
 import os
 from abc import ABC, abstractmethod
+from enum import Enum
 
 from fastapi import HTTPException, Request, status
 from loguru import logger
@@ -14,6 +16,13 @@ from app.exceptions import NonRetryableError, RetryableError
 RATE_LIMIT = int(os.getenv('RATE_LIMIT', 5))
 OBSERVATION_PERIOD = int(os.getenv('OBSERVATION_PERIOD', 30))
 DAILY_RATE_LIMIT = int(os.getenv('DAILY_RATE_LIMIT', 1000))
+
+
+class WindowType(Enum):
+    """Enumeration of supported window types for rate limiting."""
+
+    FIXED = 'fixed'  # Fixed duration windows (e.g., 30s, 5m, 1h)
+    DAILY = 'daily'  # Calendar day windows (reset at midnight UTC)
 
 
 class RateLimitStrategy(ABC):
@@ -61,19 +70,30 @@ class RateLimitStrategy(ABC):
         ...  # pragma: no cover
 
 
-class ServiceRateLimitStrategy(RateLimitStrategy):
-    """Strategy for service-level rate limiting with fixed windows."""
+class WindowedRateLimitStrategy(RateLimitStrategy):
+    """Unified strategy for windowed rate limiting with flexible window types."""
 
-    def __init__(self, limit: int = RATE_LIMIT, window: int = OBSERVATION_PERIOD) -> None:
-        """Initialize with rate limit and window.
+    def __init__(self, limit: int, window_type: WindowType, window_duration: int | None = None) -> None:
+        """Initialize with limit and window configuration.
 
         Args:
             limit: The rate limit (number of requests)
-            window: The time window in seconds
+            window_type: The type of window (FIXED, DAILY)
+            window_duration: Duration in seconds for FIXED windows (ignored for DAILY windows)
+
+        Raises:
+            ValueError: If window_duration is None for FIXED window type
         """
         super().__init__()
         self.limit = limit
-        self.window = window
+        self.window_type = window_type
+        self.window_duration = window_duration
+
+        if window_type == WindowType.FIXED and window_duration is None:
+            raise ValueError('window_duration is required for FIXED window type')
+
+        # Set the window attribute for backwards compatibility
+        self.window = window_duration if window_type == WindowType.FIXED else None
 
     def get_key(self, service_id: str, api_key_id: str) -> str:
         """Construct the Redis key for tracking request count.
@@ -85,10 +105,51 @@ class ServiceRateLimitStrategy(RateLimitStrategy):
         Returns:
             The Redis key for tracking request count
         """
-        return f'rate-limit-{service_id}-{api_key_id}'
+        window_suffix = self.window_type.value
+        return f'rate-limit-{window_suffix}-{service_id}-{api_key_id}'
+
+    def _calculate_window_expiry(self) -> int:
+        """Calculate the expiry time for the current window.
+
+        Returns:
+            The expiry time in seconds for the window
+        """
+        if self.window_type == WindowType.FIXED:
+            # For FIXED windows, we know window_duration is not None due to validation in __init__
+            return self.window_duration  # type: ignore[return-value]
+
+        return self._calculate_calendar_window_expiry()
+
+    def _calculate_calendar_window_expiry(self) -> int:
+        """Calculate expiry time for calendar-based windows.
+
+        Returns:
+            The expiry time in seconds for calendar windows
+
+        Raises:
+            ValueError: If an unsupported window type is used
+        """
+        now_utc = datetime.datetime.now(datetime.timezone.utc)
+
+        if self.window_type == WindowType.DAILY:
+            return self._calculate_daily_expiry(now_utc)
+        else:
+            raise ValueError(f'Unsupported window type: {self.window_type}')
+
+    def _calculate_daily_expiry(self, now_utc: datetime.datetime) -> int:
+        """Calculate expiry for daily windows (reset at midnight UTC).
+
+        Args:
+            now_utc: Current UTC datetime
+
+        Returns:
+            Seconds until midnight UTC
+        """
+        next_reset = (now_utc + datetime.timedelta(days=1)).replace(hour=0, minute=0, second=0, microsecond=0)
+        return int((next_reset - now_utc).total_seconds())
 
     async def is_allowed(self, redis: RedisClientManager, service_id: str, api_key_id: str) -> bool:
-        """Check if request is allowed under service rate limits.
+        """Check if request is allowed under windowed rate limits.
 
         Args:
             redis: The Redis client manager
@@ -99,63 +160,19 @@ class ServiceRateLimitStrategy(RateLimitStrategy):
             True if the request is allowed, False if rate limited
         """
         key = self.get_key(service_id, api_key_id)
-        window = self.window or OBSERVATION_PERIOD  # Fallback to default if somehow None
-        return await redis.consume_rate_limit_token(key, self.limit, window)
+        window_expiry = self._calculate_window_expiry()
+        return await redis.consume_rate_limit_token(key, self.limit, window_expiry)
 
     def get_error_message(self) -> str:
-        """Get error message for service rate limit exceeded.
+        """Get error message for rate limit exceeded.
 
         Returns:
-            The error message for service rate limits
+            The error message for rate limits
         """
-        return RESPONSE_429
-
-
-class DailyRateLimitStrategy(RateLimitStrategy):
-    """Strategy for daily rate limiting with midnight UTC reset."""
-
-    def __init__(self, daily_limit: int) -> None:
-        """Initialize with daily limit.
-
-        Args:
-            daily_limit: The daily rate limit value
-        """
-        super().__init__()
-        self.limit = daily_limit
-
-    def get_key(self, service_id: str, api_key_id: str) -> str:
-        """Construct Redis key for daily tracking per service/API key combination.
-
-        Args:
-            service_id: The service identifier
-            api_key_id: The API key identifier
-
-        Returns:
-            The Redis key for tracking daily limits
-        """
-        return f'remaining-daily-limit-{service_id}-{api_key_id}'
-
-    async def is_allowed(self, redis: RedisClientManager, service_id: str, api_key_id: str) -> bool:
-        """Check if request is allowed under daily rate limits.
-
-        Args:
-            redis: The Redis client manager
-            service_id: The service identifier
-            api_key_id: The API key identifier
-
-        Returns:
-            True if the request is allowed, False if rate limited
-        """
-        key = self.get_key(service_id, api_key_id)
-        return await redis.consume_daily_rate_limit_token(key, self.limit)
-
-    def get_error_message(self) -> str:
-        """Get error message for daily rate limit exceeded.
-
-        Returns:
-            The error message for daily rate limits
-        """
-        return 'Daily rate limit exceeded'
+        if self.window_type == WindowType.DAILY:
+            return 'Daily rate limit exceeded'
+        else:
+            return RESPONSE_429
 
 
 class RateLimiter:
@@ -246,19 +263,46 @@ class RateLimiter:
 def ServiceRateLimiter() -> RateLimiter:
     """Create a service-level rate limiter using environment variables.
 
+    Uses RATE_LIMIT (default: 5) requests per OBSERVATION_PERIOD (default: 30) seconds.
+
     Returns:
         RateLimiter configured for service-level rate limiting
     """
-    strategy = ServiceRateLimitStrategy()
+    strategy = WindowedRateLimitStrategy(RATE_LIMIT, WindowType.FIXED, OBSERVATION_PERIOD)
     return RateLimiter(strategy, fail_open=True)
 
 
 def DailyRateLimiter() -> RateLimiter:
     """Create a daily rate limiter using environment variables.
 
+    Uses DAILY_RATE_LIMIT (default: 1000) requests per day, resetting at midnight UTC.
+
     Returns:
         RateLimiter configured for daily rate limiting
     """
     daily_limit = int(os.getenv('DAILY_RATE_LIMIT', 1000))
-    strategy = DailyRateLimitStrategy(daily_limit)
+    strategy = WindowedRateLimitStrategy(daily_limit, WindowType.DAILY)
+    return RateLimiter(strategy, fail_open=True)
+
+
+# Unified factory function for flexible windowed rate limiting
+def WindowedRateLimiter(limit: int, window_type: WindowType, window_duration: int | None = None) -> RateLimiter:
+    """Create a windowed rate limiter with flexible window types.
+
+    Args:
+        limit: The rate limit (number of requests)
+        window_type: The type of window (FIXED, DAILY)
+        window_duration: Duration in seconds for FIXED windows (ignored for DAILY windows)
+
+    Returns:
+        RateLimiter configured for windowed rate limiting
+
+    Examples:
+        # Fixed 30-second window with 5 requests
+        limiter = WindowedRateLimiter(5, WindowType.FIXED, 30)
+
+        # Daily window with 1000 requests
+        limiter = WindowedRateLimiter(1000, WindowType.DAILY)
+    """
+    strategy = WindowedRateLimitStrategy(limit, window_type, window_duration)
     return RateLimiter(strategy, fail_open=True)

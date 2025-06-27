@@ -14,10 +14,11 @@ from app.constants import RESPONSE_429
 from app.exceptions import NonRetryableError, RetryableError
 from app.limits import (
     DailyRateLimiter,
-    DailyRateLimitStrategy,
     RateLimiter,
     ServiceRateLimiter,
-    ServiceRateLimitStrategy,
+    WindowedRateLimiter,
+    WindowedRateLimitStrategy,
+    WindowType,
 )
 
 
@@ -65,7 +66,7 @@ class TestServiceRateLimiter:
         """Test that the service rate limiter generates the correct Redis key format."""
         limiter = ServiceRateLimiter()
         key = limiter.get_key('service-id', 'api-key-id')
-        assert key == 'rate-limit-service-id-api-key-id'
+        assert key == 'rate-limit-fixed-service-id-api-key-id'
 
     async def test_allows_request(
         self,
@@ -84,7 +85,7 @@ class TestServiceRateLimiter:
         await limiter(request)
 
         redis_mock.consume_rate_limit_token.assert_awaited_once_with(
-            f'rate-limit-{service_id}-{api_key_id}',
+            f'rate-limit-fixed-{service_id}-{api_key_id}',
             limiter.limit,
             limiter.window,
         )
@@ -133,7 +134,7 @@ class TestServiceRateLimiter:
         await limiter(request)
 
         redis_mock.consume_rate_limit_token.assert_awaited_once_with(
-            f'rate-limit-{service_id}-{api_key_id}',
+            f'rate-limit-fixed-{service_id}-{api_key_id}',
             limiter.limit,
             limiter.window,
         )
@@ -146,7 +147,7 @@ class TestDailyRateLimiter:
         """Test that the daily rate limiter generates the correct Redis key format."""
         limiter = DailyRateLimiter()
         key = limiter.get_key('service-id', 'api-key-id')
-        assert key == 'remaining-daily-limit-service-id-api-key-id'
+        assert key == 'rate-limit-daily-service-id-api-key-id'
 
     async def test_allows_request_under_daily_limit(
         self,
@@ -158,16 +159,18 @@ class TestDailyRateLimiter:
         limiter = DailyRateLimiter()
 
         redis_mock = Mock(spec=RedisClientManager)
-        redis_mock.consume_daily_rate_limit_token = AsyncMock(return_value=True)
+        redis_mock.consume_rate_limit_token = AsyncMock(return_value=True)
 
         request = make_request_with_redis(redis_mock)
 
         await limiter(request)
 
-        redis_mock.consume_daily_rate_limit_token.assert_awaited_once_with(
-            f'remaining-daily-limit-{service_id}-{api_key_id}',
-            limiter.limit,
-        )
+        # Should call consume_rate_limit_token with daily key and window expiry
+        redis_mock.consume_rate_limit_token.assert_awaited_once()
+        call_args = redis_mock.consume_rate_limit_token.call_args
+        assert call_args[0][0] == f'rate-limit-daily-{service_id}-{api_key_id}'  # key
+        assert call_args[0][1] == limiter.limit  # limit
+        assert isinstance(call_args[0][2], int)  # window_expiry (seconds until midnight)
 
     async def test_blocks_request_over_daily_limit(
         self,
@@ -178,7 +181,7 @@ class TestDailyRateLimiter:
         limiter = DailyRateLimiter()
 
         redis_mock = Mock(spec=RedisClientManager)
-        redis_mock.consume_daily_rate_limit_token = AsyncMock(return_value=False)
+        redis_mock.consume_rate_limit_token = AsyncMock(return_value=False)
 
         request = make_request_with_redis(redis_mock)
 
@@ -206,17 +209,17 @@ class TestDailyRateLimiter:
         limiter = DailyRateLimiter()
 
         redis_mock = Mock(spec=RedisClientManager)
-        redis_mock.consume_daily_rate_limit_token = AsyncMock(side_effect=raises)
+        redis_mock.consume_rate_limit_token = AsyncMock(side_effect=raises)
 
         request = make_request_with_redis(redis_mock)
 
         # Should not raise an exception - fail open
         await limiter(request)
 
-        redis_mock.consume_daily_rate_limit_token.assert_awaited_once_with(
-            f'remaining-daily-limit-{service_id}-{api_key_id}',
-            limiter.limit,
-        )
+        # Should call consume_rate_limit_token with daily key and window expiry
+        redis_mock.consume_rate_limit_token.assert_awaited_once()
+        call_args = redis_mock.consume_rate_limit_token.call_args
+        assert call_args[0][0] == f'rate-limit-daily-{service_id}-{api_key_id}'  # key
 
     def test_limit_initialization_from_env(self) -> None:
         """Test that daily limit is properly initialized from environment variable."""
@@ -240,26 +243,81 @@ class TestRateLimiter:
 
     def test_window_property_with_service_strategy(self) -> None:
         """Test that window property returns the correct value for service strategy."""
-        strategy = ServiceRateLimitStrategy(limit=10, window=60)
+        strategy = WindowedRateLimitStrategy(limit=10, window_type=WindowType.FIXED, window_duration=60)
         limiter = RateLimiter(strategy)
         assert limiter.window == 60
 
     def test_window_property_with_daily_strategy(self) -> None:
         """Test that window property returns None for daily strategy."""
-        strategy = DailyRateLimitStrategy(daily_limit=1000)
+        strategy = WindowedRateLimitStrategy(limit=1000, window_type=WindowType.DAILY)
         limiter = RateLimiter(strategy)
         assert limiter.window is None
 
     def test_get_key_delegates_to_strategy(self) -> None:
         """Test that get_key delegates to the underlying strategy."""
         # Test with service strategy
-        service_strategy = ServiceRateLimitStrategy(limit=5, window=30)
+        service_strategy = WindowedRateLimitStrategy(limit=5, window_type=WindowType.FIXED, window_duration=30)
         limiter = RateLimiter(service_strategy)
         key = limiter.get_key('test-service', 'test-api-key')
-        assert key == 'rate-limit-test-service-test-api-key'
+        assert key == 'rate-limit-fixed-test-service-test-api-key'
 
         # Test with daily strategy
-        daily_strategy = DailyRateLimitStrategy(daily_limit=1000)
+        daily_strategy = WindowedRateLimitStrategy(limit=1000, window_type=WindowType.DAILY)
         limiter = RateLimiter(daily_strategy)
         key = limiter.get_key('test-service', 'test-api-key')
-        assert key == 'remaining-daily-limit-test-service-test-api-key'
+        assert key == 'rate-limit-daily-test-service-test-api-key'
+
+
+class TestWindowedRateLimitStrategy:
+    """Test the WindowedRateLimitStrategy class directly."""
+
+    def test_fixed_window_requires_duration(self) -> None:
+        """Test that FIXED window type requires window_duration parameter."""
+        # Should work with window_duration provided
+        strategy = WindowedRateLimitStrategy(limit=10, window_type=WindowType.FIXED, window_duration=60)
+        assert strategy.limit == 10
+        assert strategy.window_duration == 60
+
+        # Should raise ValueError when window_duration is None for FIXED type
+        with pytest.raises(ValueError, match='window_duration is required for FIXED window type'):
+            WindowedRateLimitStrategy(limit=10, window_type=WindowType.FIXED, window_duration=None)
+
+    def test_unsupported_window_type_error(self) -> None:
+        """Test that unsupported window types raise ValueError."""
+        # Create a strategy with a mock unsupported window type
+        strategy = WindowedRateLimitStrategy(limit=100, window_type=WindowType.DAILY)
+
+        # Temporarily change the window type to simulate an unsupported type
+        strategy.window_type = 'unsupported'  # type: ignore[assignment]
+
+        # Should raise ValueError for unsupported window type
+        with pytest.raises(ValueError, match='Unsupported window type: unsupported'):
+            strategy._calculate_calendar_window_expiry()
+
+
+class TestWindowedRateLimiterFactory:
+    """Test the WindowedRateLimiter factory function."""
+
+    def test_creates_fixed_window_limiter(self) -> None:
+        """Test creating a fixed window rate limiter."""
+        limiter = WindowedRateLimiter(limit=5, window_type=WindowType.FIXED, window_duration=30)
+
+        assert limiter.limit == 5
+        assert limiter.window == 30
+        # Cast to concrete type to access specific attributes
+        strategy = limiter.strategy
+        assert isinstance(strategy, WindowedRateLimitStrategy)
+        assert strategy.window_type == WindowType.FIXED
+        assert strategy.window_duration == 30
+
+    def test_creates_daily_window_limiter(self) -> None:
+        """Test creating a daily window rate limiter."""
+        limiter = WindowedRateLimiter(limit=1000, window_type=WindowType.DAILY)
+
+        assert limiter.limit == 1000
+        assert limiter.window is None  # Daily windows don't have a fixed window
+        # Cast to concrete type to access specific attributes
+        strategy = limiter.strategy
+        assert isinstance(strategy, WindowedRateLimitStrategy)
+        assert strategy.window_type == WindowType.DAILY
+        assert strategy.window_duration is None
