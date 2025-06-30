@@ -223,18 +223,26 @@ class TestDailyRateLimiter:
     def test_limit_initialization_from_env(self) -> None:
         """Test that daily limit is properly initialized from environment variable."""
         with patch('app.limits.os.getenv') as mock_getenv:
-            mock_getenv.return_value = '500'
+            # Configure side_effect to return '500' for the first call, '500' for the second call (logging)
+            mock_getenv.side_effect = ['500', '500']
             limiter = DailyRateLimiter()
             assert limiter.limit == 500
-            mock_getenv.assert_called_with('DAILY_RATE_LIMIT', 1000)
+            # Verify os.getenv was called twice: once for the actual value, once for logging
+            assert mock_getenv.call_count == 2
+            mock_getenv.assert_any_call('DAILY_RATE_LIMIT', 1000)
+            mock_getenv.assert_any_call('DAILY_RATE_LIMIT', 'not set')
 
     def test_limit_initialization_default(self) -> None:
         """Test that daily limit uses default value when environment variable is not set."""
         with patch('app.limits.os.getenv') as mock_getenv:
-            mock_getenv.return_value = '1000'  # Simulating default value
+            # Configure side_effect to return the default value for the first call, 'not set' for the second
+            mock_getenv.side_effect = [1000, 'not set']
             limiter = DailyRateLimiter()
             assert limiter.limit == 1000
-            mock_getenv.assert_called_with('DAILY_RATE_LIMIT', 1000)
+            # Verify os.getenv was called twice: once for the actual value, once for logging
+            assert mock_getenv.call_count == 2
+            mock_getenv.assert_any_call('DAILY_RATE_LIMIT', 1000)
+            mock_getenv.assert_any_call('DAILY_RATE_LIMIT', 'not set')
 
 
 class TestRateLimiter:
