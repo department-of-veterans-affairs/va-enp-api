@@ -19,8 +19,8 @@ OBSERVATION_PERIOD = int(os.getenv('OBSERVATION_PERIOD', 30))
 DAILY_RATE_LIMIT = int(os.getenv('DAILY_RATE_LIMIT', 1000))
 
 # Environment variable to control which rate limiting strategy to use
-# Options: 'WindowedRateLimitStrategy' (default), 'NoOpRateLimitStrategy'
-RATE_LIMIT_STRATEGY = os.getenv('RATE_LIMIT_STRATEGY', 'WindowedRateLimitStrategy')
+# Options: 'NoOpRateLimitStrategy' (default), 'WindowedRateLimitStrategy'
+RATE_LIMIT_STRATEGY = os.getenv('RATE_LIMIT_STRATEGY', 'NoOpRateLimitStrategy')
 
 
 class WindowType(Enum):

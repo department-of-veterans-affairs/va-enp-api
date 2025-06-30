@@ -407,6 +407,7 @@ class TestSmsPostHandler:
         finally:
             await LegacyNotificationDao.delete_notification(resp_json['id'])
 
+    @patch('app.limits.RATE_LIMIT_STRATEGY', 'WindowedRateLimitStrategy')
     async def test_rate_limited_returns_429(
         self,
         mock_background_task: AsyncMock,

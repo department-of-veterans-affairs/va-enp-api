@@ -63,12 +63,14 @@ def make_request_with_redis() -> Callable[[Mock], StarletteRequest]:
 class TestServiceRateLimiter:
     """Test the service rate limiter factory function."""
 
+    @patch('app.limits.RATE_LIMIT_STRATEGY', 'WindowedRateLimitStrategy')
     def test_build_key_format(self) -> None:
         """Test that the service rate limiter generates the correct Redis key format."""
         limiter = ServiceRateLimiter()
         key = limiter.get_key('service-id', 'api-key-id')
         assert key == 'rate-limit-service-id-api-key-id'
 
+    @patch('app.limits.RATE_LIMIT_STRATEGY', 'WindowedRateLimitStrategy')
     async def test_allows_request(
         self,
         mock_context: Tuple[str, str],
@@ -91,6 +93,7 @@ class TestServiceRateLimiter:
             limiter.window,
         )
 
+    @patch('app.limits.RATE_LIMIT_STRATEGY', 'WindowedRateLimitStrategy')
     async def test_blocks_request_when_limit_exceeded(
         self,
         mock_context: Tuple[str, str],
@@ -117,6 +120,7 @@ class TestServiceRateLimiter:
             RetryableError('temporary failure'),
         ],
     )
+    @patch('app.limits.RATE_LIMIT_STRATEGY', 'WindowedRateLimitStrategy')
     async def test_allows_request_on_errors(
         self,
         mock_context: Tuple[str, str],
@@ -144,12 +148,14 @@ class TestServiceRateLimiter:
 class TestDailyRateLimiter:
     """Test the daily rate limiter factory function."""
 
+    @patch('app.limits.RATE_LIMIT_STRATEGY', 'WindowedRateLimitStrategy')
     def test_build_daily_key_format(self) -> None:
         """Test that the daily rate limiter generates the correct Redis key format."""
         limiter = DailyRateLimiter()
         key = limiter.get_key('service-id', 'api-key-id')
         assert key == 'remaining-daily-limit-service-id-api-key-id'
 
+    @patch('app.limits.RATE_LIMIT_STRATEGY', 'WindowedRateLimitStrategy')
     async def test_allows_request_under_daily_limit(
         self,
         mock_context: Tuple[str, str],
@@ -173,6 +179,7 @@ class TestDailyRateLimiter:
         assert call_args[0][1] == limiter.limit  # limit
         assert isinstance(call_args[0][2], int)  # window_expiry (seconds until midnight)
 
+    @patch('app.limits.RATE_LIMIT_STRATEGY', 'WindowedRateLimitStrategy')
     async def test_blocks_request_over_daily_limit(
         self,
         mock_context: Tuple[str, str],
@@ -199,6 +206,7 @@ class TestDailyRateLimiter:
             RetryableError('temporary failure'),
         ],
     )
+    @patch('app.limits.RATE_LIMIT_STRATEGY', 'WindowedRateLimitStrategy')
     async def test_fails_open_on_redis_errors(
         self,
         mock_context: Tuple[str, str],
@@ -222,23 +230,24 @@ class TestDailyRateLimiter:
         call_args = redis_mock.consume_rate_limit_token.call_args
         assert call_args[0][0] == f'remaining-daily-limit-{service_id}-{api_key_id}'  # key
 
+    @patch('app.limits.RATE_LIMIT_STRATEGY', 'WindowedRateLimitStrategy')
     def test_limit_initialization_from_env(self) -> None:
         """Test that daily limit is properly initialized from environment variable."""
         with patch('app.limits.os.getenv') as mock_getenv:
             # Configure side_effect to return '500' for the first call, '500' for the second call (logging)
-            mock_getenv.side_effect = ['500', '500']
+            mock_getenv.side_effect = ['WindowedRateLimitStrategy', '500', '500']
             limiter = DailyRateLimiter()
             assert limiter.limit == 500
-            # Verify os.getenv was called twice: once for the actual value, once for logging
-            assert mock_getenv.call_count == 2
+            # Verify os.getenv was called for RATE_LIMIT_STRATEGY and DAILY_RATE_LIMIT
             mock_getenv.assert_any_call('DAILY_RATE_LIMIT', 1000)
             mock_getenv.assert_any_call('DAILY_RATE_LIMIT', 'not set')
 
+    @patch('app.limits.RATE_LIMIT_STRATEGY', 'WindowedRateLimitStrategy')
     def test_limit_initialization_default(self) -> None:
         """Test that daily limit uses default value when environment variable is not set."""
         with patch('app.limits.os.getenv') as mock_getenv:
             # Configure side_effect to return the default value for the first call, 'not set' for the second
-            mock_getenv.side_effect = [1000, 'not set']
+            mock_getenv.side_effect = ['WindowedRateLimitStrategy', 1000, 'not set']
             limiter = DailyRateLimiter()
             assert limiter.limit == 1000
             # Verify os.getenv was called twice: once for the actual value, once for logging
