@@ -19,7 +19,6 @@ from app.db.db_init import (
     init_db,
 )
 from app.legacy.v2.notifications.rest import v2_legacy_notification_router, v2_notification_router
-from app.limits import DailyRateLimiter
 from app.logging.logging_config import CustomizeLogger, logger
 from app.state import ENPState
 from app.v3 import api_router as v3_router
@@ -119,7 +118,7 @@ def simple_route() -> dict[str, str]:
 @app.get(
     '/legacy/notifications/{notification_id}',
     status_code=status.HTTP_200_OK,
-    dependencies=[Depends(JWTBearerAdmin()), Depends(DailyRateLimiter())],
+    dependencies=[Depends(JWTBearerAdmin())],
 )
 async def get_legacy_notification(notification_id: UUID4) -> None:
     """Get a legacy Notification.

@@ -18,11 +18,15 @@ fileignoreconfig:
 - filename: app/legacy/v2/notifications/utils.py
   checksum: 43f789ba4ea77e9ee4e54c2dab02e29d3ef1098dee5ff7fcbc0f5dbb3342ac25
 - filename: app/limits.py
-  checksum: 3eb7c0866dc778f74bf827c6764b65d179fcda1439a579818f797c986d08dfdc
+  checksum: 220f8c974cbf22c8ec3ce345fc88a934a244e0f84c738e8d1841170b5453bb6f
 - filename: cd/dev.env
-  checksum: fc21167dcd1898fd11852848e848b9e98a25cef6c2a0d30973943f2a5451af92
+  checksum: 443c90a73ed61faea64ab234238b296b495a693bc91410145eb992e7d8da753f
 - filename: cd/perf.env
-  checksum: 40364f54864f7273c7672f63ac9af7f96a97ef9f72fe573ab67cb1e26d09b54c
+  checksum: 3641ad160b0632605a6f3681e237ad88663ae782482330ecbe3bd0b91ff8f025
+- filename: cd/prod.env
+  checksum: 5dd82bf0de04fb1db67cc5d1704e65300b2a47119289a4b8d45702b243efe5ac
+- filename: cd/staging.env
+  checksum: dab9978625d480a04883d97388681f86a6927994ed9ce8d7c30d8e1f078cfef2
 - filename: ci/.env.docker
   checksum: 2ca10edc6e96beb5929c49af8d3208ba55d6d0ea020ac17d18df984de1ee6b3a
 - filename: poetry.lock

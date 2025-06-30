@@ -14,10 +14,12 @@ from app.constants import RESPONSE_429
 from app.exceptions import NonRetryableError, RetryableError
 from app.limits import (
     DailyRateLimiter,
+    NoOpRateLimitStrategy,
     RateLimiter,
     ServiceRateLimiter,
     WindowedRateLimitStrategy,
     WindowType,
+    _get_strategy_class,
 )
 
 
@@ -432,3 +434,124 @@ class TestRateLimiterBehavior:
         assert limiter.window == 30
         assert limiter.get_key('service', 'api-key') == 'test-key'
         strategy.get_key.assert_called_once_with('service', 'api-key')
+
+
+class TestDynamicStrategyLoading:
+    """Test the dynamic strategy loading functionality."""
+
+    @pytest.mark.parametrize(
+        ('strategy_name', 'expected_class'),
+        [
+            ('WindowedRateLimitStrategy', WindowedRateLimitStrategy),
+            ('NoOpRateLimitStrategy', NoOpRateLimitStrategy),
+        ],
+    )
+    def test_get_strategy_class_valid_strategies(self, strategy_name: str, expected_class: type) -> None:
+        """Test that _get_strategy_class returns correct strategy classes for valid names."""
+        strategy_class = _get_strategy_class(strategy_name)
+        assert strategy_class == expected_class
+
+    @pytest.mark.parametrize(
+        ('invalid_name', 'expected_error_pattern'),
+        [
+            ('InvalidStrategy', 'Unknown rate limiting strategy: InvalidStrategy'),
+            ('WindowType', 'WindowType is not a valid RateLimitStrategy'),
+            ('dict', 'Unknown rate limiting strategy: dict'),
+        ],
+    )
+    def test_get_strategy_class_invalid_names_raise_errors(
+        self, invalid_name: str, expected_error_pattern: str
+    ) -> None:
+        """Test that _get_strategy_class raises ValueError for invalid strategy names."""
+        with pytest.raises(ValueError, match=expected_error_pattern):
+            _get_strategy_class(invalid_name)
+
+    @pytest.mark.parametrize(
+        ('strategy_name', 'expected_class', 'expected_window_type'),
+        [
+            ('WindowedRateLimitStrategy', WindowedRateLimitStrategy, WindowType.FIXED),
+            ('NoOpRateLimitStrategy', NoOpRateLimitStrategy, None),
+        ],
+    )
+    def test_service_rate_limiter_strategy_selection(
+        self, strategy_name: str, expected_class: type, expected_window_type: WindowType | None
+    ) -> None:
+        """Test ServiceRateLimiter creates correct strategy based on configuration."""
+        with patch('app.limits.RATE_LIMIT_STRATEGY', strategy_name):
+            limiter = ServiceRateLimiter()
+            assert isinstance(limiter.strategy, expected_class)
+
+            if expected_window_type is not None and isinstance(limiter.strategy, WindowedRateLimitStrategy):
+                assert limiter.strategy.window_type == expected_window_type
+
+    @pytest.mark.parametrize(
+        ('strategy_name', 'expected_class', 'expected_window_type'),
+        [
+            ('WindowedRateLimitStrategy', WindowedRateLimitStrategy, WindowType.DAILY),
+            ('NoOpRateLimitStrategy', NoOpRateLimitStrategy, None),
+        ],
+    )
+    def test_daily_rate_limiter_strategy_selection(
+        self, strategy_name: str, expected_class: type, expected_window_type: WindowType | None
+    ) -> None:
+        """Test DailyRateLimiter creates correct strategy based on configuration."""
+        with patch('app.limits.RATE_LIMIT_STRATEGY', strategy_name):
+            limiter = DailyRateLimiter()
+            assert isinstance(limiter.strategy, expected_class)
+
+            if expected_window_type is not None and isinstance(limiter.strategy, WindowedRateLimitStrategy):
+                assert limiter.strategy.window_type == expected_window_type
+
+    @pytest.mark.parametrize(
+        ('factory_function', 'strategy_name'),
+        [
+            (ServiceRateLimiter, 'InvalidStrategy'),
+            (DailyRateLimiter, 'InvalidStrategy'),
+        ],
+    )
+    def test_factory_functions_fallback_to_noop_on_invalid_strategy(
+        self, factory_function: Callable[[], RateLimiter], strategy_name: str
+    ) -> None:
+        """Test that factory functions fall back to NoOp strategy for invalid strategy names."""
+        with patch('app.limits.RATE_LIMIT_STRATEGY', strategy_name):
+            with patch('app.limits.logger') as mock_logger:
+                limiter = factory_function()
+                assert isinstance(limiter.strategy, NoOpRateLimitStrategy)
+                mock_logger.error.assert_called_once()
+                error_message = str(mock_logger.error.call_args)
+                assert 'Failed to load' in error_message
+                assert strategy_name in error_message
+
+    @patch.dict('os.environ', {'RATE_LIMIT_STRATEGY': 'NoOpRateLimitStrategy'})
+    def test_environment_variable_integration(self) -> None:
+        """Test that environment variable controls strategy selection."""
+        # Need to reload the module to pick up the new environment variable
+        import importlib
+
+        import app.limits
+
+        importlib.reload(app.limits)
+
+        limiter = app.limits.ServiceRateLimiter()
+        assert isinstance(limiter.strategy, app.limits.NoOpRateLimitStrategy)
+
+    def test_service_limiter_uses_environment_variables(self) -> None:
+        """Test that ServiceRateLimiter uses environment variables for configuration."""
+        with patch('app.limits.RATE_LIMIT_STRATEGY', 'WindowedRateLimitStrategy'):
+            with patch('app.limits.RATE_LIMIT', 100):
+                with patch('app.limits.OBSERVATION_PERIOD', 120):
+                    limiter = ServiceRateLimiter()
+                    assert limiter.strategy.__class__.__name__ == 'WindowedRateLimitStrategy'
+                    assert limiter.strategy.limit == 100
+                    assert limiter.strategy.window == 120
+
+    def test_daily_limiter_uses_environment_variables(self) -> None:
+        """Test that DailyRateLimiter uses environment variables for configuration."""
+        with patch('app.limits.RATE_LIMIT_STRATEGY', 'WindowedRateLimitStrategy'):
+            with patch.dict('os.environ', {'DAILY_RATE_LIMIT': '500'}):
+                limiter = DailyRateLimiter()
+                assert limiter.strategy.__class__.__name__ == 'WindowedRateLimitStrategy'
+                assert limiter.strategy.limit == 500
+                # Check window_type by comparing the enum name to avoid comparison issues
+                if isinstance(limiter.strategy, WindowedRateLimitStrategy):
+                    assert limiter.strategy.window_type.name == 'DAILY'
