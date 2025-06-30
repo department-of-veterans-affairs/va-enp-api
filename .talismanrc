@@ -4,7 +4,7 @@ fileignoreconfig:
 - filename: app/auth.py
   checksum: c9c26cb7334788e91988fd0feac92e636a2d0ca3cfb135e56ece73ffc10c7c77
 - filename: app/clients/redis_client.py
-  checksum: 13413b6015aeb87628bb063c9a8dd6ca8d883866e41e2128cef5f1e4185c4973
+  checksum: 8e88ba188bac6c61d085a34adae09418d616cd02a5d9c1f6e162bb684e0d2528
 - filename: app/constants.py
   checksum: 99d65949b954a7f3dc7fd28decf413ad488d512fed167d945ae99da097d6967f
 - filename: app/legacy/clients/sqs.py

@@ -210,21 +210,8 @@ class RateLimiter:
         service_id = str(context['service_id'])
         api_key_id = str(context['api_key_id'])
 
-        # Log the rate limiter configuration
-        strategy_type = type(self.strategy).__name__
-        if hasattr(self.strategy, 'window_type'):
-            window_type = getattr(self.strategy, 'window_type').value
-            logger.debug(
-                f'Rate limiter - strategy: {strategy_type}, window_type: {window_type}, limit: {self.strategy.limit}, service_id: {service_id}, api_key_id: {api_key_id}'
-            )
-        else:
-            logger.debug(
-                f'Rate limiter - strategy: {strategy_type}, limit: {self.strategy.limit}, service_id: {service_id}, api_key_id: {api_key_id}'
-            )
-
         try:
             allowed = await self.strategy.is_allowed(redis, service_id, api_key_id)
-            logger.debug(f'Rate limiter - strategy: {strategy_type}, allowed: {allowed}')
         except (NonRetryableError, RetryableError):
             self._log_error(request_id, service_id, api_key_id)
             allowed = self.fail_open
