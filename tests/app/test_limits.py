@@ -14,6 +14,7 @@ from app.constants import RESPONSE_429
 from app.exceptions import NonRetryableError, RetryableError
 from app.limits import (
     DailyRateLimiter,
+    NoOpRateLimiter,
     NoOpRateLimitStrategy,
     RateLimitConfig,
     RateLimiter,
@@ -305,6 +306,19 @@ class TestWindowedRateLimitStrategy:
         with pytest.raises(ValueError, match='window_duration is required for FIXED window type'):
             RateLimitConfig(limit=10, window_type=WindowType.FIXED, window_duration=None)
 
+    def test_windowed_strategy_init_validation(self) -> None:
+        """Test that WindowedRateLimitStrategy.__init__ validates FIXED window type requires duration."""
+        # Create a config that bypasses RateLimitConfig validation by using DAILY initially
+        config = RateLimitConfig(limit=10, window_type=WindowType.DAILY)
+
+        # Manually set to FIXED with None duration to test the __init__ validation
+        config.window_type = WindowType.FIXED
+        config.window_duration = None
+
+        # Should raise ValueError in WindowedRateLimitStrategy.__init__
+        with pytest.raises(ValueError, match='window_duration is required for FIXED window type'):
+            WindowedRateLimitStrategy(config)
+
     def test_unsupported_window_type_error(self) -> None:
         """Test that unsupported window types raise ValueError."""
         # Create a strategy with a mock unsupported window type
@@ -576,6 +590,35 @@ class TestDynamicStrategyLoading:
                 limiter = DailyRateLimiter()
                 assert limiter.strategy.__class__.__name__ == 'WindowedRateLimitStrategy'
                 assert limiter.strategy.limit == 500
-                # Check window_type by comparing the enum value
-                if isinstance(limiter.strategy, WindowedRateLimitStrategy):
-                    assert limiter.strategy.window_type == WindowType.DAILY
+                # Check window_type directly since we verified it's WindowedRateLimitStrategy above
+                assert hasattr(limiter.strategy, 'window_type')
+                window_type_value = getattr(limiter.strategy, 'window_type')
+                assert window_type_value.value == 'daily'
+
+
+class TestNoOpRateLimitStrategy:
+    """Test the NoOpRateLimitStrategy class."""
+
+    def test_get_key(self) -> None:
+        """Test NoOpRateLimitStrategy.get_key() returns correct format."""
+        config = RateLimitConfig(limit=0)
+        strategy = NoOpRateLimitStrategy(config)
+        key = strategy.get_key('test-service', 'test-api-key')
+        assert key == 'noop-test-service-test-api-key'
+
+    def test_get_error_message(self) -> None:
+        """Test NoOpRateLimitStrategy.get_error_message() returns generic message."""
+        config = RateLimitConfig(limit=0)
+        strategy = NoOpRateLimitStrategy(config)
+        assert strategy.get_error_message() == 'Rate limit exceeded'
+
+
+class TestNoOpRateLimiter:
+    """Test the NoOpRateLimiter class."""
+
+    def test_noop_rate_limiter_factory(self) -> None:
+        """Test NoOpRateLimiter factory function."""
+        limiter = NoOpRateLimiter()
+        assert type(limiter.strategy).__name__ == 'NoOpRateLimitStrategy'
+        assert limiter.fail_open is True
+        assert limiter.strategy.limit == 0

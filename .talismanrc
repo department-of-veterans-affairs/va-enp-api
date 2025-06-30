@@ -60,7 +60,7 @@ fileignoreconfig:
 - filename: tests/app/test_auth.py
   checksum: 2147731d18bff8dfbda3d713fb4dec148b157121bbc8ff318ea9b55a6efeb338
 - filename: tests/app/test_limits.py
-  checksum: 63cfe4d25b509b3ece3cd53d72c5e5be6dccebd6ac6d07afdbcb8e166add0e2e
+  checksum: 369bd89e2481f15ed12bc053da86764ca8e14108a46fc7ca9ae4d9dd1aad58db
 - filename: tests/app/test_notification_routes.py
   checksum: 678efefdf3eddd0fae370a3c18aaf581e96945d20640aa980e50fb9b6ff752e2
 - filename: tests/conftest.py
