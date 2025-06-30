@@ -1,6 +1,5 @@
 """Redis client manager that encapsulates Redis interactions and handles retryable/non-retryable errors."""
 
-import os
 from typing import Awaitable, Callable, TypeVar
 
 from loguru import logger
@@ -87,15 +86,6 @@ class RedisClientManager:
             RetryableError: If the Redis operation fails due to a transient issue (e.g., timeout or connection loss).
             NonRetryableError: If the Redis operation fails in a non-recoverable way.
         """
-        # Environment safety check - this should not be called in stage/prod when using NoOpRateLimitStrategy
-        env = os.getenv('ENV', 'local')
-        if env in {'staging', 'prod'}:
-            logger.warning(
-                f'Redis rate limiting attempted in {env} environment - this should use NoOpRateLimitStrategy'
-            )
-            # Return True to fail open and not block requests
-            return True
-
         is_allowed = False
 
         try:
