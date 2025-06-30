@@ -3,6 +3,7 @@
 import datetime
 import os
 from abc import ABC, abstractmethod
+from dataclasses import dataclass
 from enum import Enum
 from typing import Type
 
@@ -30,13 +31,37 @@ class WindowType(Enum):
     DAILY = 'daily'  # Calendar day windows (reset at midnight UTC)
 
 
+@dataclass
+class RateLimitConfig:
+    """Configuration for rate limiting strategies."""
+
+    limit: int
+    window_type: WindowType | None = None
+    window_duration: int | None = None
+
+    def __post_init__(self) -> None:
+        """Validate configuration after initialization.
+
+        Raises:
+            ValueError: If window_duration is None for FIXED window type
+        """
+        if self.window_type == WindowType.FIXED and self.window_duration is None:
+            raise ValueError('window_duration is required for FIXED window type')
+
+
 class RateLimitStrategy(ABC):
     """Abstract base class for rate limiting strategies."""
 
-    def __init__(self) -> None:
-        """Initialize the strategy."""
-        self.limit: int
-        self.window: int | None = None
+    def __init__(self, config: RateLimitConfig) -> None:
+        """Initialize the strategy with configuration.
+
+        Args:
+            config: Configuration for the rate limiting strategy
+        """
+        self.config = config
+        self.limit = config.limit
+        # Set window for backwards compatibility
+        self.window = config.window_duration if config.window_type == WindowType.FIXED else None
 
     @abstractmethod
     async def is_allowed(self, redis: RedisClientManager, service_id: str, api_key_id: str) -> bool:
@@ -81,14 +106,13 @@ class NoOpRateLimitStrategy(RateLimitStrategy):
     Used in environments where Redis is not available or rate limiting is disabled.
     """
 
-    def __init__(self, limit: int = 0) -> None:
+    def __init__(self, config: RateLimitConfig) -> None:
         """Initialize the no-op strategy.
 
         Args:
-            limit: The rate limit (for compatibility, but not enforced)
+            config: Configuration for the rate limiting strategy
         """
-        super().__init__()
-        self.limit = limit
+        super().__init__(config)
 
     async def is_allowed(self, redis: RedisClientManager, service_id: str, api_key_id: str) -> bool:
         """Always allow requests in no-op mode.
@@ -127,27 +151,21 @@ class NoOpRateLimitStrategy(RateLimitStrategy):
 class WindowedRateLimitStrategy(RateLimitStrategy):
     """Unified strategy for windowed rate limiting with flexible window types."""
 
-    def __init__(self, limit: int, window_type: WindowType, window_duration: int | None = None) -> None:
+    def __init__(self, config: RateLimitConfig) -> None:
         """Initialize with limit and window configuration.
 
         Args:
-            limit: The rate limit (number of requests)
-            window_type: The type of window (FIXED, DAILY)
-            window_duration: Duration in seconds for FIXED windows (ignored for DAILY windows)
+            config: Configuration for the rate limiting strategy
 
         Raises:
             ValueError: If window_duration is None for FIXED window type
         """
-        super().__init__()
-        self.limit = limit
-        self.window_type = window_type
-        self.window_duration = window_duration
+        super().__init__(config)
+        self.window_type = config.window_type
+        self.window_duration = config.window_duration
 
-        if window_type == WindowType.FIXED and window_duration is None:
+        if config.window_type == WindowType.FIXED and config.window_duration is None:
             raise ValueError('window_duration is required for FIXED window type')
-
-        # Set the window attribute for backwards compatibility
-        self.window = window_duration if window_type == WindowType.FIXED else None
 
     def get_key(self, service_id: str, api_key_id: str) -> str:
         """Construct the Redis key for tracking request count.
@@ -347,23 +365,20 @@ def ServiceRateLimiter() -> RateLimiter:
     try:
         strategy_class = _get_strategy_class(RATE_LIMIT_STRATEGY)
 
-        strategy: RateLimitStrategy
+        config = RateLimitConfig(limit=RATE_LIMIT, window_type=WindowType.FIXED, window_duration=OBSERVATION_PERIOD)
+
         if strategy_class == NoOpRateLimitStrategy:
             logger.info(f'Service rate limiting disabled (strategy: {RATE_LIMIT_STRATEGY})')
-            strategy = NoOpRateLimitStrategy(RATE_LIMIT)
-        elif strategy_class == WindowedRateLimitStrategy:
-            logger.debug(f'Service rate limiting enabled (strategy: {RATE_LIMIT_STRATEGY})')
-            strategy = WindowedRateLimitStrategy(RATE_LIMIT, WindowType.FIXED, OBSERVATION_PERIOD)
         else:
-            # Fallback for any future strategy types
-            logger.warning(f'Unknown strategy {RATE_LIMIT_STRATEGY}, falling back to NoOp')
-            strategy = NoOpRateLimitStrategy(RATE_LIMIT)
+            logger.debug(f'Service rate limiting enabled (strategy: {RATE_LIMIT_STRATEGY})')
 
+        strategy = strategy_class(config)
         return RateLimiter(strategy, fail_open=True)
 
     except ValueError as e:
         logger.error(f'Failed to load rate limiting strategy {RATE_LIMIT_STRATEGY}: {e}. Falling back to NoOp.')
-        strategy = NoOpRateLimitStrategy(RATE_LIMIT)
+        config = RateLimitConfig(limit=RATE_LIMIT)
+        strategy = NoOpRateLimitStrategy(config)
         return RateLimiter(strategy, fail_open=True)
 
 
@@ -382,27 +397,24 @@ def DailyRateLimiter() -> RateLimiter:
     try:
         strategy_class = _get_strategy_class(RATE_LIMIT_STRATEGY)
 
-        strategy: RateLimitStrategy
+        config = RateLimitConfig(limit=daily_limit, window_type=WindowType.DAILY)
+
         if strategy_class == NoOpRateLimitStrategy:
             logger.info(
                 f'Daily rate limiting disabled (strategy: {RATE_LIMIT_STRATEGY}, would have been {daily_limit} requests/day)'
             )
-            strategy = NoOpRateLimitStrategy(daily_limit)
-        elif strategy_class == WindowedRateLimitStrategy:
+        else:
             logger.debug(
                 f'DailyRateLimiter created with limit: {daily_limit} (strategy: {RATE_LIMIT_STRATEGY}, from env: {os.getenv("DAILY_RATE_LIMIT", "not set")})'
             )
-            strategy = WindowedRateLimitStrategy(daily_limit, WindowType.DAILY)
-        else:
-            # Fallback for any future strategy types
-            logger.warning(f'Unknown strategy {RATE_LIMIT_STRATEGY}, falling back to NoOp')
-            strategy = NoOpRateLimitStrategy(daily_limit)
 
+        strategy = strategy_class(config)
         return RateLimiter(strategy, fail_open=True)
 
     except ValueError as e:
         logger.error(f'Failed to load daily rate limiting strategy {RATE_LIMIT_STRATEGY}: {e}. Falling back to NoOp.')
-        strategy = NoOpRateLimitStrategy(daily_limit)
+        config = RateLimitConfig(limit=daily_limit)
+        strategy = NoOpRateLimitStrategy(config)
         return RateLimiter(strategy, fail_open=True)
 
 
@@ -414,5 +426,6 @@ def NoOpRateLimiter() -> RateLimiter:
     Returns:
         RateLimiter configured with a no-op strategy
     """
-    strategy = NoOpRateLimitStrategy()
+    config = RateLimitConfig(limit=0)
+    strategy = NoOpRateLimitStrategy(config)
     return RateLimiter(strategy, fail_open=True)
