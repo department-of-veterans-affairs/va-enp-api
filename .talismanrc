@@ -20,9 +20,9 @@ fileignoreconfig:
 - filename: app/limits.py
   checksum: 3eb7c0866dc778f74bf827c6764b65d179fcda1439a579818f797c986d08dfdc
 - filename: cd/dev.env
-  checksum: 4234d82d9e024fed72a36db9f1fc4c278d417ba70b4844f4daa8d16f9021e30a
+  checksum: fc21167dcd1898fd11852848e848b9e98a25cef6c2a0d30973943f2a5451af92
 - filename: cd/perf.env
-  checksum: 6b5ba337d04b22246f4553919201fc47080dd502018c7199db0d9f5e23307d8b
+  checksum: 40364f54864f7273c7672f63ac9af7f96a97ef9f72fe573ab67cb1e26d09b54c
 - filename: ci/.env.docker
   checksum: 2ca10edc6e96beb5929c49af8d3208ba55d6d0ea020ac17d18df984de1ee6b3a
 - filename: poetry.lock
