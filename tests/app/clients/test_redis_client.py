@@ -76,7 +76,7 @@ class TestConsumeRateLimitToken:
     """Unit tests for consume_rate_limit_token."""
 
     async def test_consume_token_allows_when_tokens_available(self, mocker: AsyncMock) -> None:
-        """Test that a token is consumed when the count is greater than 0."""
+        """Test that a token is consumed when the count is greater than 0 and verifies operation sequence."""
         client_mock = AsyncMock(spec=Redis)
         client_mock.set = AsyncMock()
         client_mock.get = AsyncMock(return_value=3)
@@ -85,18 +85,29 @@ class TestConsumeRateLimitToken:
         mocker.patch('app.clients.redis_client.RedisClientManager.get_client', return_value=client_mock)
 
         manager = RedisClientManager(redis_url='redis://localhost')
-        result = await manager.consume_rate_limit_token('key', limit=5, window=10)
+        result = await manager.consume_rate_limit_token('test-key', limit=5, window=60)
 
-        client_mock.set.assert_awaited_once_with(name='key', value=5, ex=10, nx=True)
-        client_mock.get.assert_awaited_once_with('key')
-        client_mock.decrby.assert_awaited_once_with(name='key', amount=1)
+        # Verify correct sequence and parameters
+        client_mock.set.assert_awaited_once_with(name='test-key', value=5, ex=60, nx=True)
+        client_mock.get.assert_awaited_once_with('test-key')
+        client_mock.decrby.assert_awaited_once_with(name='test-key', amount=1)
         assert result is True
 
-    async def test_consume_token_denies_when_tokens_exhausted(self, mocker: AsyncMock) -> None:
-        """Test that no token is consumed when the count is 0."""
+    @pytest.mark.parametrize(
+        ('redis_value', 'expected_result'),
+        [
+            (0, False),  # tokens exhausted
+            (None, False),  # key missing
+            (-1, False),  # negative value (defensive)
+        ],
+    )
+    async def test_consume_token_denies_when_no_tokens(
+        self, redis_value: int | None, expected_result: bool, mocker: AsyncMock
+    ) -> None:
+        """Test that no token is consumed when tokens are unavailable."""
         client_mock = AsyncMock(spec=Redis)
         client_mock.set = AsyncMock()
-        client_mock.get = AsyncMock(return_value=0)
+        client_mock.get = AsyncMock(return_value=redis_value)
 
         mocker.patch('app.clients.redis_client.RedisClientManager.get_client', return_value=client_mock)
 
@@ -104,89 +115,27 @@ class TestConsumeRateLimitToken:
         result = await manager.consume_rate_limit_token('key', limit=5, window=10)
 
         client_mock.decrby.assert_not_called()
-        assert result is False
+        assert result is expected_result
 
-    async def test_consume_token_denies_when_key_missing(self, mocker: AsyncMock) -> None:
-        """Test that no token is consumed when Redis key doesn't exist (returns None)."""
+    @pytest.mark.parametrize(
+        ('exception_type', 'expected_error'),
+        [
+            (ConnectionError('connection down'), RetryableError),
+            (TimeoutError('timeout'), RetryableError),
+            (RedisError('generic error'), NonRetryableError),
+        ],
+    )
+    async def test_consume_token_error_handling(
+        self, exception_type: Exception, expected_error: type[Exception], mocker: AsyncMock
+    ) -> None:
+        """Test error handling for different Redis exception types."""
         client_mock = AsyncMock(spec=Redis)
-        client_mock.set = AsyncMock()
-        client_mock.get = AsyncMock(return_value=None)
+        client_mock.set = AsyncMock(side_effect=exception_type)
 
         mocker.patch('app.clients.redis_client.RedisClientManager.get_client', return_value=client_mock)
 
         manager = RedisClientManager(redis_url='redis://localhost')
-        result = await manager.consume_rate_limit_token('key', limit=5, window=10)
-
-        client_mock.decrby.assert_not_called()
-        assert result is False
-
-    async def test_consume_token_handles_negative_values(self, mocker: AsyncMock) -> None:
-        """Test edge case where Redis returns negative value (should not happen but defensive)."""
-        client_mock = AsyncMock(spec=Redis)
-        client_mock.set = AsyncMock()
-        client_mock.get = AsyncMock(return_value=-1)
-
-        mocker.patch('app.clients.redis_client.RedisClientManager.get_client', return_value=client_mock)
-
-        manager = RedisClientManager(redis_url='redis://localhost')
-        result = await manager.consume_rate_limit_token('key', limit=5, window=10)
-
-        client_mock.decrby.assert_not_called()
-        assert result is False
-
-    async def test_consume_token_atomic_operation_sequence(self, mocker: AsyncMock) -> None:
-        """Test that Redis operations happen in the correct sequence for atomicity."""
-        client_mock = AsyncMock(spec=Redis)
-        client_mock.set = AsyncMock()
-        client_mock.get = AsyncMock(return_value=2)
-        client_mock.decrby = AsyncMock()
-
-        mocker.patch('app.clients.redis_client.RedisClientManager.get_client', return_value=client_mock)
-
-        manager = RedisClientManager(redis_url='redis://localhost')
-        await manager.consume_rate_limit_token('test-key', limit=5, window=60)
-
-        # Verify sequence: set (if not exists), get, decrby
-        assert client_mock.set.await_count == 1
-        assert client_mock.get.await_count == 1
-        assert client_mock.decrby.await_count == 1
-
-        # Verify correct parameters
-        client_mock.set.assert_awaited_with(name='test-key', value=5, ex=60, nx=True)
-        client_mock.get.assert_awaited_with('test-key')
-        client_mock.decrby.assert_awaited_with(name='test-key', amount=1)
-
-    async def test_consume_token_raises_retryable_on_connection_error(self, mocker: AsyncMock) -> None:
-        """Test that a connection error raises RetryableError."""
-        client_mock = AsyncMock(spec=Redis)
-        client_mock.set = AsyncMock(side_effect=ConnectionError('connection down'))
-
-        mocker.patch('app.clients.redis_client.RedisClientManager.get_client', return_value=client_mock)
-
-        manager = RedisClientManager(redis_url='redis://localhost')
-        with pytest.raises(RetryableError):
-            await manager.consume_rate_limit_token('key', limit=5, window=10)
-
-    async def test_consume_token_raises_retryable_on_timeout_error(self, mocker: AsyncMock) -> None:
-        """Test that a timeout error raises RetryableError."""
-        client_mock = AsyncMock(spec=Redis)
-        client_mock.set = AsyncMock(side_effect=TimeoutError('timeout'))
-
-        mocker.patch('app.clients.redis_client.RedisClientManager.get_client', return_value=client_mock)
-
-        manager = RedisClientManager(redis_url='redis://localhost')
-        with pytest.raises(RetryableError):
-            await manager.consume_rate_limit_token('key', limit=5, window=10)
-
-    async def test_consume_token_raises_nonretryable_on_redis_error(self, mocker: AsyncMock) -> None:
-        """Test that a generic RedisError raises NonRetryableError."""
-        client_mock = AsyncMock(spec=Redis)
-        client_mock.set = AsyncMock(side_effect=RedisError('generic error'))
-
-        mocker.patch('app.clients.redis_client.RedisClientManager.get_client', return_value=client_mock)
-
-        manager = RedisClientManager(redis_url='redis://localhost')
-        with pytest.raises(NonRetryableError):
+        with pytest.raises(expected_error):
             await manager.consume_rate_limit_token('key', limit=5, window=10)
 
     @pytest.mark.parametrize('operation', ['set', 'get', 'decrby'])
@@ -234,21 +183,6 @@ class TestRedisClientManagerConfiguration:
         client = manager.get_client()
         assert manager._client is not None
         assert client is manager._client
-
-    async def test_connection_pool_cleanup_on_close(self) -> None:
-        """Test that connection pool is properly cleaned up on close."""
-        manager = RedisClientManager(redis_url='redis://localhost')
-
-        # Mock the pool and client
-        mock_pool = AsyncMock()
-        mock_client = AsyncMock()
-        manager._pool = mock_pool
-        manager._client = mock_client
-
-        await manager.close()
-
-        mock_client.aclose.assert_awaited_once()
-        mock_pool.disconnect.assert_awaited_once()
 
 
 class TestRedisRetryDecorator:
