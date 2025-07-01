@@ -387,14 +387,14 @@ def ServiceRateLimiter() -> RateLimiter:
 def DailyRateLimiter() -> RateLimiter:
     """Create a daily rate limiter using environment variables.
 
-    Uses DAILY_RATE_LIMIT (default: 1000) requests per day, resetting at midnight UTC.
+    Uses DAILY_RATE_LIMIT (default: 100) requests per day, resetting at midnight UTC.
     Configured with fail-open behavior (allows requests when Redis is unavailable).
     Strategy is determined by DAILY_RATE_LIMIT_STRATEGY environment variable.
 
     Returns:
         RateLimiter configured based on DAILY_RATE_LIMIT_STRATEGY environment variable
     """
-    daily_limit = int(os.getenv('DAILY_RATE_LIMIT', 1000))
+    daily_limit = int(os.getenv('DAILY_RATE_LIMIT', 100))
     strategy_name = os.getenv('DAILY_RATE_LIMIT_STRATEGY', 'NoOpRateLimitStrategy')
 
     try:
