@@ -552,6 +552,18 @@ class TestNoOpRateLimitStrategy:
         # Test error message
         assert strategy.get_error_message() == 'Rate limit exceeded'
 
+    async def test_noop_strategy_always_allows(self) -> None:
+        """Test that NoOpRateLimitStrategy always allows requests."""
+        config = RateLimitConfig(limit=0)
+        strategy = NoOpRateLimitStrategy(config)
+
+        # Mock Redis client (not used by NoOp strategy)
+        mock_redis = Mock(spec=RedisClientManager)
+
+        # Test that is_allowed always returns True
+        allowed = await strategy.is_allowed(mock_redis, 'test-service', 'test-api-key')
+        assert allowed is True
+
 
 class TestNoOpRateLimiter:
     """Test the NoOpRateLimiter class."""
