@@ -336,19 +336,16 @@ def _get_strategy_class(strategy_name: str) -> Type[RateLimitStrategy]:
     Raises:
         ValueError: If the strategy name is not found or not a valid RateLimitStrategy
     """
-    # Only allow strategy classes from this module for security
-    current_module = globals()
+    # Explicit mapping of allowed strategy names to their classes for security and clarity
+    allowed_strategies = {
+        'NoOpRateLimitStrategy': NoOpRateLimitStrategy,
+        'WindowedRateLimitStrategy': WindowedRateLimitStrategy,
+    }
 
-    if strategy_name not in current_module:
+    if strategy_name not in allowed_strategies:
         raise ValueError(f'Unknown rate limiting strategy: {strategy_name}')
 
-    strategy_class = current_module[strategy_name]
-
-    # Ensure it's a subclass of RateLimitStrategy
-    if not (isinstance(strategy_class, type) and issubclass(strategy_class, RateLimitStrategy)):
-        raise ValueError(f'{strategy_name} is not a valid RateLimitStrategy')
-
-    return strategy_class
+    return allowed_strategies[strategy_name]
 
 
 # Factory functions for common rate limiter configurations

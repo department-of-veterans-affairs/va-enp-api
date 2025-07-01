@@ -426,7 +426,7 @@ class TestDynamicStrategyLoading:
         ('invalid_name', 'expected_error_pattern'),
         [
             ('InvalidStrategy', 'Unknown rate limiting strategy: InvalidStrategy'),
-            ('WindowType', 'WindowType is not a valid RateLimitStrategy'),
+            ('WindowType', 'Unknown rate limiting strategy: WindowType'),
             ('dict', 'Unknown rate limiting strategy: dict'),
         ],
     )
