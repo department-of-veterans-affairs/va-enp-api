@@ -20,9 +20,9 @@ fileignoreconfig:
 - filename: app/limits.py
   checksum: 220f8c974cbf22c8ec3ce345fc88a934a244e0f84c738e8d1841170b5453bb6f
 - filename: cd/dev.env
-  checksum: b1d1d1da421074b170968740807263f09eee4fd801a470c65d85c5ebb1210962
+  checksum: 3d859ce6457cfa7b798f80364a6154d6dee35259f259c68a977a63785007d1d5
 - filename: cd/perf.env
-  checksum: 3641ad160b0632605a6f3681e237ad88663ae782482330ecbe3bd0b91ff8f025
+  checksum: 7270e73706e06d41e961c84f9130780c362fd80738394d654165440725d4cd8f
 - filename: cd/prod.env
   checksum: 5dd82bf0de04fb1db67cc5d1704e65300b2a47119289a4b8d45702b243efe5ac
 - filename: cd/staging.env

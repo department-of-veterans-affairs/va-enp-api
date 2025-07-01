@@ -65,14 +65,14 @@ def make_request_with_redis() -> Callable[[Mock], StarletteRequest]:
 class TestServiceRateLimiter:
     """Test the service rate limiter factory function."""
 
-    @patch('app.limits.RATE_LIMIT_STRATEGY', 'WindowedRateLimitStrategy')
+    @patch.dict('os.environ', {'RATE_LIMIT_STRATEGY': 'WindowedRateLimitStrategy'})
     def test_build_key_format(self) -> None:
         """Test that the service rate limiter generates the correct Redis key format."""
         limiter = ServiceRateLimiter()
         key = limiter.get_key('service-id', 'api-key-id')
         assert key == 'rate-limit-service-id-api-key-id'
 
-    @patch('app.limits.RATE_LIMIT_STRATEGY', 'WindowedRateLimitStrategy')
+    @patch.dict('os.environ', {'RATE_LIMIT_STRATEGY': 'WindowedRateLimitStrategy'})
     async def test_allows_request(
         self,
         mock_context: Tuple[str, str],
@@ -95,7 +95,7 @@ class TestServiceRateLimiter:
             limiter.window,
         )
 
-    @patch('app.limits.RATE_LIMIT_STRATEGY', 'WindowedRateLimitStrategy')
+    @patch.dict('os.environ', {'RATE_LIMIT_STRATEGY': 'WindowedRateLimitStrategy'})
     async def test_blocks_request_when_limit_exceeded(
         self,
         mock_context: Tuple[str, str],
@@ -122,7 +122,7 @@ class TestServiceRateLimiter:
             RetryableError('temporary failure'),
         ],
     )
-    @patch('app.limits.RATE_LIMIT_STRATEGY', 'WindowedRateLimitStrategy')
+    @patch.dict('os.environ', {'RATE_LIMIT_STRATEGY': 'WindowedRateLimitStrategy'})
     async def test_error_handling_fail_open(
         self,
         mock_context: Tuple[str, str],
@@ -150,14 +150,14 @@ class TestServiceRateLimiter:
 class TestDailyRateLimiter:
     """Test the daily rate limiter factory function."""
 
-    @patch('app.limits.RATE_LIMIT_STRATEGY', 'WindowedRateLimitStrategy')
+    @patch.dict('os.environ', {'DAILY_RATE_LIMIT_STRATEGY': 'WindowedRateLimitStrategy'})
     def test_build_daily_key_format(self) -> None:
         """Test that the daily rate limiter generates the correct Redis key format."""
         limiter = DailyRateLimiter()
         key = limiter.get_key('service-id', 'api-key-id')
         assert key == 'remaining-daily-limit-service-id-api-key-id'
 
-    @patch('app.limits.RATE_LIMIT_STRATEGY', 'WindowedRateLimitStrategy')
+    @patch.dict('os.environ', {'DAILY_RATE_LIMIT_STRATEGY': 'WindowedRateLimitStrategy'})
     async def test_allows_request_under_daily_limit(
         self,
         mock_context: Tuple[str, str],
@@ -181,7 +181,7 @@ class TestDailyRateLimiter:
         assert call_args[0][1] == limiter.limit  # limit
         assert isinstance(call_args[0][2], int)  # window_expiry (seconds until midnight)
 
-    @patch('app.limits.RATE_LIMIT_STRATEGY', 'WindowedRateLimitStrategy')
+    @patch.dict('os.environ', {'DAILY_RATE_LIMIT_STRATEGY': 'WindowedRateLimitStrategy'})
     async def test_blocks_request_over_daily_limit(
         self,
         mock_context: Tuple[str, str],
@@ -208,7 +208,7 @@ class TestDailyRateLimiter:
             (None, 1000),  # default value
         ],
     )
-    @patch('app.limits.RATE_LIMIT_STRATEGY', 'WindowedRateLimitStrategy')
+    @patch.dict('os.environ', {'DAILY_RATE_LIMIT_STRATEGY': 'WindowedRateLimitStrategy'})
     def test_limit_initialization(self, env_value: str | None, expected_limit: int) -> None:
         """Test that daily limit is properly initialized from environment variable or default."""
         with patch('app.limits.os.getenv') as mock_getenv:
@@ -454,12 +454,21 @@ class TestDynamicStrategyLoading:
         expected_window_type: WindowType | None,
     ) -> None:
         """Test rate limiter factories create correct strategy based on configuration."""
-        with patch('app.limits.RATE_LIMIT_STRATEGY', strategy_name):
-            limiter = factory_function()
-            assert isinstance(limiter.strategy, expected_class)
+        # Use appropriate strategy variable based on factory function
+        if factory_function == DailyRateLimiter:
+            with patch.dict('os.environ', {'DAILY_RATE_LIMIT_STRATEGY': strategy_name}):
+                limiter = factory_function()
+                assert isinstance(limiter.strategy, expected_class)
 
-            if expected_window_type is not None and isinstance(limiter.strategy, WindowedRateLimitStrategy):
-                assert limiter.strategy.window_type == expected_window_type
+                if expected_window_type is not None and isinstance(limiter.strategy, WindowedRateLimitStrategy):
+                    assert limiter.strategy.window_type == expected_window_type
+        else:
+            with patch.dict('os.environ', {'RATE_LIMIT_STRATEGY': strategy_name}):
+                limiter = factory_function()
+                assert isinstance(limiter.strategy, expected_class)
+
+                if expected_window_type is not None and isinstance(limiter.strategy, WindowedRateLimitStrategy):
+                    assert limiter.strategy.window_type == expected_window_type
 
     @pytest.mark.parametrize(
         ('factory_function', 'strategy_name'),
@@ -472,14 +481,25 @@ class TestDynamicStrategyLoading:
         self, factory_function: Callable[[], RateLimiter], strategy_name: str
     ) -> None:
         """Test that factory functions fall back to NoOp strategy for invalid strategy names."""
-        with patch('app.limits.RATE_LIMIT_STRATEGY', strategy_name):
-            with patch('app.limits.logger') as mock_logger:
-                limiter = factory_function()
-                assert isinstance(limiter.strategy, NoOpRateLimitStrategy)
-                mock_logger.error.assert_called_once()
-                error_message = str(mock_logger.error.call_args)
-                assert 'Failed to load' in error_message
-                assert strategy_name in error_message
+        # Use appropriate strategy variable based on factory function
+        if factory_function == DailyRateLimiter:
+            with patch.dict('os.environ', {'DAILY_RATE_LIMIT_STRATEGY': strategy_name}):
+                with patch('app.limits.logger') as mock_logger:
+                    limiter = factory_function()
+                    assert isinstance(limiter.strategy, NoOpRateLimitStrategy)
+                    mock_logger.error.assert_called_once()
+                    error_message = str(mock_logger.error.call_args)
+                    assert 'Failed to load' in error_message
+                    assert strategy_name in error_message
+        else:
+            with patch.dict('os.environ', {'RATE_LIMIT_STRATEGY': strategy_name}):
+                with patch('app.limits.logger') as mock_logger:
+                    limiter = factory_function()
+                    assert isinstance(limiter.strategy, NoOpRateLimitStrategy)
+                    mock_logger.error.assert_called_once()
+                    error_message = str(mock_logger.error.call_args)
+                    assert 'Failed to load' in error_message
+                    assert strategy_name in error_message
 
     @patch.dict('os.environ', {'RATE_LIMIT_STRATEGY': 'NoOpRateLimitStrategy'})
     def test_environment_variable_integration(self) -> None:
@@ -498,7 +518,11 @@ class TestDynamicStrategyLoading:
         ('factory_function', 'expected_class_name', 'env_vars'),
         [
             (ServiceRateLimiter, 'WindowedRateLimitStrategy', {'RATE_LIMIT_STRATEGY': 'WindowedRateLimitStrategy'}),
-            (DailyRateLimiter, 'WindowedRateLimitStrategy', {'DAILY_RATE_LIMIT': '500'}),
+            (
+                DailyRateLimiter,
+                'WindowedRateLimitStrategy',
+                {'DAILY_RATE_LIMIT_STRATEGY': 'WindowedRateLimitStrategy', 'DAILY_RATE_LIMIT': '500'},
+            ),
         ],
     )
     def test_limiter_environment_variable_usage(
@@ -508,10 +532,9 @@ class TestDynamicStrategyLoading:
         env_vars: dict[str, str],
     ) -> None:
         """Test that rate limiters use environment variables for configuration."""
-        with patch('app.limits.RATE_LIMIT_STRATEGY', 'WindowedRateLimitStrategy'):
-            with patch.dict('os.environ', env_vars, clear=False):
-                limiter = factory_function()
-                assert limiter.strategy.__class__.__name__ == expected_class_name
+        with patch.dict('os.environ', env_vars, clear=False):
+            limiter = factory_function()
+            assert limiter.strategy.__class__.__name__ == expected_class_name
 
 
 class TestNoOpRateLimitStrategy:

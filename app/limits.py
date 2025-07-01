@@ -21,6 +21,7 @@ OBSERVATION_PERIOD = int(os.getenv('OBSERVATION_PERIOD', 30))
 # Environment variable to control which rate limiting strategy to use
 # Options: 'NoOpRateLimitStrategy' (default), 'WindowedRateLimitStrategy'
 RATE_LIMIT_STRATEGY = os.getenv('RATE_LIMIT_STRATEGY', 'NoOpRateLimitStrategy')
+DAILY_RATE_LIMIT_STRATEGY = os.getenv('DAILY_RATE_LIMIT_STRATEGY', 'NoOpRateLimitStrategy')
 
 
 class WindowType(Enum):
@@ -361,21 +362,23 @@ def ServiceRateLimiter() -> RateLimiter:
     Returns:
         RateLimiter configured based on RATE_LIMIT_STRATEGY environment variable
     """
+    strategy_name = os.getenv('RATE_LIMIT_STRATEGY', 'NoOpRateLimitStrategy')
+
     try:
-        strategy_class = _get_strategy_class(RATE_LIMIT_STRATEGY)
+        strategy_class = _get_strategy_class(strategy_name)
 
         config = RateLimitConfig(limit=RATE_LIMIT, window_type=WindowType.FIXED, window_duration=OBSERVATION_PERIOD)
 
         if strategy_class == NoOpRateLimitStrategy:
-            logger.info(f'Service rate limiting disabled (strategy: {RATE_LIMIT_STRATEGY})')
+            logger.info(f'Service rate limiting disabled (strategy: {strategy_name})')
         else:
-            logger.debug(f'Service rate limiting enabled (strategy: {RATE_LIMIT_STRATEGY})')
+            logger.debug(f'Service rate limiting enabled (strategy: {strategy_name})')
 
         strategy = strategy_class(config)
         return RateLimiter(strategy, fail_open=True)
 
     except ValueError as e:
-        logger.error(f'Failed to load rate limiting strategy {RATE_LIMIT_STRATEGY}: {e}. Falling back to NoOp.')
+        logger.error(f'Failed to load rate limiting strategy {strategy_name}: {e}. Falling back to NoOp.')
         config = RateLimitConfig(limit=RATE_LIMIT)
         strategy = NoOpRateLimitStrategy(config)
         return RateLimiter(strategy, fail_open=True)
@@ -386,32 +389,33 @@ def DailyRateLimiter() -> RateLimiter:
 
     Uses DAILY_RATE_LIMIT (default: 1000) requests per day, resetting at midnight UTC.
     Configured with fail-open behavior (allows requests when Redis is unavailable).
-    Strategy is determined by RATE_LIMIT_STRATEGY environment variable.
+    Strategy is determined by DAILY_RATE_LIMIT_STRATEGY environment variable.
 
     Returns:
-        RateLimiter configured based on RATE_LIMIT_STRATEGY environment variable
+        RateLimiter configured based on DAILY_RATE_LIMIT_STRATEGY environment variable
     """
     daily_limit = int(os.getenv('DAILY_RATE_LIMIT', 1000))
+    strategy_name = os.getenv('DAILY_RATE_LIMIT_STRATEGY', 'NoOpRateLimitStrategy')
 
     try:
-        strategy_class = _get_strategy_class(RATE_LIMIT_STRATEGY)
+        strategy_class = _get_strategy_class(strategy_name)
 
         config = RateLimitConfig(limit=daily_limit, window_type=WindowType.DAILY)
 
         if strategy_class == NoOpRateLimitStrategy:
             logger.info(
-                f'Daily rate limiting disabled (strategy: {RATE_LIMIT_STRATEGY}, would have been {daily_limit} requests/day)'
+                f'Daily rate limiting disabled (strategy: {strategy_name}, would have been {daily_limit} requests/day)'
             )
         else:
             logger.debug(
-                f'DailyRateLimiter created with limit: {daily_limit} (strategy: {RATE_LIMIT_STRATEGY}, from env: {os.getenv("DAILY_RATE_LIMIT", "not set")})'
+                f'DailyRateLimiter created with limit: {daily_limit} (strategy: {strategy_name}, from env: {os.getenv("DAILY_RATE_LIMIT", "not set")})'
             )
 
         strategy = strategy_class(config)
         return RateLimiter(strategy, fail_open=True)
 
     except ValueError as e:
-        logger.error(f'Failed to load daily rate limiting strategy {RATE_LIMIT_STRATEGY}: {e}. Falling back to NoOp.')
+        logger.error(f'Failed to load daily rate limiting strategy {strategy_name}: {e}. Falling back to NoOp.')
         config = RateLimitConfig(limit=daily_limit)
         strategy = NoOpRateLimitStrategy(config)
         return RateLimiter(strategy, fail_open=True)
