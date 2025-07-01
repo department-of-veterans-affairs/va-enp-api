@@ -116,25 +116,25 @@ class TestServiceRateLimiter:
         assert exc_info.value.status_code == status.HTTP_429_TOO_MANY_REQUESTS
 
     @pytest.mark.parametrize(
-        'raises',
+        'error_type',
         [
             NonRetryableError('non-retryable failure'),
             RetryableError('temporary failure'),
         ],
     )
     @patch('app.limits.RATE_LIMIT_STRATEGY', 'WindowedRateLimitStrategy')
-    async def test_allows_request_on_errors(
+    async def test_error_handling_fail_open(
         self,
         mock_context: Tuple[str, str],
         make_request_with_redis: Callable[[Mock], StarletteRequest],
-        raises: Exception,
+        error_type: Exception,
     ) -> None:
-        """Should allow the request when consume token throws NonRetryable or RetryableError."""
+        """Should allow requests when consume token throws errors (fail-open behavior)."""
         service_id, api_key_id = mock_context
         limiter = ServiceRateLimiter()
 
         redis_mock = Mock(spec=RedisClientManager)
-        redis_mock.consume_rate_limit_token = AsyncMock(side_effect=raises)
+        redis_mock.consume_rate_limit_token = AsyncMock(side_effect=error_type)
 
         request = make_request_with_redis(redis_mock)
 
@@ -202,81 +202,48 @@ class TestDailyRateLimiter:
         assert exc_info.value.status_code == status.HTTP_429_TOO_MANY_REQUESTS
 
     @pytest.mark.parametrize(
-        'raises',
+        ('env_value', 'expected_limit'),
         [
-            NonRetryableError('non-retryable failure'),
-            RetryableError('temporary failure'),
+            ('500', 500),
+            (None, 1000),  # default value
         ],
     )
     @patch('app.limits.RATE_LIMIT_STRATEGY', 'WindowedRateLimitStrategy')
-    async def test_fails_open_on_redis_errors(
-        self,
-        mock_context: Tuple[str, str],
-        make_request_with_redis: Callable[[Mock], StarletteRequest],
-        raises: Exception,
-    ) -> None:
-        """Should allow the request when consume daily token throws NonRetryable or RetryableError (fail-open)."""
-        service_id, api_key_id = mock_context
-        limiter = DailyRateLimiter()
-
-        redis_mock = Mock(spec=RedisClientManager)
-        redis_mock.consume_rate_limit_token = AsyncMock(side_effect=raises)
-
-        request = make_request_with_redis(redis_mock)
-
-        # Should not raise an exception - fail open
-        await limiter(request)
-
-        # Should call consume_rate_limit_token with daily key and window expiry
-        redis_mock.consume_rate_limit_token.assert_awaited_once()
-        call_args = redis_mock.consume_rate_limit_token.call_args
-        assert call_args[0][0] == f'remaining-daily-limit-{service_id}-{api_key_id}'  # key
-
-    @patch('app.limits.RATE_LIMIT_STRATEGY', 'WindowedRateLimitStrategy')
-    def test_limit_initialization_from_env(self) -> None:
-        """Test that daily limit is properly initialized from environment variable."""
+    def test_limit_initialization(self, env_value: str | None, expected_limit: int) -> None:
+        """Test that daily limit is properly initialized from environment variable or default."""
         with patch('app.limits.os.getenv') as mock_getenv:
-            # Configure side_effect: DAILY_RATE_LIMIT='500', then logging call='500'
-            mock_getenv.side_effect = ['500', '500']
-            limiter = DailyRateLimiter()
-            assert limiter.limit == 500
-            # Verify os.getenv was called for DAILY_RATE_LIMIT
-            mock_getenv.assert_any_call('DAILY_RATE_LIMIT', 1000)
-            mock_getenv.assert_any_call('DAILY_RATE_LIMIT', 'not set')
+            # Configure side_effect for both calls to os.getenv
+            if env_value is None:
+                mock_getenv.side_effect = [1000, 'not set']  # Use default, then logging
+            else:
+                mock_getenv.side_effect = [env_value, env_value]  # Use provided value
 
-    @patch('app.limits.RATE_LIMIT_STRATEGY', 'WindowedRateLimitStrategy')
-    def test_limit_initialization_default(self) -> None:
-        """Test that daily limit uses default value when environment variable is not set."""
-        with patch('app.limits.os.getenv') as mock_getenv:
-            # Configure side_effect: DAILY_RATE_LIMIT=1000 (default), then logging call='not set'
-            mock_getenv.side_effect = [1000, 'not set']
             limiter = DailyRateLimiter()
-            assert limiter.limit == 1000
-            # Verify os.getenv was called for DAILY_RATE_LIMIT
-            mock_getenv.assert_any_call('DAILY_RATE_LIMIT', 1000)
-            mock_getenv.assert_any_call('DAILY_RATE_LIMIT', 'not set')
+            assert limiter.limit == expected_limit
 
 
 class TestRateLimiter:
     """Test the RateLimiter class with different strategies."""
 
-    def test_window_property_with_service_strategy(self) -> None:
-        """Test that window property returns the correct value for service strategy."""
-        config = RateLimitConfig(limit=10, window_type=WindowType.FIXED, window_duration=60)
+    @pytest.mark.parametrize(
+        ('window_type', 'window_duration', 'expected_window'),
+        [
+            (WindowType.FIXED, 60, 60),
+            (WindowType.DAILY, None, None),
+        ],
+    )
+    def test_window_property(
+        self, window_type: WindowType, window_duration: int | None, expected_window: int | None
+    ) -> None:
+        """Test that window property returns the correct value for different strategies."""
+        config = RateLimitConfig(limit=10, window_type=window_type, window_duration=window_duration)
         strategy = WindowedRateLimitStrategy(config)
         limiter = RateLimiter(strategy)
-        assert limiter.window == 60
-
-    def test_window_property_with_daily_strategy(self) -> None:
-        """Test that window property returns None for daily strategy."""
-        config = RateLimitConfig(limit=1000, window_type=WindowType.DAILY)
-        strategy = WindowedRateLimitStrategy(config)
-        limiter = RateLimiter(strategy)
-        assert limiter.window is None
+        assert limiter.window == expected_window
 
     def test_get_key_delegates_to_strategy(self) -> None:
-        """Test that get_key delegates to the underlying strategy."""
-        # Test with service strategy
+        """Test that get_key delegates to the underlying strategy and verifies key patterns."""
+        # Test with service strategy (fixed window)
         service_config = RateLimitConfig(limit=5, window_type=WindowType.FIXED, window_duration=30)
         service_strategy = WindowedRateLimitStrategy(service_config)
         limiter = RateLimiter(service_strategy)
@@ -294,8 +261,8 @@ class TestRateLimiter:
 class TestWindowedRateLimitStrategy:
     """Test the WindowedRateLimitStrategy class directly."""
 
-    def test_fixed_window_requires_duration(self) -> None:
-        """Test that FIXED window type requires window_duration parameter."""
+    def test_fixed_window_validation(self) -> None:
+        """Test that FIXED window type validation works correctly."""
         # Should work with window_duration provided
         config = RateLimitConfig(limit=10, window_type=WindowType.FIXED, window_duration=60)
         strategy = WindowedRateLimitStrategy(config)
@@ -306,31 +273,13 @@ class TestWindowedRateLimitStrategy:
         with pytest.raises(ValueError, match='window_duration is required for FIXED window type'):
             RateLimitConfig(limit=10, window_type=WindowType.FIXED, window_duration=None)
 
-    def test_windowed_strategy_init_validation(self) -> None:
-        """Test that WindowedRateLimitStrategy.__init__ validates FIXED window type requires duration."""
-        # Create a config that bypasses RateLimitConfig validation by using DAILY initially
+        # Test validation in WindowedRateLimitStrategy.__init__
         config = RateLimitConfig(limit=10, window_type=WindowType.DAILY)
-
-        # Manually set to FIXED with None duration to test the __init__ validation
         config.window_type = WindowType.FIXED
         config.window_duration = None
 
-        # Should raise ValueError in WindowedRateLimitStrategy.__init__
         with pytest.raises(ValueError, match='window_duration is required for FIXED window type'):
             WindowedRateLimitStrategy(config)
-
-    def test_unsupported_window_type_error(self) -> None:
-        """Test that unsupported window types raise ValueError."""
-        # Create a strategy with a mock unsupported window type
-        config = RateLimitConfig(limit=100, window_type=WindowType.DAILY)
-        strategy = WindowedRateLimitStrategy(config)
-
-        # Temporarily change the window type to simulate an unsupported type
-        strategy.window_type = 'unsupported'  # type: ignore[assignment]
-
-        # Should raise ValueError for unsupported window type
-        with pytest.raises(ValueError, match='Unsupported window type: unsupported'):
-            strategy._calculate_window_expiry()
 
     def test_daily_expiry_calculation(self) -> None:
         """Test that daily expiry correctly calculates seconds until midnight UTC."""
@@ -354,31 +303,22 @@ class TestWindowedRateLimitStrategy:
             assert isinstance(expiry, int)
             assert expiry == 34200  # 9.5 hours in seconds
 
-    def test_get_error_message_fixed_window(self) -> None:
-        """Test error message for fixed window rate limits."""
-        config = RateLimitConfig(limit=5, window_type=WindowType.FIXED, window_duration=30)
+    @pytest.mark.parametrize(
+        ('window_type', 'expected_message'),
+        [
+            (WindowType.FIXED, RESPONSE_429),
+            (WindowType.DAILY, 'Daily rate limit exceeded'),
+        ],
+    )
+    def test_get_error_message(self, window_type: WindowType, expected_message: str) -> None:
+        """Test error messages for different window types."""
+        if window_type == WindowType.FIXED:
+            config = RateLimitConfig(limit=5, window_type=window_type, window_duration=30)
+        else:
+            config = RateLimitConfig(limit=1000, window_type=window_type)
+
         strategy = WindowedRateLimitStrategy(config)
-        assert strategy.get_error_message() == RESPONSE_429
-
-    def test_get_error_message_daily_window(self) -> None:
-        """Test error message for daily rate limits."""
-        config = RateLimitConfig(limit=1000, window_type=WindowType.DAILY)
-        strategy = WindowedRateLimitStrategy(config)
-        assert strategy.get_error_message() == 'Daily rate limit exceeded'
-
-    def test_key_generation_patterns(self) -> None:
-        """Test Redis key generation for different window types."""
-        # Test fixed window key
-        fixed_config = RateLimitConfig(limit=5, window_type=WindowType.FIXED, window_duration=30)
-        fixed_strategy = WindowedRateLimitStrategy(fixed_config)
-        fixed_key = fixed_strategy.get_key('test-service', 'test-api-key')
-        assert fixed_key == 'rate-limit-test-service-test-api-key'
-
-        # Test daily window key
-        daily_config = RateLimitConfig(limit=1000, window_type=WindowType.DAILY)
-        daily_strategy = WindowedRateLimitStrategy(daily_config)
-        daily_key = daily_strategy.get_key('test-service', 'test-api-key')
-        assert daily_key == 'remaining-daily-limit-test-service-test-api-key'
+        assert strategy.get_error_message() == expected_message
 
     async def test_is_allowed_delegates_to_redis(self) -> None:
         """Test that is_allowed properly delegates to Redis client."""
@@ -393,24 +333,17 @@ class TestWindowedRateLimitStrategy:
         assert result is True
         redis_mock.consume_rate_limit_token.assert_awaited_once_with('rate-limit-test-service-test-api-key', 5, 30)
 
-    @pytest.mark.parametrize(
-        ('window_type', 'expected_expiry_type'),
-        [
-            (WindowType.FIXED, int),
-            (WindowType.DAILY, int),
-        ],
-    )
-    def test_calculate_window_expiry_returns_int(self, window_type: WindowType, expected_expiry_type: type) -> None:
-        """Test that window expiry calculation returns appropriate types."""
-        if window_type == WindowType.FIXED:
-            config = RateLimitConfig(limit=10, window_type=window_type, window_duration=60)
-        else:
-            config = RateLimitConfig(limit=1000, window_type=window_type)
-
+    def test_unsupported_window_type_error(self) -> None:
+        """Test that unsupported window types raise ValueError."""
+        config = RateLimitConfig(limit=100, window_type=WindowType.DAILY)
         strategy = WindowedRateLimitStrategy(config)
-        expiry = strategy._calculate_window_expiry()
-        assert isinstance(expiry, expected_expiry_type)
-        assert expiry > 0
+
+        # Temporarily change the window type to simulate an unsupported type
+        strategy.window_type = 'unsupported'  # type: ignore[assignment]
+
+        # Should raise ValueError for unsupported window type
+        with pytest.raises(ValueError, match='Unsupported window type: unsupported'):
+            strategy._calculate_window_expiry()
 
 
 class TestRateLimiterBehavior:
@@ -505,36 +438,24 @@ class TestDynamicStrategyLoading:
             _get_strategy_class(invalid_name)
 
     @pytest.mark.parametrize(
-        ('strategy_name', 'expected_class', 'expected_window_type'),
+        ('factory_function', 'strategy_name', 'expected_class', 'expected_window_type'),
         [
-            ('WindowedRateLimitStrategy', WindowedRateLimitStrategy, WindowType.FIXED),
-            ('NoOpRateLimitStrategy', NoOpRateLimitStrategy, None),
+            (ServiceRateLimiter, 'WindowedRateLimitStrategy', WindowedRateLimitStrategy, WindowType.FIXED),
+            (ServiceRateLimiter, 'NoOpRateLimitStrategy', NoOpRateLimitStrategy, None),
+            (DailyRateLimiter, 'WindowedRateLimitStrategy', WindowedRateLimitStrategy, WindowType.DAILY),
+            (DailyRateLimiter, 'NoOpRateLimitStrategy', NoOpRateLimitStrategy, None),
         ],
     )
-    def test_service_rate_limiter_strategy_selection(
-        self, strategy_name: str, expected_class: type, expected_window_type: WindowType | None
+    def test_rate_limiter_strategy_selection(
+        self,
+        factory_function: Callable[[], RateLimiter],
+        strategy_name: str,
+        expected_class: type,
+        expected_window_type: WindowType | None,
     ) -> None:
-        """Test ServiceRateLimiter creates correct strategy based on configuration."""
+        """Test rate limiter factories create correct strategy based on configuration."""
         with patch('app.limits.RATE_LIMIT_STRATEGY', strategy_name):
-            limiter = ServiceRateLimiter()
-            assert isinstance(limiter.strategy, expected_class)
-
-            if expected_window_type is not None and isinstance(limiter.strategy, WindowedRateLimitStrategy):
-                assert limiter.strategy.window_type == expected_window_type
-
-    @pytest.mark.parametrize(
-        ('strategy_name', 'expected_class', 'expected_window_type'),
-        [
-            ('WindowedRateLimitStrategy', WindowedRateLimitStrategy, WindowType.DAILY),
-            ('NoOpRateLimitStrategy', NoOpRateLimitStrategy, None),
-        ],
-    )
-    def test_daily_rate_limiter_strategy_selection(
-        self, strategy_name: str, expected_class: type, expected_window_type: WindowType | None
-    ) -> None:
-        """Test DailyRateLimiter creates correct strategy based on configuration."""
-        with patch('app.limits.RATE_LIMIT_STRATEGY', strategy_name):
-            limiter = DailyRateLimiter()
+            limiter = factory_function()
             assert isinstance(limiter.strategy, expected_class)
 
             if expected_window_type is not None and isinstance(limiter.strategy, WindowedRateLimitStrategy):
@@ -573,43 +494,39 @@ class TestDynamicStrategyLoading:
         limiter = app.limits.ServiceRateLimiter()
         assert isinstance(limiter.strategy, app.limits.NoOpRateLimitStrategy)
 
-    def test_service_limiter_uses_environment_variables(self) -> None:
-        """Test that ServiceRateLimiter uses environment variables for configuration."""
+    @pytest.mark.parametrize(
+        ('factory_function', 'expected_class_name', 'env_vars'),
+        [
+            (ServiceRateLimiter, 'WindowedRateLimitStrategy', {'RATE_LIMIT_STRATEGY': 'WindowedRateLimitStrategy'}),
+            (DailyRateLimiter, 'WindowedRateLimitStrategy', {'DAILY_RATE_LIMIT': '500'}),
+        ],
+    )
+    def test_limiter_environment_variable_usage(
+        self,
+        factory_function: Callable[[], RateLimiter],
+        expected_class_name: str,
+        env_vars: dict[str, str],
+    ) -> None:
+        """Test that rate limiters use environment variables for configuration."""
         with patch('app.limits.RATE_LIMIT_STRATEGY', 'WindowedRateLimitStrategy'):
-            with patch('app.limits.RATE_LIMIT', 100):
-                with patch('app.limits.OBSERVATION_PERIOD', 120):
-                    limiter = ServiceRateLimiter()
-                    assert limiter.strategy.__class__.__name__ == 'WindowedRateLimitStrategy'
-                    assert limiter.strategy.limit == 100
-                    assert limiter.strategy.window == 120
-
-    def test_daily_limiter_uses_environment_variables(self) -> None:
-        """Test that DailyRateLimiter uses environment variables for configuration."""
-        with patch('app.limits.RATE_LIMIT_STRATEGY', 'WindowedRateLimitStrategy'):
-            with patch.dict('os.environ', {'DAILY_RATE_LIMIT': '500'}):
-                limiter = DailyRateLimiter()
-                assert limiter.strategy.__class__.__name__ == 'WindowedRateLimitStrategy'
-                assert limiter.strategy.limit == 500
-                # Check window_type directly since we verified it's WindowedRateLimitStrategy above
-                assert hasattr(limiter.strategy, 'window_type')
-                window_type_value = getattr(limiter.strategy, 'window_type')
-                assert window_type_value.value == 'daily'
+            with patch.dict('os.environ', env_vars, clear=False):
+                limiter = factory_function()
+                assert limiter.strategy.__class__.__name__ == expected_class_name
 
 
 class TestNoOpRateLimitStrategy:
     """Test the NoOpRateLimitStrategy class."""
 
-    def test_get_key(self) -> None:
-        """Test NoOpRateLimitStrategy.get_key() returns correct format."""
+    def test_noop_strategy_behavior(self) -> None:
+        """Test NoOpRateLimitStrategy key generation and error message."""
         config = RateLimitConfig(limit=0)
         strategy = NoOpRateLimitStrategy(config)
+
+        # Test key generation
         key = strategy.get_key('test-service', 'test-api-key')
         assert key == 'noop-test-service-test-api-key'
 
-    def test_get_error_message(self) -> None:
-        """Test NoOpRateLimitStrategy.get_error_message() returns generic message."""
-        config = RateLimitConfig(limit=0)
-        strategy = NoOpRateLimitStrategy(config)
+        # Test error message
         assert strategy.get_error_message() == 'Rate limit exceeded'
 
 

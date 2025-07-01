@@ -17,7 +17,6 @@ from app.exceptions import NonRetryableError, RetryableError
 
 RATE_LIMIT = int(os.getenv('RATE_LIMIT', 5))
 OBSERVATION_PERIOD = int(os.getenv('OBSERVATION_PERIOD', 30))
-DAILY_RATE_LIMIT = int(os.getenv('DAILY_RATE_LIMIT', 1000))
 
 # Environment variable to control which rate limiting strategy to use
 # Options: 'NoOpRateLimitStrategy' (default), 'WindowedRateLimitStrategy'
