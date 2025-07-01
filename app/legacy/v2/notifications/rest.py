@@ -29,12 +29,12 @@ from app.legacy.v2.notifications.utils import (
     validate_template,
     validate_template_personalisation,
 )
-from app.limits import ServiceRateLimiter
+from app.limits import DailyRateLimiter, ServiceRateLimiter
 from app.logging.logging_config import logger
 from app.routers import LegacyTimedAPIRoute
 
 v2_legacy_notification_router = APIRouter(
-    dependencies=[Depends(ChainedDepends(JWTBearer(), ServiceRateLimiter()))],
+    dependencies=[Depends(ChainedDepends(JWTBearer(), ServiceRateLimiter(), DailyRateLimiter()))],
     prefix='/legacy/v2/notifications',
     route_class=LegacyTimedAPIRoute,
     tags=['v2 Legacy Notification Endpoints'],
@@ -42,7 +42,7 @@ v2_legacy_notification_router = APIRouter(
 
 
 v2_notification_router = APIRouter(
-    dependencies=[Depends(ChainedDepends(JWTBearer(), ServiceRateLimiter()))],
+    dependencies=[Depends(ChainedDepends(JWTBearer(), ServiceRateLimiter(), DailyRateLimiter()))],
     prefix='/v2/notifications',
     route_class=LegacyTimedAPIRoute,
     tags=['v2 Notification Endpoints'],

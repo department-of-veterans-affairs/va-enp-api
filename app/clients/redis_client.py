@@ -90,7 +90,11 @@ class RedisClientManager:
 
         try:
             client = self.get_client()
+
+            # Set the key to limit value if it doesn't exist
             await client.set(name=key, value=limit, ex=window, nx=True)
+
+            # Get current value
             current = await client.get(key)
 
             if current and int(current) > 0:

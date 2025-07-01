@@ -1,63 +1,74 @@
-scopeconfig:
-  - scopename: poetry-lockfile
-    scopepattern:
-      - poetry.lock  # Still needs to be in the fileignoreconfig section
-
 fileignoreconfig:
+- filename: .env.local
+  checksum: ebf2eb28e4dcfbfea34c6806762e4daf3fdca4fb86f04660c07742b7d133cc05
+- filename: app/auth.py
+  checksum: c9c26cb7334788e91988fd0feac92e636a2d0ca3cfb135e56ece73ffc10c7c77
+- filename: app/clients/redis_client.py
+  checksum: 8e88ba188bac6c61d085a34adae09418d616cd02a5d9c1f6e162bb684e0d2528
+- filename: app/constants.py
+  checksum: 99d65949b954a7f3dc7fd28decf413ad488d512fed167d945ae99da097d6967f
+- filename: app/legacy/clients/sqs.py
+  checksum: 578512c9b93f55717b13a7c1fed8d676de042e04d1ef7e8247097e84eb745ab8
+- filename: app/legacy/dao/api_key_dao.py
+  checksum: 9eb496d3ae4238193baf5c5627d8d186beeda815133e9b4e1bc6e56ce57a3802
+- filename: app/legacy/dao/api_keys_dao.py
+  checksum: f263dd3ff80dba091d18ed8032cce1fa3f5330afd050535cdf56d68c8841b908
+- filename: app/legacy/dao/notifications_dao.py
+  checksum: 7baa74d634ad0f8357b6c9c870ceff7d8976d116844d99798349e36cad43919d
+- filename: app/legacy/v2/notifications/utils.py
+  checksum: 43f789ba4ea77e9ee4e54c2dab02e29d3ef1098dee5ff7fcbc0f5dbb3342ac25
+- filename: app/limits.py
+  checksum: 220f8c974cbf22c8ec3ce345fc88a934a244e0f84c738e8d1841170b5453bb6f
 - filename: cd/dev.env
-  checksum: ddf9ec032a1e7059e818735f25a0e5555db5e1f5cbd3096ac853f479bdd7e535
+  checksum: 3d859ce6457cfa7b798f80364a6154d6dee35259f259c68a977a63785007d1d5
 - filename: cd/perf.env
-  checksum: 6b5ba337d04b22246f4553919201fc47080dd502018c7199db0d9f5e23307d8b
+  checksum: 7270e73706e06d41e961c84f9130780c362fd80738394d654165440725d4cd8f
+- filename: cd/prod.env
+  checksum: 5dd82bf0de04fb1db67cc5d1704e65300b2a47119289a4b8d45702b243efe5ac
+- filename: cd/staging.env
+  checksum: dab9978625d480a04883d97388681f86a6927994ed9ce8d7c30d8e1f078cfef2
 - filename: ci/.env.docker
   checksum: 2ca10edc6e96beb5929c49af8d3208ba55d6d0ea020ac17d18df984de1ee6b3a
 - filename: poetry.lock
-  checksum: dce720f75f3fa739420e2cd0aab082daa71ee8faaa7997ca624fafcb27bdba99
+  checksum: 6fd5f9896abad7c1e2c112a980092f87407d5a47a55c8e6b0cca58db00a7a33f
 - filename: postman/enp-api.postman_collection.json
   checksum: a75beb668be832bdb38484e044987be0ace21a597fa1aa30ba837d3bfc94a0c7
+- filename: tests/app/clients/test_redis_client.py
+  checksum: 1f703710c3a3a3da87183b05d63b8116d5cf3927619c5cfd89a7232936f26b44
+- filename: tests/app/legacy/clients/test_sqs.py
+  checksum: 4ba66df99cb553f63d9f7f1299cf3cbafa5f8d76f0fdb55685a050854b0c2c75
+- filename: tests/app/legacy/conftest.py
+  checksum: d0e0373f23fdfcae717d6fa48d195aa679ae2a8c0c691e82514ea619bd490446
 - filename: tests/app/legacy/dao/conftest.py
-  checksum: 302831b4c3ed1c07d8ace36625922aeb5bdbeb2de5c0119786b6cf23ac5dc19f
-- filename: app/legacy/dao/api_keys_dao.py
-  checksum: f263dd3ff80dba091d18ed8032cce1fa3f5330afd050535cdf56d68c8841b908
+  checksum: 787a9d015c894f9e031a075c7c0289676513301fc98c05605844644070780675
+- filename: tests/app/legacy/dao/test_api_keys.py
+  checksum: 68c0b40f5a2c8ad7f993693c271aee8b11df284933c4ae945c54da565f8dcf7a
+- filename: tests/app/legacy/dao/test_notifications.py
+  checksum: 3fbbca46433a8872863f365dab9f6c276713952913fe110aac5585f3d914e351
+- filename: tests/app/legacy/test_samples.py
+  checksum: b8f01af0ac1b89af71d329d048a27a7e7a8f3bd33a94fe204162eb01433b0917
+- filename: tests/app/legacy/v2/notifications/test_auth.py
+  checksum: 9a46795e0124515bc5960deee90d0a7531aaff989c39b4ecc93ab8c9f1969942
+- filename: tests/app/legacy/v2/notifications/test_rest.py
+  checksum: 5aa8322b93a48058bda58e0b4d2c6f4f87a47fe13b3adc354d018a3facc59254
+- filename: tests/app/legacy/v2/notifications/test_utils.py
+  checksum: 5fb1309c8fc73b6e23103e5cb72591de1c3811dcae3a6f196f3c31327af986c3
 - filename: tests/app/providers/__init__.py
   checksum: 0e3ae2fd3a50245a8c143d31c4316b164b51161d2db6e660aa956b78eda1b4d8
 - filename: tests/app/providers/test_provider_aws.py
   checksum: f2ed526b1a81c5c0facfd4d1e7f1a3e26194778c1909a354c98c3b042945d34d
-- filename: tests/conftest.py
-  checksum: 44a2d6e8de7940335bb84a487d3377b5339bb99219b95aca66f368dff960d537
-- filename: tests/app/legacy/test_samples.py
-  checksum: b8f01af0ac1b89af71d329d048a27a7e7a8f3bd33a94fe204162eb01433b0917
-- filename: app/legacy/dao/api_key_dao.py
-  checksum: 9eb496d3ae4238193baf5c5627d8d186beeda815133e9b4e1bc6e56ce57a3802
-- filename: tests/app/legacy/dao/test_api_keys.py
-  checksum: 68c0b40f5a2c8ad7f993693c271aee8b11df284933c4ae945c54da565f8dcf7a
-- filename: tests/app/legacy/v2/notifications/test_auth.py
-  checksum: 9a46795e0124515bc5960deee90d0a7531aaff989c39b4ecc93ab8c9f1969942
-- filename: .env.local
-  checksum: ebf2eb28e4dcfbfea34c6806762e4daf3fdca4fb86f04660c07742b7d133cc05
-- filename: app/constants.py
-  checksum: 99d65949b954a7f3dc7fd28decf413ad488d512fed167d945ae99da097d6967f
-- filename: tests/app/legacy/conftest.py
-  checksum: d0e0373f23fdfcae717d6fa48d195aa679ae2a8c0c691e82514ea619bd490446
-- filename: app/legacy/dao/notifications_dao.py
-  checksum: 7baa74d634ad0f8357b6c9c870ceff7d8976d116844d99798349e36cad43919d
-- filename: app/auth.py
-  checksum: c9c26cb7334788e91988fd0feac92e636a2d0ca3cfb135e56ece73ffc10c7c77
-- filename: tests/conftest.py
-  checksum: c39c4b3e4777417f7b302794e869c272c2175d27dbc5236f85d4ecf9668dbe0d
-- filename: tests/napi_table_data.toml
-  checksum: db0b29eb4c9c25867f0aa0fd4ae5bacceed1cea95c33602274bacf31f073aa0b
-- filename: tests/app/legacy/v2/notifications/test_rest.py
-  checksum: db33353264f3694934b202e14be1d61aebc802205964c2127a0b415edcc97fa3
 - filename: tests/app/test_auth.py
   checksum: 2147731d18bff8dfbda3d713fb4dec148b157121bbc8ff318ea9b55a6efeb338
-- filename: tests/app/legacy/v2/notifications/test_utils.py
-  checksum: 5fb1309c8fc73b6e23103e5cb72591de1c3811dcae3a6f196f3c31327af986c3
-- filename: app/legacy/v2/notifications/utils.py
-  checksum: 43f789ba4ea77e9ee4e54c2dab02e29d3ef1098dee5ff7fcbc0f5dbb3342ac25
-- filename: app/legacy/clients/sqs.py
-  checksum: 578512c9b93f55717b13a7c1fed8d676de042e04d1ef7e8247097e84eb745ab8
-- filename: tests/app/legacy/clients/test_sqs.py
-  checksum: 4ba66df99cb553f63d9f7f1299cf3cbafa5f8d76f0fdb55685a050854b0c2c75
-- filename: tests/app/legacy/dao/test_notifications.py
-  checksum: 0966bcea3a2fc90902eb80b80aff0bc05a1351ed6c08b444b2d73cd129fbfded
+- filename: tests/app/test_limits.py
+  checksum: 369bd89e2481f15ed12bc053da86764ca8e14108a46fc7ca9ae4d9dd1aad58db
+- filename: tests/app/test_notification_routes.py
+  checksum: 678efefdf3eddd0fae370a3c18aaf581e96945d20640aa980e50fb9b6ff752e2
+- filename: tests/conftest.py
+  checksum: c39c4b3e4777417f7b302794e869c272c2175d27dbc5236f85d4ecf9668dbe0d
+- filename: tests/helpers/api_test_helpers.py
+  checksum: 2753411ec5b6ec6324cd7b5ab5b1f66ba7382a0e8d800ab03895d5a795720cc8
+- filename: tests/napi_table_data.toml
+  checksum: db0b29eb4c9c25867f0aa0fd4ae5bacceed1cea95c33602274bacf31f073aa0b
+scopeconfig:
+- scope: ""
 version: "1.0"
