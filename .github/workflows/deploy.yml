@@ -1,6 +1,9 @@
 name: Deploy to ENV
 run-name: "Deploy to ${{ inputs.environment }}"
 
+permissions:
+  contents: read
+
 
 on:
   workflow_dispatch:
