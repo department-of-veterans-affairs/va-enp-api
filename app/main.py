@@ -148,16 +148,107 @@ app.add_middleware(
 )
 
 
+def _trigger_exit() -> None:
+    """Trigger graceful exit."""
+    logger.info('Triggering graceful exit...')
+    import sys
+
+    sys.exit(1)
+
+
+def _trigger_kill() -> None:
+    """Trigger hard kill."""
+    logger.info('Triggering hard kill...')
+    import os
+
+    os._exit(1)
+
+
+def _trigger_exception() -> None:
+    """Trigger unhandled exception.
+
+    Raises:
+        RuntimeError: Test exception to kill worker
+    """
+    logger.info('Triggering unhandled exception...')
+    raise RuntimeError('Test exception to kill worker')
+
+
+def _trigger_segfault() -> None:
+    """Trigger segmentation fault."""
+    logger.info('Triggering segmentation fault...')
+    import ctypes
+
+    ctypes.string_at(0)
+
+
+def _trigger_memory() -> None:
+    """Trigger memory exhaustion."""
+    logger.info('Triggering memory exhaustion...')
+    # This will gradually consume memory until the worker is killed
+    data = []
+    while True:
+        data.append('x' * 1024 * 1024)  # 1MB chunks
+
+
+def _trigger_interrupt() -> None:
+    """Trigger keyboard interrupt.
+
+    Raises:
+        KeyboardInterrupt: Test keyboard interrupt
+    """
+    logger.info('Triggering keyboard interrupt...')
+    raise KeyboardInterrupt('Test keyboard interrupt')
+
+
+def _trigger_worker_death(action: str) -> None:
+    """Trigger various worker death scenarios for testing lifespan cleanup.
+
+    Args:
+        action: The death scenario to trigger
+    """
+    death_triggers = {
+        'exit': _trigger_exit,
+        'kill': _trigger_kill,
+        'exception': _trigger_exception,
+        'segfault': _trigger_segfault,
+        'memory': _trigger_memory,
+        'interrupt': _trigger_interrupt,
+    }
+
+    trigger = death_triggers.get(action)
+    if trigger:
+        trigger()
+
+
 @app.get('/enp')
-def simple_route() -> dict[str, str]:
-    """Return a hello world.
+def simple_route(action: str = 'hello') -> dict[str, str]:
+    """Return a hello world or trigger worker death for testing.
+
+    Args:
+        action: Action to perform. Options:
+            - 'hello': Normal hello world response
+            - 'exit': Graceful exit (calls sys.exit)
+            - 'kill': Hard kill (os._exit)
+            - 'exception': Unhandled exception
+            - 'segfault': Segmentation fault (ctypes)
+            - 'memory': Memory exhaustion
+            - 'interrupt': Keyboard interrupt simulation
 
     Returns:
-        dict[str, str]: Hello World
+        dict[str, str]: Hello World response or available actions list
 
     """
-    logger.info('Hello World')
-    return {'Hello': 'World'}
+    logger.info(f'Hello World - action: {action}')
+
+    if action == 'hello':
+        return {'Hello': 'World'}
+
+    if action in ['exit', 'kill', 'exception', 'segfault', 'memory', 'interrupt']:
+        _trigger_worker_death(action)
+        return {'status': 'should_not_reach_here'}  # This won't be reached
+
+    return {'Hello': 'World', 'available_actions': 'hello,exit,kill,exception,segfault,memory,interrupt'}
 
 
 @app.get(
