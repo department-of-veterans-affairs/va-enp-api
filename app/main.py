@@ -286,11 +286,32 @@ def _trigger_worker_death(action: str) -> None:
         'segfault': _trigger_segfault,
         'memory': _trigger_memory,
         'interrupt': _trigger_interrupt,
+        'real_crash': _trigger_real_crash,
     }
 
     trigger = death_triggers.get(action)
     if trigger:
         trigger()
+
+
+def _trigger_real_crash() -> None:
+    """Trigger a real worker crash to test actual lifespan cleanup execution.
+
+    This will actually crash the worker to verify that the lifespan cleanup
+    gets called in real ungraceful shutdown scenarios.
+    """
+    logger.info('*** TRIGGERING REAL CRASH TEST ***')
+    import os
+    import time
+
+    time.sleep(0.1)  # Brief delay for log flush
+
+    # Log the worker ID for tracking
+    worker_id = os.getpid()
+    logger.info(f'[Worker {worker_id}] About to crash - watch for lifespan cleanup logs!')
+
+    # Force immediate termination to test cleanup
+    os._exit(1)
 
 
 @app.get('/enp')
@@ -306,6 +327,7 @@ def simple_route(action: str = 'hello') -> dict[str, str]:
             - 'segfault': Segmentation fault (ctypes)
             - 'memory': Memory exhaustion
             - 'interrupt': Simulated interrupt cleanup (safe)
+            - 'real_crash': Real ungraceful crash (for testing actual lifespan)
 
     Returns:
         dict[str, str]: Hello World response or available actions list
@@ -316,11 +338,11 @@ def simple_route(action: str = 'hello') -> dict[str, str]:
     if action == 'hello':
         return {'Hello': 'World'}
 
-    if action in ['exit', 'kill', 'exception', 'segfault', 'memory', 'interrupt']:
+    if action in ['exit', 'kill', 'exception', 'segfault', 'memory', 'interrupt', 'real_crash']:
         _trigger_worker_death(action)
         return {'status': 'should_not_reach_here'}  # This won't be reached for exit/kill
 
-    return {'Hello': 'World', 'available_actions': 'hello,exit,kill,exception,segfault,memory,interrupt'}
+    return {'Hello': 'World', 'available_actions': 'hello,exit,kill,exception,segfault,memory,interrupt,real_crash'}
 
 
 @app.get(
