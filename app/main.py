@@ -1,5 +1,6 @@
 """App entrypoint."""
 
+import inspect
 import os
 from asyncio.exceptions import CancelledError
 from collections.abc import AsyncIterator
@@ -48,7 +49,7 @@ async def safe_cleanup(cleanup_func: Callable[[], Any], resource_name: str) -> N
     """
     try:
         result = cleanup_func()
-        if hasattr(result, '__await__'):
+        if inspect.isawaitable(result):
             await result
         logger.info(f'{resource_name} cleanup completed')
     except Exception as e:
