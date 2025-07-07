@@ -338,9 +338,15 @@ def simple_route(action: str = 'hello') -> dict[str, str]:
     if action == 'hello':
         return {'Hello': 'World'}
 
-    if action in ['exit', 'kill', 'exception', 'segfault', 'memory', 'interrupt', 'real_crash']:
+    # Actions that actually crash the worker (won't return)
+    if action in ['exit', 'kill', 'segfault', 'memory', 'real_crash']:
         _trigger_worker_death(action)
-        return {'status': 'should_not_reach_here'}  # This won't be reached for exit/kill
+        return {'status': 'should_not_reach_here'}  # This won't be reached
+
+    # Actions that simulate cleanup but return normally
+    if action in ['exception', 'interrupt']:
+        _trigger_worker_death(action)
+        return {'status': 'cleanup_simulation_completed', 'action': action}
 
     return {'Hello': 'World', 'available_actions': 'hello,exit,kill,exception,segfault,memory,interrupt,real_crash'}
 
