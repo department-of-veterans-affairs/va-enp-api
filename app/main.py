@@ -49,28 +49,37 @@ async def _cleanup_lifespan_resources(app: CustomFastAPI, redis_manager: RedisCl
         worker_id: The worker process ID
     """
     shutdown_start = time.time()
-    logger.info(f'[Worker {worker_id}] Starting lifespan cleanup...')
+    logger.info(f'[Worker {worker_id}] *** STARTING LIFESPAN CLEANUP ***')
 
     try:
+        logger.info(f'[Worker {worker_id}] Clearing providers...')
         app.enp_state.clear_providers()
-        logger.info(f'[Worker {worker_id}] Providers cleared')
+        logger.info(f'[Worker {worker_id}] ✓ Providers cleared')
     except Exception as e:
-        logger.exception(f'[Worker {worker_id}] Error clearing providers: {e}')
+        logger.exception(f'[Worker {worker_id}] ✗ Error clearing providers: {e}')
 
     try:
+        logger.info(f'[Worker {worker_id}] Closing database connections...')
         await close_db()
-        logger.info(f'[Worker {worker_id}] Database connections closed')
+        logger.info(f'[Worker {worker_id}] ✓ Database connections closed')
     except Exception as e:
-        logger.exception(f'[Worker {worker_id}] Error closing database: {e}')
+        logger.exception(f'[Worker {worker_id}] ✗ Error closing database: {e}')
 
     try:
+        logger.info(f'[Worker {worker_id}] Closing Redis connections...')
         await redis_manager.close()
-        logger.info(f'[Worker {worker_id}] Redis connections closed')
+        logger.info(f'[Worker {worker_id}] ✓ Redis connections closed')
     except Exception as e:
-        logger.exception(f'[Worker {worker_id}] Error closing Redis: {e}')
+        logger.exception(f'[Worker {worker_id}] ✗ Error closing Redis: {e}')
 
     shutdown_time = time.time() - shutdown_start
-    logger.info(f'[Worker {worker_id}] AsyncContextManager lifespan shutdown complete in {shutdown_time:.2f}s')
+    logger.info(f'[Worker {worker_id}] *** LIFESPAN CLEANUP COMPLETE in {shutdown_time:.2f}s ***')
+
+    # Ensure logs are flushed before exit
+    import sys
+
+    sys.stdout.flush()
+    sys.stderr.flush()
 
 
 @asynccontextmanager
@@ -110,10 +119,13 @@ async def lifespan(app: CustomFastAPI) -> AsyncIterator[Never]:
             yield  # type: ignore
         except CancelledError as e:
             if isinstance(e.__context__, KeyboardInterrupt):
-                logger.info(f'[Worker {worker_id}] Stopped app with a KeyboardInterrupt')
+                logger.info(f'[Worker {worker_id}] *** SHUTDOWN INITIATED: KeyboardInterrupt ***')
             else:
-                logger.exception(f'[Worker {worker_id}] Failed to gracefully stop the app')
+                logger.exception(f'[Worker {worker_id}] *** SHUTDOWN INITIATED: CancelledError ***')
+        except Exception as e:
+            logger.exception(f'[Worker {worker_id}] *** SHUTDOWN INITIATED: Exception: {e} ***')
         finally:
+            logger.info(f'[Worker {worker_id}] *** ENTERING LIFESPAN CLEANUP ***')
             await _cleanup_lifespan_resources(app, redis_manager, worker_id)
 
     except Exception as e:
@@ -150,9 +162,25 @@ app.add_middleware(
 
 def _trigger_exit() -> None:
     """Trigger graceful exit."""
-    logger.info('Triggering graceful exit...')
+    logger.info('*** TRIGGERING GRACEFUL EXIT ***')
+    import os
+    import signal
     import sys
+    import time
 
+    # Add a small delay to ensure the log is flushed
+    time.sleep(0.1)
+
+    # Try sending SIGTERM to self for more graceful shutdown
+    try:
+        logger.info('Sending SIGTERM to self for graceful shutdown...')
+        os.kill(os.getpid(), signal.SIGTERM)
+        time.sleep(1)  # Give it time to process
+    except Exception as e:
+        logger.warning(f'SIGTERM failed: {e}, falling back to sys.exit')
+
+    # Fallback to sys.exit
+    logger.info('Falling back to sys.exit...')
     sys.exit(1)
 
 
@@ -170,7 +198,10 @@ def _trigger_exception() -> None:
     Raises:
         RuntimeError: Test exception to kill worker
     """
-    logger.info('Triggering unhandled exception...')
+    logger.info('*** TRIGGERING UNHANDLED EXCEPTION ***')
+    import time
+
+    time.sleep(0.1)  # Brief delay for log flush
     raise RuntimeError('Test exception to kill worker')
 
 
@@ -197,7 +228,10 @@ def _trigger_interrupt() -> None:
     Raises:
         KeyboardInterrupt: Test keyboard interrupt
     """
-    logger.info('Triggering keyboard interrupt...')
+    logger.info('*** TRIGGERING KEYBOARD INTERRUPT ***')
+    import time
+
+    time.sleep(0.1)  # Brief delay for log flush
     raise KeyboardInterrupt('Test keyboard interrupt')
 
 
