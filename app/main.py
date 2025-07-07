@@ -193,16 +193,35 @@ def _trigger_kill() -> None:
 
 
 def _trigger_exception() -> None:
-    """Trigger unhandled exception.
+    """Trigger simulated exception cleanup test.
 
-    Raises:
-        RuntimeError: Test exception to kill worker
+    This simulates what happens during an exception-based shutdown
+    without actually crashing the worker process.
     """
-    logger.info('*** TRIGGERING UNHANDLED EXCEPTION ***')
+    logger.info('*** TRIGGERING SIMULATED EXCEPTION CLEANUP ***')
+    import asyncio
     import time
 
     time.sleep(0.1)  # Brief delay for log flush
-    raise RuntimeError('Test exception to kill worker')
+
+    # Simulate the cleanup process that would happen during shutdown
+    async def simulate_cleanup() -> None:
+        worker_id = os.getpid()
+        logger.info(f'[Worker {worker_id}] *** SIMULATING EXCEPTION SHUTDOWN ***')
+
+        # Get the current app instance and redis manager
+        if hasattr(app, 'enp_state') and app.enp_state.redis_client_manager:
+            await _cleanup_lifespan_resources(app, app.enp_state.redis_client_manager, worker_id)
+        else:
+            logger.warning('Cannot simulate cleanup - app state not available')
+
+    # Run the simulation
+    try:
+        asyncio.run(simulate_cleanup())
+    except Exception as e:
+        logger.exception(f'Error during cleanup simulation: {e}')
+
+    # Return normally instead of crashing
 
 
 def _trigger_segfault() -> None:
@@ -223,16 +242,35 @@ def _trigger_memory() -> None:
 
 
 def _trigger_interrupt() -> None:
-    """Trigger keyboard interrupt.
+    """Trigger simulated interrupt cleanup test.
 
-    Raises:
-        KeyboardInterrupt: Test keyboard interrupt
+    This simulates what happens during a keyboard interrupt shutdown
+    without actually crashing the worker process.
     """
-    logger.info('*** TRIGGERING KEYBOARD INTERRUPT ***')
+    logger.info('*** TRIGGERING SIMULATED INTERRUPT CLEANUP ***')
+    import asyncio
     import time
 
     time.sleep(0.1)  # Brief delay for log flush
-    raise KeyboardInterrupt('Test keyboard interrupt')
+
+    # Simulate the cleanup process that would happen during shutdown
+    async def simulate_cleanup() -> None:
+        worker_id = os.getpid()
+        logger.info(f'[Worker {worker_id}] *** SIMULATING INTERRUPT SHUTDOWN ***')
+
+        # Get the current app instance and redis manager
+        if hasattr(app, 'enp_state') and app.enp_state.redis_client_manager:
+            await _cleanup_lifespan_resources(app, app.enp_state.redis_client_manager, worker_id)
+        else:
+            logger.warning('Cannot simulate cleanup - app state not available')
+
+    # Run the simulation
+    try:
+        asyncio.run(simulate_cleanup())
+    except Exception as e:
+        logger.exception(f'Error during cleanup simulation: {e}')
+
+    # Return normally instead of crashing
 
 
 def _trigger_worker_death(action: str) -> None:
@@ -264,10 +302,10 @@ def simple_route(action: str = 'hello') -> dict[str, str]:
             - 'hello': Normal hello world response
             - 'exit': Graceful exit (calls sys.exit)
             - 'kill': Hard kill (os._exit)
-            - 'exception': Unhandled exception
+            - 'exception': Simulated exception cleanup (safe)
             - 'segfault': Segmentation fault (ctypes)
             - 'memory': Memory exhaustion
-            - 'interrupt': Keyboard interrupt simulation
+            - 'interrupt': Simulated interrupt cleanup (safe)
 
     Returns:
         dict[str, str]: Hello World response or available actions list
@@ -280,7 +318,7 @@ def simple_route(action: str = 'hello') -> dict[str, str]:
 
     if action in ['exit', 'kill', 'exception', 'segfault', 'memory', 'interrupt']:
         _trigger_worker_death(action)
-        return {'status': 'should_not_reach_here'}  # This won't be reached
+        return {'status': 'should_not_reach_here'}  # This won't be reached for exit/kill
 
     return {'Hello': 'World', 'available_actions': 'hello,exit,kill,exception,segfault,memory,interrupt'}
 
