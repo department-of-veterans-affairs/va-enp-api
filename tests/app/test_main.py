@@ -244,6 +244,3 @@ async def test_safe_cleanup_function() -> None:
 
         failing_cleanup.assert_called_once()
         mock_logger.exception.assert_called_with('FailingResource cleanup failed: Cleanup failed')
-
-
-# Import safe_cleanup for testing
