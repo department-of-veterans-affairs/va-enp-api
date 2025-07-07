@@ -22,7 +22,7 @@ fileignoreconfig:
 - filename: cd/dev.env
   checksum: 3d859ce6457cfa7b798f80364a6154d6dee35259f259c68a977a63785007d1d5
 - filename: cd/perf.env
-  checksum: 7270e73706e06d41e961c84f9130780c362fd80738394d654165440725d4cd8f
+  checksum: ab3e730cc646b3e9e7cd02e20b4fb6e984846c0f5032a6fea457925011b3e1ed
 - filename: cd/prod.env
   checksum: 5dd82bf0de04fb1db67cc5d1704e65300b2a47119289a4b8d45702b243efe5ac
 - filename: cd/staging.env
