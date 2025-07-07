@@ -21,6 +21,7 @@ from app.db.db_init import (
 )
 from app.legacy.v2.notifications.rest import v2_legacy_notification_router, v2_notification_router
 from app.logging.logging_config import CustomizeLogger, logger
+from app.plugins import WorkerIdPlugin
 from app.state import ENPState
 from app.v3 import api_router as v3_router
 
@@ -156,7 +157,10 @@ def create_app() -> CustomFastAPI:
 app: CustomFastAPI = create_app()
 app.add_middleware(
     ContextMiddleware,
-    plugins=(plugins.RequestIdPlugin(force_new_uuid=False),),
+    plugins=(
+        plugins.RequestIdPlugin(force_new_uuid=False),
+        WorkerIdPlugin(),
+    ),
 )
 
 
@@ -366,3 +370,17 @@ async def get_legacy_notification(notification_id: UUID4) -> None:
 
     data = await LegacyNotificationDao.get(notification_id)
     logger.info('Notification data: {}', data._asdict())
+
+
+@app.get('/worker-test')
+def worker_test() -> dict[str, str]:
+    """Test endpoint to verify worker ID logging.
+
+    Returns:
+        dict[str, str]: Response with process ID information
+    """
+    import os
+
+    logger.info('Testing worker ID logging')
+    logger.info(f'Current process ID: {os.getpid()}')
+    return {'message': 'Check logs for worker_id', 'process_id': str(os.getpid())}

@@ -21,6 +21,8 @@ fileignoreconfig:
   checksum: 220f8c974cbf22c8ec3ce345fc88a934a244e0f84c738e8d1841170b5453bb6f
 - filename: app/main.py
   checksum: a02d78e344f79038f5cec1a1c0fe839754b89f4d1c2ba10a569208633aa51d73
+- filename: app/plugins.py
+  checksum: baba72a10c79ac7976307082c59787181e9005d65b4fa8e17108a07c0e8cf462
 - filename: cd/dev.env
   checksum: 3d859ce6457cfa7b798f80364a6154d6dee35259f259c68a977a63785007d1d5
 - filename: cd/perf.env

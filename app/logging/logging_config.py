@@ -41,9 +41,16 @@ def get_context() -> dict[str, str]:
         dict[str, str]: The context for the logger
 
     """
+    import os
+
     ctx = {}
     with suppress(ContextDoesNotExistError):
         ctx = context.data
+
+    # Ensure worker_id is always present, even outside of request context
+    if 'worker_id' not in ctx:
+        ctx['worker_id'] = str(os.getpid())
+
     return ctx
 
 

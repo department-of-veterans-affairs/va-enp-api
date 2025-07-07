@@ -34,7 +34,7 @@ def test_simple_route_logs_hello_world(mock_logger: Mock, client: ENPTestClient)
 
     """
     client.get('/enp')
-    mock_logger.info.assert_called_with('Hello World')
+    mock_logger.info.assert_called_with('Hello World - action: hello')
 
 
 def test_specified_request_id_is_preserved(client: ENPTestClient) -> None:
