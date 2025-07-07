@@ -1,6 +1,7 @@
 """Test suite for initializing FastAPI application."""
 
 from asyncio import CancelledError
+from typing import Any, Callable
 from unittest.mock import AsyncMock, Mock, patch
 from uuid import uuid4
 
@@ -140,8 +141,6 @@ async def test_lifespan_finally_block_cleanup() -> None:
         mock_init_db.assert_awaited_once()
 
         # Verify all safe_cleanup calls were made with correct arguments
-        from typing import Any, Callable
-
         expected_cleanup_calls: list[tuple[Callable[[], Any], str]] = [
             # Providers cleanup
             (app.enp_state.clear_providers, 'Providers'),
