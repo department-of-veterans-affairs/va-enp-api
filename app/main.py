@@ -1,5 +1,6 @@
 """App entrypoint."""
 
+import inspect
 import os
 from asyncio.exceptions import CancelledError
 from collections.abc import AsyncIterator
@@ -39,6 +40,22 @@ class CustomFastAPI(FastAPI):
         self.enp_state = ENPState()
 
 
+async def safe_cleanup(cleanup_func: Callable[[], Any], resource_name: str) -> None:
+    """Safely execute cleanup with error handling.
+
+    Args:
+        cleanup_func: The cleanup function to execute (sync or async)
+        resource_name: Name of the resource being cleaned up for logging
+    """
+    try:
+        result = cleanup_func()
+        if inspect.isawaitable(result):
+            await result
+        logger.info(f'{resource_name} cleanup completed')
+    except Exception as e:
+        logger.exception(f'{resource_name} cleanup failed: {e}')
+
+
 @asynccontextmanager
 async def lifespan(app: CustomFastAPI) -> AsyncIterator[Never]:
     """Initialize the database, and populate the providers dictionary.
@@ -69,9 +86,10 @@ async def lifespan(app: CustomFastAPI) -> AsyncIterator[Never]:
         else:
             logger.exception('Failed to gracefully stop the app')
     finally:
-        app.enp_state.clear_providers()
-        await close_db()
-        await redis_manager.close()
+        # Use safe cleanup pattern to ensure all resources are cleaned up even if some fail
+        await safe_cleanup(lambda: app.enp_state.clear_providers(), 'Providers')
+        await safe_cleanup(close_db, 'Database')
+        await safe_cleanup(redis_manager.close, 'Redis')
 
         logger.info('AsyncContextManager lifespan shutdown complete')
 
