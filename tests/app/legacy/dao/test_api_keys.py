@@ -75,6 +75,35 @@ class TestLegacyApiKeysDao:
         assert len(keys) == 0, 'keys should not exist'
 
     @pytest.mark.parametrize(
+        'raised_exception',
+        [
+            DataError('stmt', 'params', Exception('orig')),
+            OperationalError('stmt', 'params', Exception('orig')),
+            InterfaceError('stmt', 'params', Exception('orig')),
+            TimeoutError(),
+            SQLAlchemyError('some generic error'),
+        ],
+    )
+    async def test_get_service_api_keys_exception_handling(
+        self,
+        raised_exception: Exception,
+    ) -> None:
+        """Test that get_service_api_keys raises custom NonRetryableError when SQLAlchemy exceptions occurs.
+
+        NonRetryableError raised for all errors since retries exceeded or was never retryable.
+        """
+        service_id = uuid4()
+
+        # Patch the session context and simulate the exception during execution
+        with patch('app.legacy.dao.api_keys_dao.get_read_session_with_context') as mock_session_ctx:
+            mock_session = AsyncMock()
+            mock_session.execute.side_effect = raised_exception
+            mock_session_ctx.return_value.__aenter__.return_value = mock_session
+
+            with pytest.raises(NonRetryableError):
+                await LegacyApiKeysDao.get_service_api_keys(service_id)
+
+    @pytest.mark.parametrize(
         ('raised_exception', 'expected_error'),
         [
             (DataError('stmt', 'params', Exception('orig')), NonRetryableError),
@@ -84,7 +113,7 @@ class TestLegacyApiKeysDao:
             (SQLAlchemyError('some generic error'), NonRetryableError),
         ],
     )
-    async def test_get_api_keys_exception_handling(
+    async def test_get_api_keys_for_service_exception_handling(
         self,
         raised_exception: Exception,
         expected_error: type[Exception],
