@@ -64,7 +64,6 @@ omit = [
     "app/logging/*",
     "app/main.py",
     "tests/app/test_main.py",
-    "app/legacy/dao/api_keys_dao.py",
     "app/legacy/dao/recipient_identifiers_dao.py",
     "app/legacy/dao/utils.py",
 ]
