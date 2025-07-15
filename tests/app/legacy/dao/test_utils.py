@@ -1,20 +1,8 @@
 """Tests for DAO utils methods."""
 
-from typing import Union
-
 import pytest
 
 from app.legacy.dao.utils import Serializer
-
-PayloadType = Union[
-    str,
-    int,
-    float,
-    bool,
-    dict[str, str],
-    list[str],
-    None,
-]
 
 
 @pytest.mark.parametrize(
@@ -29,7 +17,7 @@ PayloadType = Union[
         ['a', 'b', 'c'],
     ],
 )
-def test_serialize_deserialize_round_trip(payload: PayloadType) -> None:
+def test_serialize_deserialize_round_trip(payload: object | str | dict[str, str] | int | float | bool | None) -> None:
     """Test that serializer can perform a round-trip serialize/deserialize."""
     serializer = Serializer()
 
