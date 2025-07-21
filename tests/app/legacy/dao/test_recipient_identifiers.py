@@ -5,7 +5,7 @@ from unittest.mock import AsyncMock, patch
 from uuid import uuid4
 
 import pytest
-from sqlalchemy import Row, delete
+from sqlalchemy import Row, delete, select
 from sqlalchemy.exc import (
     DataError,
     IntegrityError,
@@ -47,9 +47,23 @@ class TestLegacyRecipientIdentifiersDaoSet:
             notification_id=commit_notification.id, recipient_identifiers=recipient
         )
 
-        # tear down, notification cleanup up by commit_notification fixture
+        # Verify that the data was persisted to the database
         legacy_recipient_identifiers = metadata_legacy.tables['recipient_identifiers']
 
+        async with get_write_session_with_context() as session:
+            result = await session.execute(
+                select(legacy_recipient_identifiers).where(
+                    legacy_recipient_identifiers.c.notification_id == commit_notification.id
+                )
+            )
+            persisted_recipient = result.fetchone()
+
+            # Verify the expected data is present
+            assert persisted_recipient.id_type == id_type.value
+            assert persisted_recipient.id_value == id_value
+            assert persisted_recipient.notification_id == commit_notification.id
+
+        # tear down, notification cleanup up by commit_notification fixture
         async with get_write_session_with_context() as session:
             await session.execute(
                 delete(legacy_recipient_identifiers).where(
@@ -87,6 +101,40 @@ class TestLegacyRecipientIdentifiersDaoSet:
                 )
             )
             await session.commit()
+
+    @pytest.mark.parametrize(
+        'caught_exception',
+        [
+            IntegrityError('stmt', 'params', Exception('orig')),
+            DataError('stmt', 'params', Exception('orig')),
+            OperationalError('stmt', 'params', Exception('orig')),
+            InterfaceError('stmt', 'params', Exception('orig')),
+            TimeoutError(),
+            SQLAlchemyError('some generic error'),
+            Exception('some other error'),
+        ],
+    )
+    async def test_set_recipient_identifiers_all_exceptions_non_retryable(
+        self,
+        caught_exception: Exception,
+    ) -> None:
+        """Test that set_recipient_identifiers raises NonRetryableError for all exception types.
+
+        Args:
+            caught_exception (Exception): The exception our code caught
+        """
+        # Patch the session context and simulate the exception during execution
+        with patch('app.legacy.dao.recipient_identifiers_dao.get_write_session_with_context') as mock_session_ctx:
+            mock_session = AsyncMock()
+            mock_session.execute.side_effect = caught_exception
+            mock_session_ctx.return_value.__aenter__.return_value = mock_session
+
+            recipient = RecipientIdentifierModel(id_type=IdentifierType.PID, id_value='12345')
+
+            with pytest.raises(NonRetryableError):
+                await RecipientIdentifiersDao.set_recipient_identifiers(
+                    notification_id=uuid4(), recipient_identifiers=recipient
+                )
 
     @pytest.mark.parametrize(
         ('caught_exception', 'raised_exception'),
