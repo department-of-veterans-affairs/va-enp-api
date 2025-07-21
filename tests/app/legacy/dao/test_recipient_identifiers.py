@@ -32,6 +32,7 @@ class TestLegacyRecipientIdentifiersDaoSet:
             (IdentifierType.EDIPI, '12345'),
             (IdentifierType.ICN, '1234567890V123456'),
             (IdentifierType.PID, '12345'),
+            (IdentifierType.VA_PROFILE_ID, '12345'),
         ],
     )
     async def test_happy_path(self, id_type: IdentifierType, id_value: str, commit_notification: Row[Any]) -> None:
