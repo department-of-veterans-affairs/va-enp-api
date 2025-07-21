@@ -59,17 +59,25 @@ class TestLegacyRecipientIdentifiersDaoSet:
             await session.commit()
 
     async def test_sad_path(self, commit_notification: Row[Any]) -> None:
-        """Test the ability to add a recipient identifier to the database.
+        """Test that set_recipient_identifiers raises NonRetryableError when database constraint is violated.
 
         Args:
             commit_notification (Row[Any]): Notification that was committed to the database
         """
+        recipient = RecipientIdentifierModel(id_type=IdentifierType.PID, id_value='12345')
+
+        # First insertion should succeed
+        await RecipientIdentifiersDao.set_recipient_identifiers(
+            notification_id=commit_notification.id, recipient_identifiers=recipient
+        )
+
+        # Second insertion with same notification_id should fail with NonRetryableError
+        # due to IntegrityError (duplicate key constraint violation)
         with pytest.raises(NonRetryableError):
             await RecipientIdentifiersDao.set_recipient_identifiers(
-                notification_id=commit_notification.id, recipient_identifiers='not a recipient identifier'
+                notification_id=commit_notification.id, recipient_identifiers=recipient
             )
 
-        # tear down, notification cleanup up by commit_notification fixture
         legacy_recipient_identifiers = metadata_legacy.tables['recipient_identifiers']
 
         async with get_write_session_with_context() as session:
@@ -95,13 +103,13 @@ class TestLegacyRecipientIdentifiersDaoSet:
     async def test_set_recipient_identifiers_exception_handling(
         self,
         caught_exception: Exception,
-        raised_exception: Exception,
+        raised_exception: type[Exception],
     ) -> None:
         """Test that _set_recipient_identifiers raises the correct custom error when a specific SQLAlchemy exception occurs.
 
         Args:
             caught_exception (Exception): The exception our code caught
-            raised_exception (Exception): The exception we expect to be raised by our code
+            raised_exception (type[Exception]): The exception type we expect to be raised by our code
         """
         # Patch the session context and simulate the exception during execution
         with patch('app.legacy.dao.recipient_identifiers_dao.get_write_session_with_context') as mock_session_ctx:
