@@ -59,6 +59,7 @@ class TestLegacyRecipientIdentifiersDaoSet:
             persisted_recipient = result.fetchone()
 
             # Verify the expected data is present
+            assert persisted_recipient is not None, 'Expected recipient identifier to be found in database'
             assert persisted_recipient.id_type == id_type.value
             assert persisted_recipient.id_value == id_value
             assert persisted_recipient.notification_id == commit_notification.id
