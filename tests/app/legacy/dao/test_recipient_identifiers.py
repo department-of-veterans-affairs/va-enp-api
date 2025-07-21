@@ -73,7 +73,9 @@ class TestLegacyRecipientIdentifiersDaoSet:
             )
             await session.commit()
 
-    async def test_sad_path(self, commit_notification: Row[Any]) -> None:
+    async def test_set_recipient_identifiers_raise_non_retryable_for_db_constraint(
+        self, commit_notification: Row[Any]
+    ) -> None:
         """Test that set_recipient_identifiers raises NonRetryableError when database constraint is violated.
 
         Args:
@@ -95,6 +97,7 @@ class TestLegacyRecipientIdentifiersDaoSet:
 
         legacy_recipient_identifiers = metadata_legacy.tables['recipient_identifiers']
 
+        # tear down, notification cleanup up by commit_notification fixture
         async with get_write_session_with_context() as session:
             await session.execute(
                 delete(legacy_recipient_identifiers).where(
