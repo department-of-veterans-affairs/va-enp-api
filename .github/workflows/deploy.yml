@@ -3,6 +3,7 @@ run-name: "Deploy to ${{ inputs.environment }}"
 
 permissions:
   contents: read
+  id-token: write
 
 
 on:
