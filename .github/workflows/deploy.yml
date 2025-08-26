@@ -36,10 +36,8 @@ jobs:
         uses: ./.github/actions/build-push-artifacts
         with:
           ref: ${{ inputs.ref }}
-          aws-access-key-id: ${{ secrets.VAEC_AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.VAEC_AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ secrets.AWS_REGION }}
-          role-to-assume: ${{ secrets.VAEC_DEPLOY_ROLE }}
+          role-to-assume: ${{ secrets.OIDC_DEPLOY_ROLE_PREFIX }}-${{ inputs.environment }}
 
       - name: Set uppercase environment name
         id: env_case
@@ -51,10 +49,8 @@ jobs:
           task-definition-path: "./cd/va-enp-api-task-definition.json"
           container-name: "va-enp-api"
           image: ${{ steps.build_and_push.outputs.image-uri }}
-          aws-access-key-id: ${{ secrets.VAEC_AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.VAEC_AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ secrets.AWS_REGION }}
-          role-to-assume: ${{ secrets.VAEC_DEPLOY_ROLE }}
+          role-to-assume: ${{ secrets.OIDC_DEPLOY_ROLE_PREFIX }}-${{ inputs.environment }}
           environment: ${{ inputs.environment }}
         env:
           AWS_ARN_REGION: ${{ secrets.AWS_ARN_REGION }}
