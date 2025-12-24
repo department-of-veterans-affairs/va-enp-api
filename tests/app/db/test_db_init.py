@@ -29,6 +29,43 @@ def test_init_db() -> None:
     assert isinstance(_engine_napi_write, AsyncEngine)
 
 
+@pytest.mark.parametrize('hide_parameters', [True, False])
+def test_create_engines_hide_parameters(monkeypatch: pytest.MonkeyPatch, hide_parameters: bool) -> None:
+    """Ensure create_engines forwards SQLALCHEMY_HIDE_PARAMETERS-derived options."""
+    from app.db import db_init
+
+    # Preserve module globals so we can restore them after stubbing engine creation.
+    original_read = db_init._engine_napi_read
+    original_write = db_init._engine_napi_write
+
+    # Collect kwargs passed to create_async_engine for assertions.
+    created_kwargs: list[dict[str, object]] = []
+
+    def fake_create_async_engine(*_args: object, **kwargs: object) -> object:
+        created_kwargs.append(kwargs)
+        return object()
+
+    # Replace engine factory and options to avoid real DB connections.
+    monkeypatch.setattr(db_init, 'create_async_engine', fake_create_async_engine)
+    monkeypatch.setattr(db_init, 'SQLALCHEMY_ENGINE_OPTIONS', {'hide_parameters': hide_parameters})
+
+    try:
+        db_init.create_engines(pool_pre_ping=False)
+
+        assert len(created_kwargs) == 2
+
+        # Both read/write engine creations should receive the same hide_parameters value.
+        assert [kwargs['hide_parameters'] for kwargs in created_kwargs] == [
+            hide_parameters,
+            hide_parameters,
+        ]
+
+    finally:
+        # Always restore module globals, even if assertions fail, to avoid test bleed.
+        db_init._engine_napi_read = original_read
+        db_init._engine_napi_write = original_write
+
+
 @pytest.mark.parametrize('engine_type', ['read', 'write'])
 def test_get_db_session_none(engine_type: str) -> None:
     """Ensure globals are populated before calling get_db_session."""
