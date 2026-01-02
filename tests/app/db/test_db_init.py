@@ -37,7 +37,6 @@ def test_create_engines_hide_parameters(monkeypatch: pytest.MonkeyPatch, hide_pa
     """Ensure create_engines forwards SQLALCHEMY_HIDE_PARAMETERS-derived options.
 
     Note: this only checks that create_async_engine receives the hide_parameters kwarg; it does not validate log output.
-
     """
     from app.db import db_init
 
