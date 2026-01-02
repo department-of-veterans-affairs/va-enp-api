@@ -10,9 +10,6 @@ from typing import Any, AsyncContextManager, Callable, Mapping, Never
 from fastapi import Depends, FastAPI, status
 from fastapi.staticfiles import StaticFiles
 from pydantic import UUID4
-from sqlalchemy import text
-from sqlalchemy.exc import SQLAlchemyError
-from sqlalchemy.ext.asyncio import AsyncSession, async_scoped_session
 from starlette_context import plugins
 from starlette_context.middleware import ContextMiddleware
 
@@ -20,7 +17,6 @@ from app.auth import JWTBearerAdmin
 from app.clients.redis_client import RedisClientManager
 from app.db.db_init import (
     close_db,
-    get_read_session_with_depends,
     init_db,
 )
 from app.legacy.v2.notifications.rest import v2_legacy_notification_router, v2_notification_router
@@ -135,26 +131,6 @@ def simple_route() -> dict[str, str]:
     """
     logger.info('Hello World')
     return {'Hello': 'World'}
-
-
-@app.get('/debug/db-error', include_in_schema=False)
-async def debug_db_error(
-    session: async_scoped_session[AsyncSession] = Depends(get_read_session_with_depends),
-) -> dict[str, str]:
-    """Trigger a database error to exercise parameter redaction in logs.
-
-    Args:
-        session: Async read session dependency.
-
-    Returns:
-        dict[str, str]: Simple status response.
-
-    """
-    try:
-        await session.execute(text('SELECT * FROM missing_table WHERE id = :value'), {'value': 'example-value'})
-    except SQLAlchemyError:
-        logger.exception('Intentional SQLAlchemy error for parameter redaction test.')
-    return {'status': 'ok'}
 
 
 @app.get(

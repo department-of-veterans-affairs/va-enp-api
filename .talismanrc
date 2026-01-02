@@ -1,6 +1,6 @@
 fileignoreconfig:
 - filename: .env.local
-  checksum: 9b2641c6e205ec1d45e78a57d88f821153924c8bc56aaadbeb05767d451090bc
+  checksum: a87970c5233a7824cd8e6ff0e35efbf0c94af5cd180e20e970fba669cdd2eb76
 - filename: app/auth.py
   checksum: c9c26cb7334788e91988fd0feac92e636a2d0ca3cfb135e56ece73ffc10c7c77
 - filename: app/clients/redis_client.py
@@ -22,13 +22,13 @@ fileignoreconfig:
 - filename: cd/dev.env
   checksum: 0cbd0c338b6f4dac447c102f072cfcb69ed98374cf2c2ea5baea98c18e34243f
 - filename: cd/perf.env
-  checksum: f64053adb43156484ca8da215af71462988db66e4e09aa7d84ab9d8fe579fffa
+  checksum: bb088b409879f90e4921d3b5a1695a0ac89c7ac96dc04b81435de032d3cd85cf
 - filename: cd/prod.env
   checksum: 5dd82bf0de04fb1db67cc5d1704e65300b2a47119289a4b8d45702b243efe5ac
 - filename: cd/staging.env
   checksum: dab9978625d480a04883d97388681f86a6927994ed9ce8d7c30d8e1f078cfef2
 - filename: ci/.env.docker
-  checksum: 620ec8c82ab73dced288f55c0b13b8de4b3679fdd4622b621dbd1c9089dfc187
+  checksum: 0f259e67d8b3cce9fe6678295fdaffd0d3ce4bd631a2685bc4fb76234fc100e7
 - filename: poetry.lock
   checksum: aa11b6c4e4faec5ba5b298b9d2aca4b45f4fe7169af3989e9d44a8a9486d8c30
 - filename: postman/enp-api.postman_collection.json
@@ -70,7 +70,7 @@ fileignoreconfig:
 - filename: tests/napi_table_data.toml
   checksum: db0b29eb4c9c25867f0aa0fd4ae5bacceed1cea95c33602274bacf31f073aa0b
 - filename: tests/app/db/test_db_init.py
-  checksum: 6941eb4e5fe6d78a999cdd956011969f12818a8213cfa7fb4dbcbd47f50f625c
+  checksum: b5df0c343576cf4054ad506a45761ef39fb87d6a4dfac9a76f848396b9c51bf3
 scopeconfig:
 - scope: ""
 version: "1.0"

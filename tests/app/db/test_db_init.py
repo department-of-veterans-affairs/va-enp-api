@@ -1,7 +1,10 @@
 """Test module for testing the app/db/db_init.py file."""
 
+import logging
+
 import pytest
-from sqlalchemy import text
+from sqlalchemy import create_engine, text
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession
 
 from app.db.db_init import (
@@ -31,7 +34,11 @@ def test_init_db() -> None:
 
 @pytest.mark.parametrize('hide_parameters', [True, False])
 def test_create_engines_hide_parameters(monkeypatch: pytest.MonkeyPatch, hide_parameters: bool) -> None:
-    """Ensure create_engines forwards SQLALCHEMY_HIDE_PARAMETERS-derived options."""
+    """Ensure create_engines forwards SQLALCHEMY_HIDE_PARAMETERS-derived options.
+
+    Note: this only checks that create_async_engine receives the hide_parameters kwarg; it does not validate log output.
+
+    """
     from app.db import db_init
 
     # Preserve module globals so we can restore them after stubbing engine creation.
@@ -64,6 +71,28 @@ def test_create_engines_hide_parameters(monkeypatch: pytest.MonkeyPatch, hide_pa
         # Always restore module globals, even if assertions fail, to avoid test bleed.
         db_init._engine_napi_read = original_read
         db_init._engine_napi_write = original_write
+
+
+@pytest.mark.parametrize('hide_parameters', [True, False])
+def test_hide_parameters_redacts_engine_logs(caplog: pytest.LogCaptureFixture, hide_parameters: bool) -> None:
+    """Verify engine logs include or redact bound values based on hide_parameters."""
+    engine = create_engine('sqlite://', echo=True, hide_parameters=hide_parameters)
+    try:
+        caplog.clear()
+        with caplog.at_level(logging.INFO, logger='sqlalchemy.engine'):
+            with pytest.raises(SQLAlchemyError):
+                with engine.connect() as conn:
+                    conn.execute(text('SELECT * FROM missing_table WHERE id = :value'), {'value': 'example-value'})
+
+        messages = [record.getMessage() for record in caplog.records]
+        assert any('missing_table' in message for message in messages)
+
+        if hide_parameters:
+            assert all('example-value' not in message for message in messages)
+        else:
+            assert any('example-value' in message for message in messages)
+    finally:
+        engine.dispose()
 
 
 @pytest.mark.parametrize('engine_type', ['read', 'write'])
