@@ -2,6 +2,9 @@ import json
 import os
 
 DB_ENGINE = 'postgresql+psycopg'
+SQLALCHEMY_ENGINE_OPTIONS = {
+    'hide_parameters': os.getenv('SQLALCHEMY_HIDE_PARAMETERS', 'True') == 'True',
+}
 
 # These configs require a change in infra to be updated
 DB_AUTH = json.loads(os.getenv('DB_AUTH', '{"username": "postgres", "password": "LocalPassword"}'))

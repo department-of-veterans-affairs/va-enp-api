@@ -13,7 +13,7 @@ from sqlalchemy.ext.asyncio import (
     create_async_engine,
 )
 
-from app.db import NAPI_DB_READ_URI, NAPI_DB_WRITE_URI
+from app.db import NAPI_DB_READ_URI, NAPI_DB_WRITE_URI, SQLALCHEMY_ENGINE_OPTIONS
 from app.logging.logging_config import logger
 
 _engine_napi_read: AsyncEngine | None = None
@@ -46,9 +46,19 @@ def create_engines(pool_pre_ping: bool) -> None:
     """
     global _engine_napi_read, _engine_napi_write
     # Create the read database engine.
-    _engine_napi_read = create_async_engine(NAPI_DB_READ_URI, echo=False, pool_pre_ping=pool_pre_ping)
+    _engine_napi_read = create_async_engine(
+        NAPI_DB_READ_URI,
+        echo=False,
+        pool_pre_ping=pool_pre_ping,
+        **SQLALCHEMY_ENGINE_OPTIONS,
+    )
     # Create the write database engine.
-    _engine_napi_write = create_async_engine(NAPI_DB_WRITE_URI, echo=False, pool_pre_ping=pool_pre_ping)
+    _engine_napi_write = create_async_engine(
+        NAPI_DB_WRITE_URI,
+        echo=False,
+        pool_pre_ping=pool_pre_ping,
+        **SQLALCHEMY_ENGINE_OPTIONS,
+    )
 
 
 async def init_napi_metadata() -> None:
