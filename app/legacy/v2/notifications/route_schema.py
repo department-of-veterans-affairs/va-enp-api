@@ -31,10 +31,10 @@ from app.legacy.v2.notifications.validators import is_valid_recipient_id_value
 from app.logging.logging_config import logger
 
 
-class StrictBaseModel(BaseModel):
-    """Base model to enforce strict mode."""
+class RestrictiveBaseModel(BaseModel):
+    """Base model to prevent additional properties without strict type checking."""
 
-    model_config = ConfigDict(strict=True)
+    model_config = ConfigDict(strict=False, extra='forbid')
 
 
 class HttpsUrl(HttpUrl):
@@ -43,7 +43,7 @@ class HttpsUrl(HttpUrl):
     _constraints = UrlConstraints(max_length=255, allowed_schemes=['https'])
 
 
-class V2Template(StrictBaseModel):
+class V2Template(BaseModel):
     """V2 templates have an associated version to conform to the notification-api database schema."""
 
     id: Annotated[UUID4, Field(strict=False)]
@@ -51,10 +51,10 @@ class V2Template(StrictBaseModel):
     version: int = 0
 
 
-class RecipientIdentifierModel(StrictBaseModel):
+class RecipientIdentifierModel(RestrictiveBaseModel):
     """Used to look up contact information from VA Profile or MPI."""
 
-    id_type: Annotated[IdentifierType, Field(strict=False)]
+    id_type: IdentifierType
     id_value: str
 
     @model_validator(mode='after')
@@ -128,10 +128,10 @@ ValidatedPhoneNumber = Annotated[
 ##################################################
 
 
-class V2PostPushRequestModel(StrictBaseModel):
+class V2PostPushRequestModel(RestrictiveBaseModel):
     """Request model for the v2 push notification endpoint."""
 
-    class ICNRecipientIdentifierModel(StrictBaseModel):
+    class ICNRecipientIdentifierModel(RestrictiveBaseModel):
         """Model for ICN recipient identifier."""
 
         # Created a specific enum for ICN so api spec is clear, and only "ICN" is allowed.
@@ -145,7 +145,7 @@ class V2PostPushRequestModel(StrictBaseModel):
     personalisation: dict[str, str | int | float] | None = None
 
 
-class V2PostPushResponseModel(StrictBaseModel):
+class V2PostPushResponseModel(BaseModel):
     """Response model for v2 push notification endpoint."""
 
     result: str = 'success'
@@ -156,10 +156,10 @@ class V2PostPushResponseModel(StrictBaseModel):
 ##################################################
 
 
-class V2GetNotificationResponseModel(StrictBaseModel):
+class V2GetNotificationResponseModel(BaseModel):
     """Common attributes for the GET /v2/notifications/<:id> route response."""
 
-    id: Annotated[UUID4, Field(strict=False)]
+    id: UUID4
     billing_code: str | None = Field(max_length=256, default=None)
     body: str
     callback_url: HttpsUrl | None = None
@@ -176,7 +176,7 @@ class V2GetNotificationResponseModel(StrictBaseModel):
     status: str
     status_reason: str | None
     template: V2Template
-    type: Annotated[NotificationType, Field(strict=False)]
+    type: NotificationType
 
 
 class V2GetEmailNotificationResponseModel(V2GetNotificationResponseModel):
@@ -193,7 +193,7 @@ class V2GetSmsNotificationResponseModel(V2GetNotificationResponseModel):
 
     email_address: None
     phone_number: ValidatedPhoneNumber
-    sms_sender_id: Annotated[UUID4, Field(strict=False)]
+    sms_sender_id: UUID4
     subject: None
 
 
@@ -202,7 +202,7 @@ class V2GetSmsNotificationResponseModel(V2GetNotificationResponseModel):
 ##################################################
 
 
-class PersonalisationFileObject(StrictBaseModel):
+class PersonalisationFileObject(RestrictiveBaseModel):
     """Personalisation file attachment object."""
 
     file: str
@@ -214,7 +214,7 @@ class PersonalisationFileObject(StrictBaseModel):
     sending_method: Literal['attach', 'link'] | None = None
 
 
-class V2PostNotificationRequestModel(StrictBaseModel):
+class V2PostNotificationRequestModel(RestrictiveBaseModel):
     """Common attributes for the POST /v2/notifications/<:notification_type> routes request."""
 
     billing_code: str | None = Field(max_length=256, default=None)
@@ -223,8 +223,8 @@ class V2PostNotificationRequestModel(StrictBaseModel):
 
     recipient_identifier: RecipientIdentifierModel | None = None
     reference: str | None = None
-    template_id: Annotated[UUID4, Field(strict=False)]
-    scheduled_for: Annotated[AwareDatetime, Field(strict=False)] | None = None
+    template_id: UUID4
+    scheduled_for: AwareDatetime | None = None
 
     async def get_reply_to_text(self) -> str:
         """Get the reply_to_text field for this request.
@@ -311,7 +311,7 @@ class V2PostSmsRequestModel(V2PostNotificationRequestModel):
     """Attributes specific to requests to send SMS notifications."""
 
     phone_number: ValidatedPhoneNumber | None = None
-    sms_sender_id: Annotated[UUID4, Field(strict=False)] | None = None
+    sms_sender_id: UUID4 | None = None
 
     json_schema_extra: ClassVar[dict[str, dict[str, Collection[str]]]] = {
         'examples': {
@@ -431,39 +431,39 @@ async def _get_sms_sender(sms_sender_id: UUID4 | None, service_id: UUID4) -> str
 ##################################################
 
 
-class V2PostNotificationResponseModel(StrictBaseModel):
+class V2PostNotificationResponseModel(BaseModel):
     """Common attributes for the POST /v2/notifications/<:notification_type> routes response."""
 
-    id: Annotated[UUID4, Field(strict=False)]
+    id: UUID4
     billing_code: str | None = Field(max_length=256, default=None)
     callback_url: HttpsUrl | None = None
     reference: str | None
     template: V2Template
     uri: HttpsUrl
-    scheduled_for: Annotated[AwareDatetime, Field(strict=False)] | None = None
+    scheduled_for: AwareDatetime | None = None
 
 
-class V2EmailContentModel(StrictBaseModel):
+class V2EmailContentModel(BaseModel):
     """The content body of a response for sending an e-mail notification."""
 
     body: str
     subject: str
 
 
-class V2PostEmailResponseModel(V2PostNotificationResponseModel):
+class V2PostEmailResponseModel(BaseModel):
     """Attributes specific to responses for sending e-mail notifications."""
 
     content: V2EmailContentModel
 
 
-class V2SmsContentModel(StrictBaseModel):
+class V2SmsContentModel(BaseModel):
     """The content body of a response for sending an SMS notification."""
 
     body: str
     from_number: ValidatedPhoneNumber
 
 
-class V2PostSmsResponseModel(V2PostNotificationResponseModel):
+class V2PostSmsResponseModel(BaseModel):
     """Attributes specific to responses for sending SMS notifications."""
 
     content: V2SmsContentModel
