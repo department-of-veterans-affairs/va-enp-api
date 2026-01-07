@@ -456,7 +456,7 @@ class V2PostEmailResponseModel(V2PostNotificationResponseModel):
     content: V2EmailContentModel
 
 
-class V2SmsContentModel(V2PostNotificationResponseModel):
+class V2SmsContentModel(BaseModel):
     """The content body of a response for sending an SMS notification."""
 
     body: str
