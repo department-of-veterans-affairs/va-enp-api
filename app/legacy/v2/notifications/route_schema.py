@@ -450,13 +450,13 @@ class V2EmailContentModel(BaseModel):
     subject: str
 
 
-class V2PostEmailResponseModel(BaseModel):
+class V2PostEmailResponseModel(V2PostNotificationResponseModel):
     """Attributes specific to responses for sending e-mail notifications."""
 
     content: V2EmailContentModel
 
 
-class V2SmsContentModel(BaseModel):
+class V2SmsContentModel(V2PostNotificationResponseModel):
     """The content body of a response for sending an SMS notification."""
 
     body: str
