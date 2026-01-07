@@ -102,7 +102,7 @@
 										"header": [],
 										"body": {
 											"mode": "raw",
-											"raw": "{\r\n    \"billing_code\": \"12345\",\r\n    \"callback_url\": \"https://mock-notify.va.gov/\",\r\n    \"personalisation\": {\r\n        \"Test\": \"string\"\r\n    },\r\n    \"reference\": \"external-id\",\r\n    \"template_id\": \"{{sms-template-id}}\",\r\n    \"phone_number\": \"+18005550101\",\r\n    \"sms_sender_id\": \"{{sms-sender-id}}\"\r\n}",
+											"raw": "{\r\n    \"billing_code\": \"12345\",\r\n    \"callback_url\": \"https://mock-notify.va.gov/\",\r\n    \"personalisation\": {\r\n        \"Test\": \"string\"\r\n    },\r\n    \"reference\": \"external-id\",\r\n    \"template_id\": \"{{sms-template-id}}\",\r\n    \"phone_number\": \"+18005550101\"\r\n    // \"sms_sender_id\": \"{{sms-sender-id}}\"\r\n}",
 											"options": {
 												"raw": {
 													"language": "json"
@@ -217,7 +217,7 @@
 											"mode": "raw",
 											"raw": "{\n    \"mobile_app\": \"VA_FLAGSHIP_APP\",\n    \"template_id\": \"{{vetext-template-id}}\",\n    \"recipient_identifier\": {\n        \"id_type\": \"ICN\",\n        \"id_value\": \"{{icn}}\"\n    },\n    \"personalisation\": {\n        \"appointment_date\": \"bar\",\n        \"appointment_time\": \"foo\"\n    }\n}"
 										},
-										"url": "{{notification-api-url}}/legency/v2/notifications/push",
+										"url": "{{notification-api-url}}/legacy/v2/notifications/push",
 										"description": "api-key field combines key name, service id and secret:\n<key name>-<service id>-<secret>\nwhere secret is the return value when calling create api key\nThis is important as the jwt token for sending message should use service-id and service-api-key to generate the JWT bearer token"
 									},
 									"response": []
@@ -384,7 +384,7 @@
 								"header": [],
 								"body": {
 									"mode": "raw",
-									"raw": "{\n  \"to\": \"user@example.com\",\n  \"personalization\": {\n    \"first_name\": \"John\",\n    \"order_number\": \"12345\",\n    \"confirmation_link\": \"https://example.com/confirm/abc123\"\n  },\n  \"template\": \"{{template-id}}\"\n}",
+									"raw": "{\n  \"to\": \"user@example.com\",\n  \"personalization\": {\n    \"first_name\": \"John\",\n    \"order_number\": \"12345\",\n    \"confirmation_link\": \"https://example.com/confirm/abc123\"\n  },\n  \"template\": \"{{template-id}}\"\n  \n}",
 									"options": {
 										"raw": {
 											"language": "json"
