@@ -463,7 +463,7 @@ class V2SmsContentModel(V2PostNotificationResponseModel):
     from_number: ValidatedPhoneNumber
 
 
-class V2PostSmsResponseModel(BaseModel):
+class V2PostSmsResponseModel(V2PostNotificationResponseModel):
     """Attributes specific to responses for sending SMS notifications."""
 
     content: V2SmsContentModel
