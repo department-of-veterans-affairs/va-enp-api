@@ -1,9 +1,15 @@
 """Request and Response bodies for v3/notifications."""
 
-from pydantic import UUID4, AwareDatetime, BaseModel
+from pydantic import UUID4, AwareDatetime, BaseModel, ConfigDict
 
 
-class NotificationSingleRequest(BaseModel):
+class RestrictiveBaseModel(BaseModel):
+    """Base model to prevent additional properties without strict type checking."""
+
+    model_config = ConfigDict(strict=False, extra='forbid')
+
+
+class NotificationSingleRequest(RestrictiveBaseModel):
     """Request model for notification endpoint."""
 
     to: str

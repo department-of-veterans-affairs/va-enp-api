@@ -1,11 +1,17 @@
 """Schema for device registration endpoints."""
 
-from pydantic import AliasChoices, BaseModel, Field
+from pydantic import AliasChoices, BaseModel, ConfigDict, Field
 
 from app.constants import MobileAppType, OSPlatformType
 
 
-class DeviceRegistrationRequest(BaseModel):
+class RestrictiveBaseModel(BaseModel):
+    """Base model to prevent additional properties without strict type checking."""
+
+    model_config = ConfigDict(strict=False, extra='forbid')
+
+
+class DeviceRegistrationRequest(RestrictiveBaseModel):
     """Request model for register endpoint."""
 
     device_name: str = Field(validation_alias=AliasChoices('device_name', 'deviceName'))
