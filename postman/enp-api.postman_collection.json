@@ -7,7 +7,7 @@
 	},
 	"item": [
 		{
-			"name": "legacy",
+			"name": "legency",
 			"item": [
 				{
 					"name": "v2/notifications",
@@ -23,11 +23,6 @@
 											"script": {
 												"exec": [
 													"const crypto = require('crypto-js');\r",
-													"\r",
-													"const USE_SERVICE = (pm.environment.get('enp-use-service-auth') || '').toLowerCase() === 'true';\r",
-													"\r",
-													"const ADMIN_SECRET_KEY = pm.environment.get('enp-admin-secret') || '';\r",
-													"const ADMIN_ID = 'enp';\r",
 													"\r",
 													"const SERVICE_SECRET_KEY = pm.environment.get('service-api-key') || '';\r",
 													"const SERVICE_ID = pm.environment.get('service-id') || '';\r",
@@ -77,13 +72,25 @@
 													"    return token + \".\" + encodedSignature;\r",
 													"}\r",
 													"\r",
-													"// Choose credentials based on the toggle\r",
-													"const token = USE_SERVICE\r",
-													"    ? generateToken(SERVICE_ID, SERVICE_SECRET_KEY)\r",
-													"    : generateToken(ADMIN_ID, ADMIN_SECRET_KEY);\r",
+													"// Generate token using service credentials\r",
+													"const token = generateToken(SERVICE_ID, SERVICE_SECRET_KEY);\r",
 													"\r",
 													"console.log('JWT Token:', token);\r",
 													"pm.environment.set('jwt_signed', token);"
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										},
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													"if (pm.response.code == 201) {",
+													"    var jsonData = pm.response.json(); ",
+													"    pm.environment.set(\"notification-id\", jsonData.id);",
+													"}"
 												],
 												"type": "text/javascript",
 												"packages": {},
@@ -103,6 +110,111 @@
 										"body": {
 											"mode": "raw",
 											"raw": "{\r\n    \"billing_code\": \"12345\",\r\n    \"callback_url\": \"https://mock-notify.va.gov/\",\r\n    \"personalisation\": {\r\n        \"Test\": \"string\"\r\n    },\r\n    \"reference\": \"external-id\",\r\n    \"template_id\": \"{{sms-template-id}}\",\r\n    \"phone_number\": \"+18005550101\"\r\n    // \"sms_sender_id\": \"{{sms-sender-id}}\"\r\n}",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": "{{notification-api-url}}/legacy/v2/notifications/sms"
+									},
+									"response": []
+								},
+								{
+									"name": "send sms with recipient_identifier",
+									"event": [
+										{
+											"listen": "prerequest",
+											"script": {
+												"exec": [
+													"const crypto = require('crypto-js');\r",
+													"\r",
+													"const SERVICE_SECRET_KEY = pm.environment.get('service-api-key') || '';\r",
+													"const SERVICE_ID = pm.environment.get('service-id') || '';\r",
+													"\r",
+													"const ALGORITHM = 'HS256';\r",
+													"const ACCESS_TOKEN_EXPIRE_SECONDS = 15;\r",
+													"\r",
+													"function base64url(source) {\r",
+													"    // Encode in classical base64\r",
+													"    let encodedSource = crypto.enc.Base64.stringify(source);\r",
+													"\r",
+													"    // Remove padding equal characters\r",
+													"    encodedSource = encodedSource.replace(/=+$/, '');\r",
+													"\r",
+													"    // Replace characters according to base64url specifications\r",
+													"    encodedSource = encodedSource.replace(/\\+/g, '-');\r",
+													"    encodedSource = encodedSource.replace(/\\//g, '_');\r",
+													"\r",
+													"    return encodedSource;\r",
+													"}\r",
+													"\r",
+													"function generateToken(issuer, sigKey) {\r",
+													"    const header = {\r",
+													"        typ: 'JWT',\r",
+													"        alg: ALGORITHM,\r",
+													"    };\r",
+													"\r",
+													"    const now = Math.floor(Date.now() / 1000);\r",
+													"\r",
+													"    const payload = {\r",
+													"        iss: issuer,\r",
+													"        iat: now,\r",
+													"        exp: now + ACCESS_TOKEN_EXPIRE_SECONDS,\r",
+													"    };\r",
+													"\r",
+													"    const stringifiedHeader = crypto.enc.Utf8.parse(JSON.stringify(header));\r",
+													"    const encodedHeader = base64url(stringifiedHeader);\r",
+													"\r",
+													"    const stringifiedPayload = crypto.enc.Utf8.parse(JSON.stringify(payload));\r",
+													"    const encodedPayload = base64url(stringifiedPayload);\r",
+													"\r",
+													"    const token = encodedHeader + \".\" + encodedPayload;\r",
+													"\r",
+													"    const signature = crypto.HmacSHA256(token, sigKey);\r",
+													"    const encodedSignature = base64url(signature);\r",
+													"\r",
+													"    return token + \".\" + encodedSignature;\r",
+													"}\r",
+													"\r",
+													"// Generate token using service credentials\r",
+													"const token = generateToken(SERVICE_ID, SERVICE_SECRET_KEY);\r",
+													"\r",
+													"console.log('JWT Token:', token);\r",
+													"pm.environment.set('jwt_signed', token);"
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										},
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													"if (pm.response.code == 201) {",
+													"    var jsonData = pm.response.json(); ",
+													"    pm.environment.set(\"notification-id\", jsonData.id);",
+													"}"
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										}
+									],
+									"request": {
+										"auth": {
+											"type": "bearer",
+											"bearer": {
+												"token": "{{jwt_signed}}"
+											}
+										},
+										"method": "POST",
+										"header": [],
+										"body": {
+											"mode": "raw",
+											"raw": "{\r\n    \"template_id\": \"{{sms-template-id}}\",\r\n    \"recipient_identifier\": {\r\n        \"id_type\": \"VAPROFILEID\",\r\n        \"id_value\": \"{{va-profile-id}}\"\r\n    },\r\n    \"callback_url\": \"https://staging-api.va.gov/vanotify/internal/swagger\"\r\n    // \"sms_sender_id\": \"{{sms-sender-id}}\"\r\n}",
 											"options": {
 												"raw": {
 													"language": "json"
@@ -186,10 +298,6 @@
 											"listen": "test",
 											"script": {
 												"exec": [
-													"if (pm.response.code == 201) {",
-													"    var jsonData = pm.response.json(); ",
-													"    pm.environment.set(\"notification-id\", jsonData.id);",
-													"}",
 													""
 												],
 												"type": "text/javascript",
@@ -371,6 +479,20 @@
 										"packages": {},
 										"requests": {}
 									}
+								},
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"if (pm.response.code == 202) {",
+											"    var jsonData = pm.response.json(); ",
+											"    pm.environment.set(\"notification-id\", jsonData.id);",
+											"}"
+										],
+										"type": "text/javascript",
+										"packages": {},
+										"requests": {}
+									}
 								}
 							],
 							"request": {
@@ -396,6 +518,91 @@
 							"response": []
 						}
 					]
+				},
+				{
+					"name": "device registration",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									"const crypto = require('crypto-js');",
+									"",
+									"const ADMIN_SECRET_KEY = pm.environment.get('enp-admin-secret') || '';",
+									"const ALGORITHM = 'HS256';",
+									"const ACCESS_TOKEN_EXPIRE_SECONDS = 15;",
+									"",
+									"function base64url(source) {",
+									"    // Encode in classical base64",
+									"    let encodedSource = crypto.enc.Base64.stringify(source);",
+									"",
+									"    // Remove padding equal characters",
+									"    encodedSource = encodedSource.replace(/=+$/, '');",
+									"",
+									"    // Replace characters according to base64url specifications",
+									"    encodedSource = encodedSource.replace(/\\+/g, '-');",
+									"    encodedSource = encodedSource.replace(/\\//g, '_');",
+									"",
+									"    return encodedSource;",
+									"}",
+									"",
+									"function generateToken(sigKey = ADMIN_SECRET_KEY) {",
+									"    const header = {",
+									"        typ: 'JWT',",
+									"        alg: ALGORITHM,",
+									"    };",
+									"",
+									"    var payload = {",
+									"        iss: 'enp',",
+									"        iat: Math.floor(Date.now() / 1000),",
+									"        exp: Math.floor(Date.now() / 1000) + ACCESS_TOKEN_EXPIRE_SECONDS,",
+									"    };",
+									"",
+									"    const stringifiedHeader = crypto.enc.Utf8.parse(JSON.stringify(header));",
+									"    const encodedHeader = base64url(stringifiedHeader);",
+									"",
+									"    const stringifiedPayload = crypto.enc.Utf8.parse(JSON.stringify(payload));",
+									"    const encodedPayload = base64url(stringifiedPayload);",
+									"",
+									"    const token = encodedHeader + \".\" + encodedPayload;",
+									"",
+									"    const signature = crypto.HmacSHA256(token, sigKey);",
+									"    const encodedSignature = base64url(signature);",
+									"",
+									"    return token + \".\" + encodedSignature;",
+									"}",
+									"",
+									"const token = generateToken();",
+									"console.log(token);",
+									"pm.environment.set('jwt_signed', token);"
+								],
+								"type": "text/javascript",
+								"packages": {},
+								"requests": {}
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": {
+								"token": "{{jwt_signed}}"
+							}
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"device_name\": \"test\",\n  \"device_token\": \"test\",\n  \"app_name\": \"VA_FLAGSHIP_APP\",\n  \"os_name\": \"IOS\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": "{{notification-api-url}}/v3/device-registrations/"
+					},
+					"response": []
 				}
 			]
 		},

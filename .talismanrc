@@ -32,7 +32,7 @@ fileignoreconfig:
 - filename: poetry.lock
   checksum: aa11b6c4e4faec5ba5b298b9d2aca4b45f4fe7169af3989e9d44a8a9486d8c30
 - filename: postman/enp-api.postman_collection.json
-  checksum: e10164a7c77dd9c8d6e974605ef19a2897303048068759525391d39cf7beca63
+  checksum: a7d8162e930cea5b9bd4677150cf54e1303169a367a51cddbf35eb17cf29e8f2
 - filename: tests/app/clients/test_redis_client.py
   checksum: 1f703710c3a3a3da87183b05d63b8116d5cf3927619c5cfd89a7232936f26b44
 - filename: tests/app/legacy/clients/test_sqs.py
