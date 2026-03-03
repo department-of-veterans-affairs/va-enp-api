@@ -9,6 +9,7 @@ from typing import Any, AsyncContextManager, Callable, Mapping, Never
 
 from fastapi import Depends, FastAPI, status
 from fastapi.staticfiles import StaticFiles
+from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
 from pydantic import UUID4
 from starlette_context import plugins
 from starlette_context.middleware import ContextMiddleware
@@ -22,6 +23,7 @@ from app.db.db_init import (
 from app.legacy.v2.notifications.rest import v2_legacy_notification_router, v2_notification_router
 from app.logging.logging_config import CustomizeLogger, logger
 from app.state import ENPState
+from app.telemetry import configure_telemetry
 from app.v3 import api_router as v3_router
 
 MKDOCS_DIRECTORY = 'site'
@@ -69,6 +71,10 @@ async def lifespan(app: CustomFastAPI) -> AsyncIterator[Never]:
         None: nothing
 
     """
+    # OTel must be configured before anything else
+    configure_telemetry()
+    FastAPIInstrumentor.instrument_app(app)
+
     logger.info('Initializing the RedisClientManager...')
     redis_url = os.getenv('REDIS_URL', 'redis://0.0.0.0:6379')
     redis_manager = RedisClientManager(redis_url)
