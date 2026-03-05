@@ -28,7 +28,7 @@ fileignoreconfig:
 - filename: cd/staging.env
   checksum: dab9978625d480a04883d97388681f86a6927994ed9ce8d7c30d8e1f078cfef2
 - filename: ci/.env.docker
-  checksum: 0f259e67d8b3cce9fe6678295fdaffd0d3ce4bd631a2685bc4fb76234fc100e7
+  checksum: f4482a5564d1d85849c2d6a29d62566cb9a0e09023a338f6a59cd5932d382bbc
 - filename: poetry.lock
   checksum: 7cc6f459a567e245a3812ee581f825b3ac4d86eeed039e986d8b8a805344e2f2
 - filename: postman/enp-api.postman_collection.json
