@@ -1,3 +1,5 @@
+# Local development only - debug exporter prints telemetry to stdout for local verification
+# In production the Datadog Agent sidecar handles telemetry forwarding
 receivers:
   otlp:
     protocols:

@@ -22,6 +22,8 @@ services:
       - "6379:6379"
 
   otel-collector:
+    # Local development only - in production the Datadog Agent sidecar receives
+    # telemetry on localhost:4317 and forwards to Datadog
     image: otel/opentelemetry-collector:latest
     command: ["--config=/etc/otel-collector-config.yaml"]
     volumes:
