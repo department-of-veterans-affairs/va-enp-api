@@ -12,6 +12,8 @@ from opentelemetry.sdk.resources import Resource
 from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import BatchSpanProcessor
 
+from app.logging.logging_config import logger
+
 
 def configure_telemetry(service_name: str = 'va-enp-api') -> None:
     """Configure OpenTelemetry tracing and metrics for the application.
@@ -19,17 +21,24 @@ def configure_telemetry(service_name: str = 'va-enp-api') -> None:
     Args:
         service_name: The name of the service to be used in telemetry data.
     """
-    # Pull endpoint from env, fall back to OTel default
     endpoint = os.getenv('OTEL_EXPORTER_OTLP_ENDPOINT')
+
+    if not endpoint:
+        logger.warning('OTEL_EXPORTER_OTLP_ENDPOINT not set, telemetry will not be exported')
+        return
+
+    logger.info(f'Configuring telemetry with OTLP endpoint: {endpoint}')
 
     # Detect container resource attributes (container ID, image, etc.)
     docker_resource = ContainerResourceDetector().detect()
     resource = Resource.create({'service.name': service_name}).merge(docker_resource)
 
+    # Configure tracing
     tracer_provider = TracerProvider(resource=resource)
     tracer_provider.add_span_processor(BatchSpanProcessor(OTLPSpanExporter(endpoint=endpoint, insecure=True)))
     trace.set_tracer_provider(tracer_provider)
 
+    # Configure metrics
     metric_reader = PeriodicExportingMetricReader(OTLPMetricExporter(endpoint=endpoint, insecure=True))
     meter_provider = MeterProvider(resource=resource, metric_readers=[metric_reader])
     metrics.set_meter_provider(meter_provider)
