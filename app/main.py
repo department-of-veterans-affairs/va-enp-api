@@ -71,10 +71,6 @@ async def lifespan(app: CustomFastAPI) -> AsyncIterator[Never]:
         None: nothing
 
     """
-    # OTel must be configured before anything else
-    configure_telemetry()
-    FastAPIInstrumentor.instrument_app(app)
-
     logger.info('Initializing the RedisClientManager...')
     redis_url = os.getenv('REDIS_URL', 'redis://0.0.0.0:6379')
     redis_manager = RedisClientManager(redis_url)
@@ -121,6 +117,11 @@ def create_app() -> CustomFastAPI:
 
 
 app: CustomFastAPI = create_app()
+
+# OTel must be configured before the app starts handling requests
+configure_telemetry()
+FastAPIInstrumentor.instrument_app(app)
+
 app.add_middleware(
     ContextMiddleware,
     plugins=(plugins.RequestIdPlugin(force_new_uuid=False),),
