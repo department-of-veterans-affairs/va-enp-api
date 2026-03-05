@@ -30,7 +30,7 @@ fileignoreconfig:
 - filename: ci/.env.docker
   checksum: 0f259e67d8b3cce9fe6678295fdaffd0d3ce4bd631a2685bc4fb76234fc100e7
 - filename: poetry.lock
-  checksum: 1309ed38002fdd82fb273865c19c7ff329b449f6fb7ac8855232290476fb2950
+  checksum: 7cc6f459a567e245a3812ee581f825b3ac4d86eeed039e986d8b8a805344e2f2
 - filename: postman/enp-api.postman_collection.json
   checksum: a7d8162e930cea5b9bd4677150cf54e1303169a367a51cddbf35eb17cf29e8f2
 - filename: tests/app/clients/test_redis_client.py

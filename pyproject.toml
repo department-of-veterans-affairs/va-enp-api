@@ -18,7 +18,7 @@ loguru = "*"
 opentelemetry-api = "*"
 opentelemetry-exporter-otlp-proto-grpc = "*"
 opentelemetry-instrumentation-fastapi = "*"
-opentelemetry-resourcedetector-docker = "*"
+opentelemetry-resource-detector-containerid = "*"
 opentelemetry-sdk = "*"
 phonenumbers = "*"
 psycopg = {extras = ["binary"], version = "*"}

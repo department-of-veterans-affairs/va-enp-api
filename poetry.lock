@@ -2559,23 +2559,19 @@ files = [
 protobuf = ">=5.0,<7.0"
 
 [[package]]
-name = "opentelemetry-resourcedetector-docker"
-version = "0.4.0"
-description = "An OpenTelemetry package to populates Resource attributes from Docker containers"
+name = "opentelemetry-resource-detector-containerid"
+version = "0.60b1"
+description = "Container Resource Detector for OpenTelemetry"
 optional = false
-python-versions = ">=3.8"
+python-versions = ">=3.9"
 groups = ["main"]
 files = [
-    {file = "opentelemetry-resourcedetector-docker-0.4.0.tar.gz", hash = "sha256:2723c8c7e63d78eabd9c6ebf7cca7570f4b73d3db18687544073f3c8f280c0bb"},
-    {file = "opentelemetry_resourcedetector_docker-0.4.0-py3-none-any.whl", hash = "sha256:0313ef1678f8af895b4da00b1643567fd50238ffbf2480ce56a6e73d9c7ff32c"},
+    {file = "opentelemetry_resource_detector_containerid-0.60b1-py3-none-any.whl", hash = "sha256:954785762155e68e507d3d81bc0fed3f89edb74778ec12c6e5f6fcbef1e06638"},
+    {file = "opentelemetry_resource_detector_containerid-0.60b1.tar.gz", hash = "sha256:5fe902cd7c5c2438e1891478e780716e48b5de48f094d2e19bb9fdc2e38323bc"},
 ]
 
 [package.dependencies]
-opentelemetry-sdk = "*"
-opentelemetry-semantic-conventions = "*"
-
-[package.extras]
-dev = ["black", "build", "docker", "flake8", "flake8-black", "isort", "mypy", "pre-commit", "pylint", "pytest", "pytest-cov", "pytest-xdist", "twine", "types-setuptools"]
+opentelemetry-sdk = ">=1.12,<2.0"
 
 [[package]]
 name = "opentelemetry-sdk"
@@ -6098,4 +6094,4 @@ type = ["pytest-mypy"]
 [metadata]
 lock-version = "2.1"
 python-versions = "^3.13"
-content-hash = "458ac6e8c9792b59359bf23fe43eb8604e03b053d487c678d18776465ae1ea40"
+content-hash = "74a6746396756a3076ce04958971e623956290dee560aea6f01ae24d2bcb69de"
