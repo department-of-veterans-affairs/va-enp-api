@@ -5,7 +5,7 @@ import os
 from opentelemetry import metrics, trace
 from opentelemetry.exporter.otlp.proto.grpc.metric_exporter import OTLPMetricExporter
 from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
-from opentelemetry.resourcedetector.docker import DockerResourceDetector
+from opentelemetry.resource.detector.containerid import ContainerResourceDetector
 from opentelemetry.sdk.metrics import MeterProvider
 from opentelemetry.sdk.metrics.export import PeriodicExportingMetricReader
 from opentelemetry.sdk.resources import Resource
@@ -23,7 +23,7 @@ def configure_telemetry(service_name: str = 'va-enp-api') -> None:
     endpoint = os.getenv('OTEL_EXPORTER_OTLP_ENDPOINT')
 
     # Detect container resource attributes (container ID, image, etc.)
-    docker_resource = DockerResourceDetector().detect()
+    docker_resource = ContainerResourceDetector().detect()
     resource = Resource.create({'service.name': service_name}).merge(docker_resource)
 
     tracer_provider = TracerProvider(resource=resource)
