@@ -2,7 +2,7 @@
 
 from typing import Any
 from unittest.mock import AsyncMock, patch
-from uuid import uuid4
+from uuid import UUID
 
 import pytest
 from sqlalchemy import Row, delete, select
@@ -122,11 +122,13 @@ class TestLegacyRecipientIdentifiersDaoSet:
     async def test_set_recipient_identifiers_all_exceptions_non_retryable(
         self,
         caught_exception: Exception,
+        uuid_factory: UUID,
     ) -> None:
         """Test that set_recipient_identifiers raises NonRetryableError for all exception types.
 
         Args:
             caught_exception (Exception): The exception our code caught
+            uuid_factory (UUID): A parametrized UUID covering multiple UUID versions
         """
         # Patch the session context and simulate the exception during execution
         with patch('app.legacy.dao.recipient_identifiers_dao.get_write_session_with_context') as mock_session_ctx:
@@ -138,7 +140,7 @@ class TestLegacyRecipientIdentifiersDaoSet:
 
             with pytest.raises(NonRetryableError):
                 await RecipientIdentifiersDao.set_recipient_identifiers(
-                    notification_id=uuid4(), recipient_identifiers=recipient
+                    notification_id=uuid_factory, recipient_identifiers=recipient
                 )
 
     @pytest.mark.parametrize(
@@ -157,12 +159,14 @@ class TestLegacyRecipientIdentifiersDaoSet:
         self,
         caught_exception: Exception,
         raised_exception: type[Exception],
+        uuid_factory: UUID,
     ) -> None:
         """Test that _set_recipient_identifiers raises the correct custom error when a specific SQLAlchemy exception occurs.
 
         Args:
             caught_exception (Exception): The exception our code caught
             raised_exception (type[Exception]): The exception type we expect to be raised by our code
+            uuid_factory (UUID): A parametrized UUID covering multiple UUID versions
         """
         # Patch the session context and simulate the exception during execution
         with patch('app.legacy.dao.recipient_identifiers_dao.get_write_session_with_context') as mock_session_ctx:
@@ -174,5 +178,5 @@ class TestLegacyRecipientIdentifiersDaoSet:
 
             with pytest.raises(raised_exception):
                 await RecipientIdentifiersDao._set_recipient_identifiers(
-                    notification_id=uuid4(), recipient_identifiers=recipient
+                    notification_id=uuid_factory, recipient_identifiers=recipient
                 )

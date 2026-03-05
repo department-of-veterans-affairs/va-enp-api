@@ -1,9 +1,9 @@
 """The data access objects for templates."""
 
 from typing import Any
+from uuid import UUID
 
 from async_lru import alru_cache
-from pydantic import UUID4
 from sqlalchemy import Row, select
 from sqlalchemy.exc import (
     DataError,
@@ -31,11 +31,11 @@ class LegacyTemplateDao:
     """
 
     @staticmethod
-    async def get(id: UUID4) -> Row[Any]:
+    async def get(id: UUID) -> Row[Any]:
         """Retrieve a single templaet row by its ID.
 
         Args:
-            id (UUID4): The unique identifier of the templaet to retrieve.
+            id (UUID): The unique identifier of the templaet to retrieve.
 
         Returns:
             Row[Any]: A SQLAlchemy Core Row object containing the templaet data.
@@ -51,11 +51,11 @@ class LegacyTemplateDao:
 
     @db_retry
     @staticmethod
-    async def _get(id: UUID4) -> Row[Any]:
+    async def _get(id: UUID) -> Row[Any]:
         """Get a Template from the legacy database.
 
         Args:
-            id (UUID4): The template id
+            id (UUID): The template id
 
         Raises:
             NonRetryableError: This is a non-retryable error
@@ -86,12 +86,12 @@ class LegacyTemplateDao:
 
     @staticmethod
     @alru_cache(maxsize=1024, ttl=FIVE_MINUTES)
-    async def get_by_id_and_service_id(id: UUID4, service_id: UUID4) -> Row[Any]:
+    async def get_by_id_and_service_id(id: UUID, service_id: UUID) -> Row[Any]:
         """Retrieve a single template row by its ID and service ID.
 
         Args:
-            id (UUID4): The unique identifier of the template to retrieve.
-            service_id (UUID4): The service ID that owns the template.
+            id (UUID): The unique identifier of the template to retrieve.
+            service_id (UUID): The service ID that owns the template.
 
         Returns:
             Row[Any]: A SQLAlchemy Core Row object containing the template data.
@@ -107,12 +107,12 @@ class LegacyTemplateDao:
 
     @db_retry
     @staticmethod
-    async def _get_by_id_and_service_id(id: UUID4, service_id: UUID4) -> Row[Any]:
+    async def _get_by_id_and_service_id(id: UUID, service_id: UUID) -> Row[Any]:
         """Get a Template from the legacy database by ID and service ID.
 
         Args:
-            id (UUID4): The template id
-            service_id (UUID4): The service id that owns the template
+            id (UUID): The template id
+            service_id (UUID): The service id that owns the template
 
         Raises:
             NonRetryableError: This is a non-retryable error

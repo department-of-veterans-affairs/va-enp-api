@@ -4,13 +4,12 @@ import os
 import time
 from datetime import datetime, timezone
 from typing import Any, Sequence, TypedDict, cast
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 import jwt
 from async_lru import alru_cache
 from fastapi import HTTPException, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-from pydantic import UUID4
 from sqlalchemy import Row
 from starlette_context import context
 
@@ -197,30 +196,30 @@ async def verify_service_token(issuer: str, token: str) -> None:
 
 
 @alru_cache(maxsize=1024, ttl=TWELVE_HOURS)
-async def get_active_service_for_issuer(issuer: str) -> tuple[UUID4, str]:
-    """Validate the given issuer string as a UUID4 and return the corresponding active service.
+async def get_active_service_for_issuer(issuer: str) -> tuple[UUID, str]:
+    """Validate the given issuer string as a UUID and return the corresponding active service.
 
     This function performs the following:
-    - Parses the issuer string into a UUID4.
+    - Parses the issuer string into a UUID.
     - Retrieves the corresponding service from the database using the DAO layer.
     - Verifies that the service exists and is marked as active.
 
     Args:
-        issuer (str): The issuer value extracted from a JWT token, expected to be a UUID4 string.
+        issuer (str): The issuer value extracted from a JWT token, expected to be a UUID string.
 
     Returns:
-        Tuple[UUID4, str]: A SQLAlchemy Core row representing the active service associated with the given issuer.
+        Tuple[UUID, str]: A SQLAlchemy Core row representing the active service associated with the given issuer.
 
     Raises:
         HTTPException:
-            - 403 if the issuer is not a valid UUID4 or wrong type.
+            - 403 if the issuer is not a valid UUID or wrong type.
             - 403 if the service is not found.
             - 403 if the service is found but marked as archived (inactive).
     """
     logger.debug('Attempting to lookup service by issuer: {}', issuer)
 
     try:
-        service_id = UUID4(issuer)
+        service_id = UUID(issuer)
     except ValueError:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=RESPONSE_LEGACY_INVALID_TOKEN_WRONG_TYPE)
 
@@ -240,7 +239,7 @@ async def get_active_service_for_issuer(issuer: str) -> tuple[UUID4, str]:
 
 
 @alru_cache(maxsize=1024, ttl=FIVE_MINUTES)
-async def _get_service_api_keys(service_id: UUID4) -> Sequence[Row[Any]]:
+async def _get_service_api_keys(service_id: UUID) -> Sequence[Row[Any]]:
     """Retrieve all API keys associated with the given service ID.
 
     Attempts to fetch API keys for a service from the LegacyApiKeysDao. If no keys are found,
@@ -248,7 +247,7 @@ async def _get_service_api_keys(service_id: UUID4) -> Sequence[Row[Any]]:
     to indicate that the token is invalid due to lack of associated API keys.
 
     Args:
-        service_id (UUID4): The UUID of the service whose API keys are being requested.
+        service_id (UUID): The UUID of the service whose API keys are being requested.
 
     Returns:
         Sequence[Row[Any]]: A collection of API keys associated with the service.

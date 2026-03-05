@@ -4,14 +4,14 @@ import asyncio
 import os
 import time
 import tomllib
-from typing import Any
+from typing import Any, cast
 from unittest.mock import AsyncMock, Mock
+from uuid import NAMESPACE_DNS, UUID, uuid1, uuid3, uuid4, uuid5
 
 import jwt
 import pytest
 from fastapi import APIRouter
 from fastapi.testclient import TestClient
-from pydantic import UUID4
 from sqlalchemy import TextClause, select, text
 from starlette_context import plugins
 from starlette_context.middleware import ContextMiddleware
@@ -187,7 +187,7 @@ def generate_token_with_partial_payload(
 with open('tests/napi_table_data.toml', 'rb') as f:
     _napi_toml_table_data = tomllib.load(f)
 
-_napi_table_data: dict[str, dict[str, str | list[str | UUID4]]] = _napi_toml_table_data['napi_table_data']
+_napi_table_data: dict[str, dict[str, str | list[str | UUID]]] = _napi_toml_table_data['napi_table_data']
 _skip_tables: list[str] = _napi_toml_table_data['skip_tables']['table_names']
 
 
@@ -272,7 +272,7 @@ async def _check_table(
         pt_session.exitstatus = 1
 
 
-def _get_table_delete_statement(table: str, where_item: str, ids: list[str | UUID4]) -> TextClause:  # pragma: no cover
+def _get_table_delete_statement(table: str, where_item: str, ids: list[str | UUID]) -> TextClause:  # pragma: no cover
     if len(ids) == 0:
         # Earlier in the process this table had extra data that is not tracked.
         stmt = text(f"""DELETE FROM {table};""")
@@ -291,7 +291,7 @@ async def _clear_table(artifact_counts: list[int], tables_with_artifacts: list[s
             for i, table in enumerate(tables_with_artifacts):
                 # Would have to load each "table" into a dataclass. This is a cleanup script, ignore the mypy errors here.
                 where_item: str = _napi_table_data[table]['key']  # type:ignore
-                ids: list[str | UUID4] = _napi_table_data[table]['keys']  # type:ignore
+                ids: list[str | UUID] = _napi_table_data[table]['keys']  # type:ignore
                 stmt = _get_table_delete_statement(table, where_item, ids)
                 await session.execute(stmt)
                 print(
@@ -323,3 +323,17 @@ async def _clean_tables(artifact_counts: list[int], tables_with_artifacts: list[
         print(f'\n\nUNIT TESTS FAILED{_COLOR_RESET}')
     else:
         print(f'\n\n{_COLOR_GREEN}DATABASE IS CLEAN{_COLOR_RESET}')
+
+
+@pytest.fixture(
+    params=[
+        uuid1(),
+        uuid4(),
+        uuid3(NAMESPACE_DNS, 'test-service-issuer'),
+        uuid5(NAMESPACE_DNS, 'test-service-issuer'),
+    ],
+    ids=['uuid1', 'uuid4', 'uuid3', 'uuid5'],
+)
+def uuid_factory(request: pytest.FixtureRequest) -> UUID:
+    """Return a UUID instance for parametrized UUID version testing."""
+    return cast(UUID, request.param)

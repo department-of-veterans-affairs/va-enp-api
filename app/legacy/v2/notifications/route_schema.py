@@ -2,12 +2,12 @@
 
 import re
 from typing import Annotated, Any, ClassVar, Collection, Literal
+from uuid import UUID
 
 from async_lru import alru_cache
 from fastapi import HTTPException, status
 from phonenumbers import PhoneNumber
 from pydantic import (
-    UUID4,
     AwareDatetime,
     BaseModel,
     ConfigDict,
@@ -46,7 +46,7 @@ class HttpsUrl(HttpUrl):
 class V2Template(BaseModel):
     """V2 templates have an associated version to conform to the notification-api database schema."""
 
-    id: Annotated[UUID4, Field(strict=False)]
+    id: Annotated[UUID, Field(strict=False)]
     uri: HttpUrl
     version: int = 0
 
@@ -139,7 +139,7 @@ class V2PostPushRequestModel(RestrictiveBaseModel):
         id_value: str
 
     mobile_app: Annotated[MobileAppType, Field(strict=False)]
-    # This is a string in the Flask API. It will be a UUID4 in v3.
+    # This is a string in the Flask API. It will be a UUID in v3.
     template_id: str
     recipient_identifier: ICNRecipientIdentifierModel
     personalisation: dict[str, str | int | float] | None = None
@@ -159,7 +159,7 @@ class V2PostPushResponseModel(BaseModel):
 class V2GetNotificationResponseModel(BaseModel):
     """Common attributes for the GET /v2/notifications/<:id> route response."""
 
-    id: UUID4
+    id: UUID
     billing_code: str | None = Field(max_length=256, default=None)
     body: str
     callback_url: HttpsUrl | None = None
@@ -193,7 +193,7 @@ class V2GetSmsNotificationResponseModel(V2GetNotificationResponseModel):
 
     email_address: None
     phone_number: ValidatedPhoneNumber
-    sms_sender_id: UUID4
+    sms_sender_id: UUID
     subject: None
 
 
@@ -223,7 +223,7 @@ class V2PostNotificationRequestModel(RestrictiveBaseModel):
 
     recipient_identifier: RecipientIdentifierModel | None = None
     reference: str | None = None
-    template_id: UUID4
+    template_id: UUID
     scheduled_for: AwareDatetime | None = None
 
     async def get_reply_to_text(self) -> str:
@@ -311,7 +311,7 @@ class V2PostSmsRequestModel(V2PostNotificationRequestModel):
     """Attributes specific to requests to send SMS notifications."""
 
     phone_number: ValidatedPhoneNumber | None = None
-    sms_sender_id: UUID4 | None = None
+    sms_sender_id: UUID | None = None
 
     json_schema_extra: ClassVar[dict[str, dict[str, Collection[str]]]] = {
         'examples': {
@@ -406,14 +406,14 @@ class V2PostSmsRequestModel(V2PostNotificationRequestModel):
 
 
 @alru_cache(maxsize=1024, ttl=FIVE_MINUTES)
-async def _get_sms_sender(sms_sender_id: UUID4 | None, service_id: UUID4) -> str:
+async def _get_sms_sender(sms_sender_id: UUID | None, service_id: UUID) -> str:
     """Get the sms_sender of a ServiceSmsSender.
 
         Moved outside the class due to caching issues.
 
     Args:
-        sms_sender_id (UUID4 | None): The id to check if it is there
-        service_id (UUID4): The fallback id
+        sms_sender_id (UUID | None): The id to check if it is there
+        service_id (UUID): The fallback id
 
     Returns:
         str: A string representing a PhoneNumber, PoolId, etc.
@@ -434,7 +434,7 @@ async def _get_sms_sender(sms_sender_id: UUID4 | None, service_id: UUID4) -> str
 class V2PostNotificationResponseModel(BaseModel):
     """Common attributes for the POST /v2/notifications/<:notification_type> routes response."""
 
-    id: UUID4
+    id: UUID
     billing_code: str | None = Field(max_length=256, default=None)
     callback_url: HttpsUrl | None = None
     reference: str | None

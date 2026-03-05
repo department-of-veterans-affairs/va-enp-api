@@ -3,12 +3,11 @@
 from collections.abc import AsyncGenerator, Generator
 from typing import Any, Awaitable, Callable, Coroutine
 from unittest.mock import AsyncMock, Mock, patch
-from uuid import UUID, uuid4
+from uuid import UUID
 
 import pytest
 from fastapi import BackgroundTasks, HTTPException, Request, status
 from fastapi.encoders import jsonable_encoder
-from pydantic import UUID4
 from sqlalchemy import Row, delete
 
 from app.constants import IdentifierType, MobileAppType, NotificationType
@@ -233,7 +232,7 @@ class TestSmsPostHandler:
             Iterator[Generator[Callable[[str | None], Coroutine[Any, Any, dict[str, str]]], None]]: Generator that builds header data and tears down any created notifications
         """
 
-        def _wrapper(api_key_id: UUID4, service_id: UUID4) -> dict[str, str]:
+        def _wrapper(api_key_id: UUID, service_id: UUID) -> dict[str, str]:
             # Based on sample_api_key's secret being secret-id
             secret_str = f'secret-{api_key_id}'
             return generate_headers(secret_str, str(service_id))
@@ -260,13 +259,13 @@ class TestSmsPostHandler:
         """Generator to build request data.
 
         Yields:
-            Generator[ Callable[ [ str | None, UUID4 | None, str | None, RecipientIdentifierModel | None, dict[str, str | int | float | list[str | int | float] | PersonalisationFileObject] | None, ], dict[str, object], ], None, ]: Request data
+            Generator[ Callable[ [ str | None, UUID | None, str | None, RecipientIdentifierModel | None, dict[str, str | int | float | list[str | int | float] | PersonalisationFileObject] | None, ], dict[str, object], ], None, ]: Request data
         """
 
         def _wrapper(
-            template_id: UUID4,
+            template_id: UUID,
             reference: str | None = None,
-            sms_sender_id: UUID4 | None = None,
+            sms_sender_id: UUID | None = None,
             phone_number: str | None = None,
             recipient_identifier: RecipientIdentifierModel | None = None,
             personalization: dict[str, str | int | float | list[str | int | float] | PersonalisationFileObject]
@@ -334,17 +333,17 @@ class TestSmsPostHandler:
         finally:
             await LegacyNotificationDao.delete_notification(response.json()['id'])
 
-    @pytest.mark.parametrize('reference', [None, str(uuid4()), ''])
-    async def test_reference(
+    @pytest.mark.parametrize('reference', [None, ''], ids=['none', 'empty_string'])
+    async def test_reference_non_uuid(
         self,
         mock_background_task: AsyncMock,
         client: ENPTestClient,
         prepare_database: Callable[[], Coroutine[Any, Any, dict[str, Row[Any]]]],
         path_request: Callable[..., dict[str, object]],
         build_headers: Callable[[UUID, UUID], dict[str, str]],
-        reference: UUID4 | None,
+        reference: str | None,
     ) -> None:
-        """Test sms notification route returns 201 with valid template."""
+        """Test sms notification route returns 201 with non-UUID reference values."""
         db_data = await prepare_database()
         request = path_request(db_data['template'].id, phone_number='+18005550101', reference=reference)
         headers = build_headers(db_data['api_key'].id, db_data['service'].id)
@@ -353,6 +352,28 @@ class TestSmsPostHandler:
             assert response.status_code == status.HTTP_201_CREATED
             resp_json = response.json()
             assert resp_json['reference'] == reference if reference is not None else 'null'
+        finally:
+            await LegacyNotificationDao.delete_notification(resp_json['id'])
+
+    async def test_reference_uuid(
+        self,
+        mock_background_task: AsyncMock,
+        client: ENPTestClient,
+        prepare_database: Callable[[], Coroutine[Any, Any, dict[str, Row[Any]]]],
+        path_request: Callable[..., dict[str, object]],
+        build_headers: Callable[[UUID, UUID], dict[str, str]],
+        uuid_factory: UUID,
+    ) -> None:
+        """Test sms notification route returns 201 with UUID reference values."""
+        reference = str(uuid_factory)
+        db_data = await prepare_database()
+        request = path_request(db_data['template'].id, phone_number='+18005550101', reference=reference)
+        headers = build_headers(db_data['api_key'].id, db_data['service'].id)
+        try:
+            response = client.post(self.sms_route, json=request, headers=headers)
+            assert response.status_code == status.HTTP_201_CREATED
+            resp_json = response.json()
+            assert resp_json['reference'] == reference
         finally:
             await LegacyNotificationDao.delete_notification(resp_json['id'])
 
@@ -490,21 +511,22 @@ class TestSmsPost:
     """Test the _sms_post method."""
 
     @pytest.fixture
-    def mock_template_validations(self, mocker: AsyncMock) -> UUID4:
+    def mock_template_validations(self, mocker: AsyncMock, uuid_factory: UUID) -> UUID:
         """Fixture to mock a template.
 
         Args:
             mocker (AsyncMock): Mock object
+            uuid_factory (UUID): A parametrized UUID covering multiple UUID versions
 
         Returns:
             Any: The mocked template
         """
-        template_id = uuid4()
+        template_id = uuid_factory
         mock_template = mocker.AsyncMock()
         mock_template.id = template_id
         mock_template.template_type = NotificationType.SMS
         mock_template.archived = False
-        mock_template.service_id = uuid4()
+        mock_template.service_id = uuid_factory
         mocker.patch('app.legacy.v2.notifications.rest.validate_template', return_value=mock_template)
         mocker.patch('app.legacy.v2.notifications.rest.validate_template_personalisation')
         return template_id
@@ -515,9 +537,10 @@ class TestSmsPost:
         mock_context: AsyncMock,
         mocker: AsyncMock,
         mock_template_validations: AsyncMock,
+        uuid_factory: UUID,
     ) -> None:
         """Test _sms_post works with a recipient identifier."""
-        mock_context.data = {'request_id': uuid4(), 'service_id': uuid4()}
+        mock_context.data = {'request_id': uuid_factory, 'service_id': uuid_factory}
         mocker.patch('app.legacy.v2.notifications.rest.create_notification')
 
         request = V2PostSmsRequestModel(phone_number='+18005550101', template_id=mock_template_validations)
@@ -530,9 +553,10 @@ class TestSmsPost:
         mock_context: AsyncMock,
         mocker: AsyncMock,
         mock_template_validations: AsyncMock,
+        uuid_factory: UUID,
     ) -> None:
         """Test _sms_post works with a recipient identifier."""
-        mock_context.data = {'request_id': uuid4(), 'service_id': uuid4()}
+        mock_context.data = {'request_id': uuid_factory, 'service_id': uuid_factory}
         mocker.patch('app.legacy.v2.notifications.rest.create_notification')
         mock_resolver = mocker.AsyncMock(spec=IdentifierSmsTaskResolver)
         recipient = RecipientIdentifierModel(id_type=IdentifierType.VA_PROFILE_ID, id_value='12345')

@@ -6,10 +6,10 @@ from asyncio.exceptions import CancelledError
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from typing import Any, AsyncContextManager, Callable, Mapping, Never
+from uuid import UUID
 
 from fastapi import Depends, FastAPI, status
 from fastapi.staticfiles import StaticFiles
-from pydantic import UUID4
 from starlette_context import plugins
 from starlette_context.middleware import ContextMiddleware
 
@@ -138,11 +138,11 @@ def simple_route() -> dict[str, str]:
     status_code=status.HTTP_200_OK,
     dependencies=[Depends(JWTBearerAdmin())],
 )
-async def get_legacy_notification(notification_id: UUID4) -> None:
+async def get_legacy_notification(notification_id: UUID) -> None:
     """Get a legacy Notification.
 
     Args:
-        notification_id (UUID4): id of the notification
+        notification_id (UUID): id of the notification
     """
     from app.legacy.dao.notifications_dao import LegacyNotificationDao
 

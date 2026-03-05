@@ -2,7 +2,7 @@
 
 from typing import Any
 from unittest.mock import AsyncMock, patch
-from uuid import uuid4
+from uuid import UUID
 
 import pytest
 from sqlalchemy.engine import Row
@@ -32,10 +32,10 @@ class TestLegacyServiceDao:
         service_row = await LegacyServiceDao.get(commit_service.id)
         assert service_row.id == commit_service.id
 
-    async def test_get_non_existent_service(self) -> None:
+    async def test_get_non_existent_service(self, uuid_factory: UUID) -> None:
         """Should raise NoResultFound when service does not exist in DB."""
         with pytest.raises(NonRetryableError):
-            await LegacyServiceDao.get(uuid4())
+            await LegacyServiceDao.get(uuid_factory)
 
     @pytest.mark.parametrize(
         ('caught_exception', 'raised_exception'),
@@ -53,14 +53,16 @@ class TestLegacyServiceDao:
         self,
         caught_exception: Exception,
         raised_exception: type[Exception],
+        uuid_factory: UUID,
     ) -> None:
         """Test that _get raises the correct custom error when a specific SQLAlchemy exception occurs.
 
         Args:
             caught_exception (Exception): The exception our code caught
             raised_exception (type[Exception]): The exception our code raised
+            uuid_factory (UUID): A parametrized UUID covering multiple UUID versions
         """
-        service_id = uuid4()
+        service_id = uuid_factory
 
         # Patch the session context and simulate the exception during execution
         with patch('app.legacy.dao.services_dao.get_read_session_with_context') as mock_session_ctx:

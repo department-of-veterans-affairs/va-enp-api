@@ -4,8 +4,8 @@ import base64
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import Any, Sequence
+from uuid import UUID
 
-from pydantic import UUID4
 from sqlalchemy import Row, select
 from sqlalchemy.exc import (
     DataError,
@@ -25,11 +25,11 @@ class LegacyApiKeysDao:
     """Data access object for interacting with API keys in the legacy database schema."""
 
     @staticmethod
-    async def get_service_api_keys(service_id: UUID4) -> Sequence[Row[Any]]:
+    async def get_service_api_keys(service_id: UUID) -> Sequence[Row[Any]]:
         """Retrieve all API keys associated with the given service ID.
 
         Args:
-            service_id (UUID4): The unique identifier of the service whose API keys should be fetched.
+            service_id (UUID): The unique identifier of the service whose API keys should be fetched.
 
         Returns:
             Sequence[Row[Any]]: A sequence of rows from the 'api_keys' table, each representing an API key
@@ -46,11 +46,11 @@ class LegacyApiKeysDao:
 
     @db_retry
     @staticmethod
-    async def _get_api_keys_for_service(service_id: UUID4) -> Sequence[Row[Any]]:
+    async def _get_api_keys_for_service(service_id: UUID) -> Sequence[Row[Any]]:
         """Retryable and cached function to get a ApiKey row.
 
         Args:
-            service_id (UUID4): The service id to get keys for
+            service_id (UUID): The service id to get keys for
 
         Raises:
             NonRetryableError: If the error is non-retryable
@@ -89,16 +89,16 @@ class ApiKeyRecord:
     """Represents a single API key record, including metadata and the encrypted secret.
 
     Attributes:
-        id (UUID4): The unique identifier of the API key.
+        id (UUID): The unique identifier of the API key.
         _secret_encrypted (str): The encrypted secret string for the API key.
-        service_id (UUID4): The ID of the service this API key belongs to.
+        service_id (UUID): The ID of the service this API key belongs to.
         expiry_date (datetime | None): The expiration date of the API key, if any.
         revoked (bool): Indicates whether the API key has been revoked.
     """
 
-    id: UUID4
+    id: UUID
     _secret_encrypted: str
-    service_id: UUID4
+    service_id: UUID
     expiry_date: datetime | None
     revoked: bool
     key_type: str

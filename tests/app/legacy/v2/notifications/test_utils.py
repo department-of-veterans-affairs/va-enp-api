@@ -2,7 +2,7 @@
 
 from typing import Any, Awaitable, Callable, cast
 from unittest.mock import AsyncMock, patch
-from uuid import uuid4
+from uuid import UUID
 
 import pytest
 from fastapi import HTTPException, status
@@ -34,10 +34,10 @@ async def test_get_arn_from_icn_not_implemented() -> None:
         await get_arn_from_icn('12345')
 
 
-async def test_validate_push_template() -> None:
+async def test_validate_push_template(uuid_factory: UUID) -> None:
     """Test validate_push_template."""
     with pytest.raises(NotImplementedError):
-        await validate_push_template(uuid4())
+        await validate_push_template(uuid_factory)
 
 
 class TestSendPushNotificationHelper:
@@ -98,8 +98,7 @@ class TestValidateTemplate:
             await validate_template(template.id, template.service_id, NotificationType.SMS)
 
     async def test_validate_template_raises_exception_when_template_not_active(
-        self,
-        sample_template: Callable[..., Awaitable[Row[Any]]],
+        self, sample_template: Callable[..., Awaitable[Row[Any]]], uuid_factory: UUID
     ) -> None:
         """Test validate_template raises an exception when the template is not active."""
         template = await sample_template(archived=True, template_type=NotificationType.SMS)
@@ -108,11 +107,11 @@ class TestValidateTemplate:
             'app.legacy.v2.notifications.utils.LegacyTemplateDao.get_by_id_and_service_id', return_value=template
         ):
             with pytest.raises(HTTPException) as exc_info:
-                await validate_template(template.id, uuid4(), NotificationType.SMS)
+                await validate_template(template.id, uuid_factory, NotificationType.SMS)
 
             assert exc_info.value.detail == 'Template has been deleted'
 
-    async def test_validate_template_raises_exception_when_service_id(self) -> None:
+    async def test_validate_template_raises_exception_when_service_id(self, uuid_factory: UUID) -> None:
         """Test validate_template raises an exception when the template is not found."""
         with patch(
             'app.legacy.v2.notifications.utils.LegacyTemplateDao.get_by_id_and_service_id',
@@ -120,15 +119,14 @@ class TestValidateTemplate:
         ):
             with pytest.raises(HTTPException) as exc_info:
                 await validate_template(
-                    uuid4(),
-                    uuid4(),
+                    uuid_factory,
+                    uuid_factory,
                     NotificationType.SMS,
                 )
             assert exc_info.value.detail == 'Template not found'
 
     async def test_validate_template_raises_exception_when_template_not_expected_type(
-        self,
-        sample_template: Callable[..., Awaitable[Row[Any]]],
+        self, sample_template: Callable[..., Awaitable[Row[Any]]], uuid_factory: UUID
     ) -> None:
         """Test validate_template raises an exception when the template is not the expected type."""
         template = await sample_template(template_type=NotificationType.EMAIL)
@@ -137,7 +135,7 @@ class TestValidateTemplate:
             'app.legacy.v2.notifications.utils.LegacyTemplateDao.get_by_id_and_service_id', return_value=template
         ):
             with pytest.raises(HTTPException) as exc_info:
-                await validate_template(template.id, uuid4(), NotificationType.SMS)
+                await validate_template(template.id, uuid_factory, NotificationType.SMS)
             assert exc_info.value.detail == (
                 f'{NotificationType.EMAIL} template is not suitable for {NotificationType.SMS} notification'
             )
@@ -168,10 +166,10 @@ class TestValidateTemplatePersonalisation:
             validate_template_personalisation(template, {'foo': 'bar'})
 
 
-async def test_enqueue_notification_tasks() -> None:
+async def test_enqueue_notification_tasks(uuid_factory: UUID) -> None:
     """Test enqueue_notification_tasks."""
     q_name = 'queue_name'
-    test_data = [(q_name, ('task_name', uuid4()))]
+    test_data = [(q_name, ('task_name', uuid_factory))]
 
     with patch.object(SqsAsyncProducer, 'enqueue_message') as mock_enqueue:
         await enqueue_notification_tasks(test_data)
@@ -180,62 +178,65 @@ async def test_enqueue_notification_tasks() -> None:
     assert mock_enqueue.call_args[0][0] == test_data
 
 
-async def test_create_notification_happy_path(mocker: AsyncMock) -> None:
+async def test_create_notification_happy_path(mocker: AsyncMock, uuid_factory: UUID) -> None:
     """Validate functionality of create_notification.
 
     Args:
         mocker (AsyncMock): Mock object
+        uuid_factory (UUID): A parametrized UUID covering multiple UUID versions
     """
     mocker.patch('app.legacy.v2.notifications.utils.LegacyNotificationDao.create_notification')
     mocker.patch('app.legacy.v2.notifications.route_schema.LegacyServiceSmsSenderDao.get_service_default')
     mock_context = mocker.patch('app.legacy.v2.notifications.utils.context')
-    mock_context['api_key_id'] = uuid4()
-    mock_context['service_id'] = uuid4()
+    mock_context['api_key_id'] = uuid_factory
+    mock_context['service_id'] = uuid_factory
     mocker.patch('app.legacy.v2.notifications.route_schema.context', return_value=mock_context)
 
-    request = V2PostSmsRequestModel(phone_number='+18005550101', template_id=uuid4())
-    await create_notification(uuid4(), mocker.AsyncMock(), request)
+    request = V2PostSmsRequestModel(phone_number='+18005550101', template_id=uuid_factory)
+    await create_notification(uuid_factory, mocker.AsyncMock(), request)
 
 
-async def test_create_notification_with_recipient_id(mocker: AsyncMock) -> None:
+async def test_create_notification_with_recipient_id(mocker: AsyncMock, uuid_factory: UUID) -> None:
     """Validate functionality of create_notification.
 
     Args:
         mocker (AsyncMock): Mock object
+        uuid_factory (UUID): A parametrized UUID covering multiple UUID versions
     """
     mocker.patch('app.legacy.v2.notifications.utils.LegacyNotificationDao.create_notification')
     mocker.patch('app.legacy.v2.notifications.utils.RecipientIdentifiersDao.set_recipient_identifiers')
     mocker.patch('app.legacy.v2.notifications.route_schema.LegacyServiceSmsSenderDao.get_service_default')
     mock_context = mocker.patch('app.legacy.v2.notifications.utils.context')
-    mock_context['api_key_id'] = uuid4()
-    mock_context['service_id'] = uuid4()
+    mock_context['api_key_id'] = uuid_factory
+    mock_context['service_id'] = uuid_factory
     mocker.patch('app.legacy.v2.notifications.route_schema.context', return_value=mock_context)
 
     request = V2PostSmsRequestModel(
         phone_number='+18005550101',
-        template_id=uuid4(),
+        template_id=uuid_factory,
         recipient_identifier=RecipientIdentifierModel(id_type=IdentifierType.PID, id_value='123456789'),
     )
-    await create_notification(uuid4(), mocker.AsyncMock(), request)
+    await create_notification(uuid_factory, mocker.AsyncMock(), request)
 
 
-async def test_create_notification_failure(mocker: AsyncMock) -> None:
+async def test_create_notification_failure(mocker: AsyncMock, uuid_factory: UUID) -> None:
     """Fail to create notification due to a NonRetryableError.
 
     Args:
         mocker (AsyncMock): Mock object
+        uuid_factory (UUID): A parametrized UUID covering multiple UUID versions
     """
-    request = V2PostSmsRequestModel(phone_number='+18005550101', template_id=uuid4())
+    request = V2PostSmsRequestModel(phone_number='+18005550101', template_id=uuid_factory)
     mocker.patch(
         'app.legacy.v2.notifications.utils.LegacyNotificationDao.create_notification', side_effect=NonRetryableError
     )
     mocker.patch('app.legacy.v2.notifications.route_schema.LegacyServiceSmsSenderDao.get_service_default')
     mock_context = mocker.patch('app.legacy.v2.notifications.utils.context')
-    mock_context['api_key_id'] = uuid4()
-    mock_context['service_id'] = uuid4()
+    mock_context['api_key_id'] = uuid_factory
+    mock_context['service_id'] = uuid_factory
     mocker.patch('app.legacy.v2.notifications.route_schema.context', return_value=mock_context)
 
     with pytest.raises(HTTPException) as exc_info:
-        await create_notification(uuid4(), mocker.AsyncMock(), request)
+        await create_notification(uuid_factory, mocker.AsyncMock(), request)
     assert exc_info.value.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
     assert exc_info.value.detail == RESPONSE_500

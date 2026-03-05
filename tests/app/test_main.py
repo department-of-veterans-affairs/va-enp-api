@@ -3,7 +3,7 @@
 from asyncio import CancelledError
 from typing import Any, Callable
 from unittest.mock import AsyncMock, Mock, patch
-from uuid import uuid4
+from uuid import UUID
 
 from starlette import status
 
@@ -38,14 +38,15 @@ def test_simple_route_logs_hello_world(mock_logger: Mock, client: ENPTestClient)
     mock_logger.info.assert_called_with('Hello World')
 
 
-def test_specified_request_id_is_preserved(client: ENPTestClient) -> None:
+def test_specified_request_id_is_preserved(client: ENPTestClient, uuid_factory: UUID) -> None:
     """Test that GET /enp headers propagate x-request-id from request to response.
 
     Args:
         client (ENPTestClient): Custom FastAPI client fixture
+        uuid_factory (UUID): A parametrized UUID covering multiple UUID versions
 
     """
-    request_id = uuid4().hex
+    request_id = uuid_factory.hex
     response = client.get('/enp', headers={'X-Request-ID': request_id})
     # Ensure context data is available in the response
     assert 'X-Request-ID' in response.headers

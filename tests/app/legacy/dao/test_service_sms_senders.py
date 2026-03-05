@@ -2,7 +2,7 @@
 
 from typing import Any
 from unittest.mock import AsyncMock, patch
-from uuid import uuid4
+from uuid import UUID
 
 import pytest
 from sqlalchemy.engine import Row
@@ -32,10 +32,10 @@ class TestLegacyServiceSmsSenderDaoGet:
         sms_sender_row = await LegacyServiceSmsSenderDao.get(id=commit_service_sms_sender.id)
         assert sms_sender_row.id == commit_service_sms_sender.id
 
-    async def test_get_non_existent_service_sms_sender(self) -> None:
+    async def test_get_non_existent_service_sms_sender(self, uuid_factory: UUID) -> None:
         """Should raise NonRetryableError when service_sms_sender does not exist in DB."""
         with pytest.raises(NonRetryableError):
-            await LegacyServiceSmsSenderDao.get(id=uuid4())
+            await LegacyServiceSmsSenderDao.get(id=uuid_factory)
 
     @pytest.mark.parametrize(
         ('caught_exception', 'raised_exception'),
@@ -53,12 +53,14 @@ class TestLegacyServiceSmsSenderDaoGet:
         self,
         caught_exception: Exception,
         raised_exception: type[Exception],
+        uuid_factory: UUID,
     ) -> None:
         """Test that get raises the correct custom error when a specific SQLAlchemy exception occurs.
 
         Args:
             caught_exception (Exception): The exception our code caught
             raised_exception (type[Exception]): The exception we expect to be raised
+            uuid_factory (UUID): A parametrized UUID covering multiple UUID versions
         """
         # Patch the session context and simulate the exception during execution
         with patch('app.legacy.dao.service_sms_sender_dao.get_read_session_with_context') as mock_session_ctx:
@@ -67,7 +69,7 @@ class TestLegacyServiceSmsSenderDaoGet:
             mock_session_ctx.return_value.__aenter__.return_value = mock_session
 
             with pytest.raises(raised_exception):
-                await LegacyServiceSmsSenderDao._get(id=uuid4())
+                await LegacyServiceSmsSenderDao._get(id=uuid_factory)
 
 
 class TestLegacyServiceSmsSenderDaoGetServiceDefault:
@@ -85,10 +87,10 @@ class TestLegacyServiceSmsSenderDaoGetServiceDefault:
         assert sms_sender_row.id == commit_service_sms_sender.id
         assert sms_sender_row.is_default, 'Expected the sms sender to be the default'
 
-    async def test_get_non_existent_service_sms_sender(self) -> None:
+    async def test_get_non_existent_service_sms_sender(self, uuid_factory: UUID) -> None:
         """Should raise NonRetryableError when service_sms_sender does not exist in DB."""
         with pytest.raises(NonRetryableError):
-            await LegacyServiceSmsSenderDao.get_service_default(service_id=uuid4())
+            await LegacyServiceSmsSenderDao.get_service_default(service_id=uuid_factory)
 
     @pytest.mark.parametrize(
         ('caught_exception', 'raised_exception'),
@@ -106,12 +108,14 @@ class TestLegacyServiceSmsSenderDaoGetServiceDefault:
         self,
         caught_exception: Exception,
         raised_exception: type[Exception],
+        uuid_factory: UUID,
     ) -> None:
         """Test that get raises the correct custom error when a specific SQLAlchemy exception occurs.
 
         Args:
             caught_exception (Exception): The exception our code caught
             raised_exception (type[Exception]): The exception we expect to be raised
+            uuid_factory (UUID): A parametrized UUID covering multiple UUID versions
         """
         # Patch the session context and simulate the exception during execution
         with patch('app.legacy.dao.service_sms_sender_dao.get_read_session_with_context') as mock_session_ctx:
@@ -120,4 +124,4 @@ class TestLegacyServiceSmsSenderDaoGetServiceDefault:
             mock_session_ctx.return_value.__aenter__.return_value = mock_session
 
             with pytest.raises(raised_exception):
-                await LegacyServiceSmsSenderDao._get_service_default(service_id=uuid4())
+                await LegacyServiceSmsSenderDao._get_service_default(service_id=uuid_factory)

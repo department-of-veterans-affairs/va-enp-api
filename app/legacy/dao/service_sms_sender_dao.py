@@ -1,8 +1,8 @@
 """The data access objects for notifications."""
 
 from typing import Any
+from uuid import UUID
 
-from pydantic import UUID4
 from sqlalchemy import Row, select
 from sqlalchemy.exc import (
     DataError,
@@ -23,11 +23,11 @@ class LegacyServiceSmsSenderDao:
     """A class to handle the data access for service_sms_sender data in the legacy database."""
 
     @staticmethod
-    async def get(id: UUID4) -> Row[Any]:
+    async def get(id: UUID) -> Row[Any]:
         """Get a ServiceSmsSender from the legacy database.
 
         Args:
-            id (UUID4): id of the ServiceSmsSender
+            id (UUID): id of the ServiceSmsSender
 
         Raises:
             NonRetryableError: Unable to get the service
@@ -42,11 +42,11 @@ class LegacyServiceSmsSenderDao:
             raise NonRetryableError from e
 
     @staticmethod
-    async def get_service_default(service_id: UUID4) -> Row[Any]:
+    async def get_service_default(service_id: UUID) -> Row[Any]:
         """Get a ServiceSmsSender from the legacy database.
 
         Args:
-            service_id (UUID4): id of the service
+            service_id (UUID): id of the service
 
         Raises:
             NonRetryableError: Unable to get the service
@@ -62,7 +62,7 @@ class LegacyServiceSmsSenderDao:
 
     @db_retry
     @staticmethod
-    async def _get(id: UUID4) -> Row[Any]:
+    async def _get(id: UUID) -> Row[Any]:
         legacy_service_sms_senders = metadata_legacy.tables['service_sms_senders']
         try:
             stmt = select(legacy_service_sms_senders).where(legacy_service_sms_senders.c.id == id)
@@ -85,7 +85,7 @@ class LegacyServiceSmsSenderDao:
 
     @db_retry
     @staticmethod
-    async def _get_service_default(service_id: UUID4) -> Row[Any]:
+    async def _get_service_default(service_id: UUID) -> Row[Any]:
         legacy_service_sms_senders = metadata_legacy.tables['service_sms_senders']
         try:
             stmt = (
