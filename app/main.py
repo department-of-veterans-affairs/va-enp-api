@@ -10,6 +10,7 @@ from uuid import UUID
 
 from fastapi import Depends, FastAPI, status
 from fastapi.staticfiles import StaticFiles
+from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
 from starlette_context import plugins
 from starlette_context.middleware import ContextMiddleware
 
@@ -22,6 +23,7 @@ from app.db.db_init import (
 from app.legacy.v2.notifications.rest import v2_legacy_notification_router, v2_notification_router
 from app.logging.logging_config import CustomizeLogger, logger
 from app.state import ENPState
+from app.telemetry import configure_telemetry
 from app.v3 import api_router as v3_router
 
 MKDOCS_DIRECTORY = 'site'
@@ -69,6 +71,9 @@ async def lifespan(app: CustomFastAPI) -> AsyncIterator[Never]:
         None: nothing
 
     """
+    logger.info('Initializing OpenTelemetry...')
+    otel_providers = configure_telemetry()
+
     logger.info('Initializing the RedisClientManager...')
     redis_url = os.getenv('REDIS_URL', 'redis://0.0.0.0:6379')
     redis_manager = RedisClientManager(redis_url)
@@ -91,6 +96,12 @@ async def lifespan(app: CustomFastAPI) -> AsyncIterator[Never]:
         await safe_cleanup(close_db, 'Database')
         await safe_cleanup(redis_manager.close, 'Redis')
 
+        # Flush and shut down OTel providers if telemetry was configured
+        if otel_providers:
+            tracer_provider, meter_provider = otel_providers
+            await safe_cleanup(tracer_provider.shutdown, 'OTel Tracer')
+            await safe_cleanup(meter_provider.shutdown, 'OTel Meter')
+
         logger.info('AsyncContextManager lifespan shutdown complete')
 
 
@@ -105,6 +116,8 @@ def create_app() -> CustomFastAPI:
     app.include_router(v3_router)
     app.include_router(v2_legacy_notification_router)
     app.include_router(v2_notification_router)
+
+    FastAPIInstrumentor.instrument_app(app)
 
     # Static site for MkDocs. If unavailable locally, run `mkdocs build` to create the site files,
     # or run the application locally with Docker.
