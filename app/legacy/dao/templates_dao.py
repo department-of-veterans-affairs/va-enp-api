@@ -32,13 +32,13 @@ class LegacyTemplateDao:
 
     @staticmethod
     async def get(id: UUID) -> Row[Any]:
-        """Retrieve a single templaet row by its ID.
+        """Retrieve a single template row by its ID.
 
         Args:
-            id (UUID): The unique identifier of the templaet to retrieve.
+            id (UUID): The unique identifier of the template to retrieve.
 
         Returns:
-            Row[Any]: A SQLAlchemy Core Row object containing the templaet data.
+            Row[Any]: A SQLAlchemy Core Row object containing the template data.
 
         Raises:
             NonRetryableError: If the failure is deterministic (e.g., not found, bad input).

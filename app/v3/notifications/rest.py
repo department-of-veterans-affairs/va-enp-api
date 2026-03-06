@@ -36,7 +36,7 @@ async def create_notification(request: NotificationSingleRequest) -> Notificatio
         request (NotificationSingleRequest): Data for the request
 
     Returns:
-        UUID: The notification object
+        NotificationSingleResponse: The notification object
 
     """
     response = NotificationSingleResponse(
