@@ -24,10 +24,11 @@ def configure_telemetry(service_name: str = 'va-enp-api') -> None:
     endpoint = os.getenv('OTEL_EXPORTER_OTLP_ENDPOINT')
 
     if not endpoint:
-        logger.warning('OTEL_EXPORTER_OTLP_ENDPOINT not set, telemetry will not be exported')
+        logger.warning('OTEL_EXPORTER_OTLP_ENDPOINT not set.')
+        logger.warning('OpenTelemetry will not be configured. Set OTEL_EXPORTER_OTLP_ENDPOINT to enable telemetry.')
         return
 
-    logger.info(f'Configuring telemetry with OTLP endpoint: {endpoint}')
+    logger.info(f'Configuring OpenTelemetry with OTLP endpoint: {endpoint}')
 
     # Detect container resource attributes (container ID, image, etc.)
     docker_resource = ContainerResourceDetector().detect()
@@ -42,3 +43,4 @@ def configure_telemetry(service_name: str = 'va-enp-api') -> None:
     metric_reader = PeriodicExportingMetricReader(OTLPMetricExporter(endpoint=endpoint, insecure=True))
     meter_provider = MeterProvider(resource=resource, metric_readers=[metric_reader])
     metrics.set_meter_provider(meter_provider)
+    logger.info('OpenTelemetry configured successfully.')
