@@ -15,18 +15,21 @@ from opentelemetry.sdk.trace.export import BatchSpanProcessor
 from app.logging.logging_config import logger
 
 
-def configure_telemetry(service_name: str = 'va-enp-api') -> None:
+def configure_telemetry(service_name: str = 'va-enp-api') -> tuple[TracerProvider, MeterProvider] | None:
     """Configure OpenTelemetry tracing and metrics for the application.
 
     Args:
         service_name: The name of the service to be used in telemetry data.
+
+    Returns:
+        A tuple of (TracerProvider, MeterProvider) if configured, or None if no endpoint is set.
     """
     endpoint = os.getenv('OTEL_EXPORTER_OTLP_ENDPOINT')
 
     if not endpoint:
         logger.warning('OTEL_EXPORTER_OTLP_ENDPOINT not set.')
         logger.warning('OpenTelemetry will not be configured. Set OTEL_EXPORTER_OTLP_ENDPOINT to enable telemetry.')
-        return
+        return None
 
     logger.info(f'Configuring OpenTelemetry with OTLP endpoint: {endpoint}')
 
@@ -43,4 +46,6 @@ def configure_telemetry(service_name: str = 'va-enp-api') -> None:
     metric_reader = PeriodicExportingMetricReader(OTLPMetricExporter(endpoint=endpoint, insecure=True))
     meter_provider = MeterProvider(resource=resource, metric_readers=[metric_reader])
     metrics.set_meter_provider(meter_provider)
+
     logger.info('OpenTelemetry configured successfully.')
+    return tracer_provider, meter_provider

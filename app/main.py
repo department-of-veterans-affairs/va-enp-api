@@ -72,7 +72,7 @@ async def lifespan(app: CustomFastAPI) -> AsyncIterator[Never]:
 
     """
     logger.info('Initializing OpenTelemetry...')
-    configure_telemetry()
+    otel_providers = configure_telemetry()
 
     logger.info('Initializing the RedisClientManager...')
     redis_url = os.getenv('REDIS_URL', 'redis://0.0.0.0:6379')
@@ -95,6 +95,12 @@ async def lifespan(app: CustomFastAPI) -> AsyncIterator[Never]:
         await safe_cleanup(lambda: app.enp_state.clear_providers(), 'Providers')
         await safe_cleanup(close_db, 'Database')
         await safe_cleanup(redis_manager.close, 'Redis')
+
+        # Flush and shut down OTel providers if telemetry was configured
+        if otel_providers:
+            tracer_provider, meter_provider = otel_providers
+            await safe_cleanup(tracer_provider.shutdown, 'OTel Tracer')
+            await safe_cleanup(meter_provider.shutdown, 'OTel Meter')
 
         logger.info('AsyncContextManager lifespan shutdown complete')
 
