@@ -71,6 +71,9 @@ async def lifespan(app: CustomFastAPI) -> AsyncIterator[Never]:
         None: nothing
 
     """
+    logger.info('Initializing OpenTelemetry...')
+    configure_telemetry()
+
     logger.info('Initializing the RedisClientManager...')
     redis_url = os.getenv('REDIS_URL', 'redis://0.0.0.0:6379')
     redis_manager = RedisClientManager(redis_url)
@@ -108,6 +111,8 @@ def create_app() -> CustomFastAPI:
     app.include_router(v2_legacy_notification_router)
     app.include_router(v2_notification_router)
 
+    FastAPIInstrumentor.instrument_app(app)
+
     # Static site for MkDocs. If unavailable locally, run `mkdocs build` to create the site files,
     # or run the application locally with Docker.
     if os.path.exists(MKDOCS_DIRECTORY):
@@ -117,11 +122,6 @@ def create_app() -> CustomFastAPI:
 
 
 app: CustomFastAPI = create_app()
-
-# OTel must be configured before the app starts handling requests
-configure_telemetry()
-FastAPIInstrumentor.instrument_app(app)
-
 app.add_middleware(
     ContextMiddleware,
     plugins=(plugins.RequestIdPlugin(force_new_uuid=False),),
