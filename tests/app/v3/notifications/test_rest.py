@@ -1,21 +1,22 @@
 """Test module for app/v3/notifications/rest.py."""
 
+from uuid import uuid4
+
 from fastapi import status
 
 from app.constants import RESPONSE_400
 from app.v3.notifications.route_schema import NotificationSingleRequest
-from tests.conftest import ENPTestClient, UUIDFactory
+from tests.conftest import ENPTestClient
 
 
-def test_get(client: ENPTestClient, uuid_factory: UUIDFactory) -> None:
+def test_get(client: ENPTestClient) -> None:
     """Test GET /v3/notifications/.
 
     Args:
         client(ENPTestClient): Custom FastAPI client fixture
-        uuid_factory (UUIDFactory): A parametrized UUID covering multiple UUID versions
 
     """
-    resp = client.get(f'/v3/notifications/{uuid_factory()}')
+    resp = client.get(f'/v3/notifications/{uuid4()}')
     assert resp.status_code == status.HTTP_200_OK
 
 
@@ -50,34 +51,32 @@ def test_get_malformed_request(client: ENPTestClient) -> None:
     assert malformed_uuid in resp_text
 
 
-def test_post(client: ENPTestClient, uuid_factory: UUIDFactory) -> None:
+def test_post(client: ENPTestClient) -> None:
     """Test POST /v3/notifications/.
 
     Args:
         client(ENPTestClient): Custom FastAPI client fixture
-        uuid_factory (UUIDFactory): A parametrized UUID covering multiple UUID versions
 
     """
     srequest = NotificationSingleRequest(
         to='vanotify@va.gov',
         personalization={'hello': 'world'},
-        template=uuid_factory(),
+        template=uuid4(),
     )
     resp = client.post('v3/notifications', json=srequest.serialize())
     assert resp.status_code == status.HTTP_202_ACCEPTED
 
 
-def test_post_no_personalization(client: ENPTestClient, uuid_factory: UUIDFactory) -> None:
+def test_post_no_personalization(client: ENPTestClient) -> None:
     """Test POST /v3/notifications/ with no personalization.
 
     Args:
         client(ENPTestClient): Custom FastAPI client fixture
-        uuid_factory (UUIDFactory): A parametrized UUID covering multiple UUID versions
 
     """
     srequest = NotificationSingleRequest(
         to='vanotify@va.gov',
-        template=uuid_factory(),
+        template=uuid4(),
     )
     resp = client.post('v3/notifications', json=srequest.serialize())
     assert resp.status_code == status.HTTP_202_ACCEPTED

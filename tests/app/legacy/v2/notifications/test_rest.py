@@ -3,7 +3,7 @@
 from collections.abc import AsyncGenerator, Generator
 from typing import Any, Awaitable, Callable, Coroutine
 from unittest.mock import AsyncMock, Mock, patch
-from uuid import UUID
+from uuid import UUID, uuid4
 
 import pytest
 from fastapi import BackgroundTasks, HTTPException, Request, status
@@ -333,17 +333,17 @@ class TestSmsPostHandler:
         finally:
             await LegacyNotificationDao.delete_notification(response.json()['id'])
 
-    @pytest.mark.parametrize('reference', [None, ''], ids=['none', 'empty_string'])
-    async def test_reference_non_uuid(
+    @pytest.mark.parametrize('reference', [None, str(uuid4()), ''])
+    async def test_reference(
         self,
         mock_background_task: AsyncMock,
         client: ENPTestClient,
         prepare_database: Callable[[], Coroutine[Any, Any, dict[str, Row[Any]]]],
         path_request: Callable[..., dict[str, object]],
         build_headers: Callable[[UUID, UUID], dict[str, str]],
-        reference: str | None,
+        reference: UUID | None,
     ) -> None:
-        """Test sms notification route returns 201 with non-UUID reference values."""
+        """Test sms notification route returns 201 with valid template."""
         db_data = await prepare_database()
         request = path_request(db_data['template'].id, phone_number='+18005550101', reference=reference)
         headers = build_headers(db_data['api_key'].id, db_data['service'].id)
@@ -352,28 +352,6 @@ class TestSmsPostHandler:
             assert response.status_code == status.HTTP_201_CREATED
             resp_json = response.json()
             assert resp_json['reference'] == reference if reference is not None else 'null'
-        finally:
-            await LegacyNotificationDao.delete_notification(resp_json['id'])
-
-    async def test_reference_uuid(
-        self,
-        mock_background_task: AsyncMock,
-        client: ENPTestClient,
-        prepare_database: Callable[[], Coroutine[Any, Any, dict[str, Row[Any]]]],
-        path_request: Callable[..., dict[str, object]],
-        build_headers: Callable[[UUID, UUID], dict[str, str]],
-        uuid_factory: UUIDFactory,
-    ) -> None:
-        """Test sms notification route returns 201 with UUID reference values."""
-        reference = str(uuid_factory())
-        db_data = await prepare_database()
-        request = path_request(db_data['template'].id, phone_number='+18005550101', reference=reference)
-        headers = build_headers(db_data['api_key'].id, db_data['service'].id)
-        try:
-            response = client.post(self.sms_route, json=request, headers=headers)
-            assert response.status_code == status.HTTP_201_CREATED
-            resp_json = response.json()
-            assert resp_json['reference'] == reference
         finally:
             await LegacyNotificationDao.delete_notification(resp_json['id'])
 

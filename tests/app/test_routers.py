@@ -1,7 +1,7 @@
 """Test file for routers."""
 
 from unittest.mock import AsyncMock
-from uuid import UUID
+from uuid import UUID, uuid4
 
 import pytest
 from fastapi import HTTPException, status
@@ -9,7 +9,7 @@ from fastapi.encoders import jsonable_encoder
 from pydantic import BaseModel
 
 from app.constants import RESPONSE_500
-from tests.conftest import ENPTestClient, UUIDFactory, router
+from tests.conftest import ENPTestClient, router
 
 
 class UuidRaise(BaseModel):
@@ -102,11 +102,10 @@ class TestLegacyTimedAPIRoute:
         assert response.status_code == status.HTTP_401_UNAUTHORIZED
         assert response.json() == error_details
 
-    def test_uuid_raise(self, client: ENPTestClient, uuid_factory: UUIDFactory) -> None:
+    def test_uuid_raise(self, client: ENPTestClient) -> None:
         """Assert handler is tested.
 
         Args:
             client (ENPTestClient): Test client
-            uuid_factory (UUIDFactory): A parametrized UUID covering multiple UUID versions
         """
-        client.post('/test/uuid', json=jsonable_encoder(UuidRaise(item=uuid_factory())))
+        client.post('/test/uuid', json=jsonable_encoder(UuidRaise(item=uuid4())))
