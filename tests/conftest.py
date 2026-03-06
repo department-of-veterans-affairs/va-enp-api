@@ -4,6 +4,7 @@ import asyncio
 import os
 import time
 import tomllib
+from secrets import randbits
 from typing import Any, Callable, cast
 from unittest.mock import AsyncMock, Mock
 from uuid import NAMESPACE_DNS, UUID, uuid1, uuid3, uuid4, uuid5
@@ -325,7 +326,67 @@ async def _clean_tables(artifact_counts: list[int], tables_with_artifacts: list[
         print(f'\n\n{_COLOR_GREEN}DATABASE IS CLEAN{_COLOR_RESET}')
 
 
+# UUID Factory for generating UUIDs of various versions in tests
 UUIDFactory = Callable[[], UUID]
+
+
+def _build_uuid(version: int, time_high_and_mid: int, rand_or_low: int, node: int) -> UUID:
+    """Assemble a UUID with the given version, enforcing RFC 9562 variant bits.
+
+    Returns:
+        UUID: The assembled UUID object.
+    """
+    value = (time_high_and_mid << 80) | (version << 76) | (rand_or_low << 64) | (0b10 << 62) | node
+    return UUID(int=value)
+
+
+def _generate_uuid6() -> UUID:
+    """Generate a UUIDv6 (reordered Gregorian timestamp, RFC 9562).
+
+    Note: Support for a native generator function is added in Python 3.14.
+
+    Returns:
+        UUID: The assembled UUIDv6 object.
+    """
+    ts = time.time_ns() // 100 + 0x01B21DD213814000
+    return _build_uuid(
+        version=6,
+        time_high_and_mid=ts >> 12,
+        rand_or_low=ts & 0xFFF,
+        node=randbits(48),
+    )
+
+
+def _generate_uuid7() -> UUID:
+    """Generate a UUIDv7 (Unix-epoch millisecond timestamp, RFC 9562).
+
+    Note: Support for a native generator function is added in Python 3.14.
+
+    Returns:
+        UUID: The assembled UUIDv7 object.
+    """
+    return _build_uuid(
+        version=7,
+        time_high_and_mid=int(time.time_ns() // 1_000_000),
+        rand_or_low=randbits(12),
+        node=randbits(62),
+    )
+
+
+def _generate_uuid8() -> UUID:
+    """Generate a UUIDv8 (custom/application-defined layout, RFC 9562).
+
+    Note: Support for a native generator function is added in Python 3.14.
+
+    Returns:
+        UUID: The assembled UUIDv8 object.
+    """
+    return _build_uuid(
+        version=8,
+        time_high_and_mid=randbits(48),
+        rand_or_low=randbits(12),
+        node=randbits(62),
+    )
 
 
 @pytest.fixture(
@@ -334,13 +395,16 @@ UUIDFactory = Callable[[], UUID]
         uuid4,
         lambda: uuid3(NAMESPACE_DNS, f'test-service-issuer-{uuid4()}'),
         lambda: uuid5(NAMESPACE_DNS, f'test-service-issuer-{uuid4()}'),
+        _generate_uuid6,
+        _generate_uuid7,
+        _generate_uuid8,
     ],
-    ids=['uuid1', 'uuid4', 'uuid3', 'uuid5'],
+    ids=['uuid1', 'uuid4', 'uuid3', 'uuid5', 'uuid6', 'uuid7', 'uuid8'],
 )
 def uuid_factory(request: pytest.FixtureRequest) -> UUIDFactory:
     """Provide a UUID generator function for parametrized UUID version testing.
 
-    The fixture is parametrized across UUID versions (1, 4, 3, and 5) and returns
+    The fixture is parametrized across UUID versions (1, 4, 3, 5, 7) and returns
     a callable that generates a new UUID each time it is invoked. This allows tests
     to validate compatibility with multiple UUID versions while still producing
     unique UUID values within a single test.
