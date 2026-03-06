@@ -2,7 +2,6 @@
 
 from typing import Any
 from unittest.mock import AsyncMock, patch
-from uuid import UUID
 
 import pytest
 from sqlalchemy import Row
@@ -18,6 +17,7 @@ from sqlalchemy.exc import (
 
 from app.exceptions import NonRetryableError, RetryableError
 from app.legacy.dao.templates_dao import LegacyTemplateDao
+from tests.conftest import UUIDFactory
 
 
 class TestLegacyTemplateDaoGet:
@@ -32,10 +32,10 @@ class TestLegacyTemplateDaoGet:
         template_row = await LegacyTemplateDao.get(commit_template.id)
         assert template_row.id == commit_template.id
 
-    async def test_get_non_existent_template(self, uuid_factory: UUID) -> None:
+    async def test_get_non_existent_template(self, uuid_factory: UUIDFactory) -> None:
         """Should raise NoResultFound when template does not exist in DB."""
         with pytest.raises(NonRetryableError):
-            await LegacyTemplateDao.get(uuid_factory)
+            await LegacyTemplateDao.get(uuid_factory())
 
     @pytest.mark.parametrize(
         ('caught_exception', 'raised_exception'),
@@ -53,16 +53,16 @@ class TestLegacyTemplateDaoGet:
         self,
         caught_exception: Exception,
         raised_exception: type[Exception],
-        uuid_factory: UUID,
+        uuid_factory: UUIDFactory,
     ) -> None:
         """Test that _get raises the correct custom error when a specific SQLAlchemy exception occurs.
 
         Args:
             caught_exception (Exception): The exception our code caught
             raised_exception (type[Exception]): The exception our code raised
-            uuid_factory (UUID): A parametrized UUID covering multiple UUID versions
+            uuid_factory (UUIDFactory): A parametrized UUID covering multiple UUID versions
         """
-        template_id = uuid_factory
+        template_id = uuid_factory()
 
         # Patch the session context and simulate the exception during execution
         with patch('app.legacy.dao.templates_dao.get_read_session_with_context') as mock_session_ctx:
@@ -86,17 +86,19 @@ class TestLegacyTemplateDaoGetByIdAndServiceId:
         template_row = await LegacyTemplateDao.get_by_id_and_service_id(commit_template.id, commit_template.service_id)
         assert template_row.id == commit_template.id
 
-    async def test_get_non_existent_template(self, uuid_factory: UUID) -> None:
+    async def test_get_non_existent_template(self, uuid_factory: UUIDFactory) -> None:
         """Should raise NoResultFound when template does not exist in DB."""
-        template_id = uuid_factory
-        service_id = uuid_factory
+        template_id = uuid_factory()
+        service_id = uuid_factory()
 
         with pytest.raises(NonRetryableError):
             await LegacyTemplateDao.get_by_id_and_service_id(template_id, service_id)
 
-    async def test_get_non_existent_template_service_id(self, commit_template: Row[Any], uuid_factory: UUID) -> None:
+    async def test_get_non_existent_template_service_id(
+        self, commit_template: Row[Any], uuid_factory: UUIDFactory
+    ) -> None:
         """Should raise NoResultFound when template with correct service id does not exist in DB."""
-        service_id = uuid_factory
+        service_id = uuid_factory()
 
         with pytest.raises(NonRetryableError):
             await LegacyTemplateDao.get_by_id_and_service_id(commit_template.id, service_id)
@@ -117,17 +119,17 @@ class TestLegacyTemplateDaoGetByIdAndServiceId:
         self,
         caught_exception: Exception,
         raised_exception: type[Exception],
-        uuid_factory: UUID,
+        uuid_factory: UUIDFactory,
     ) -> None:
         """Test that _get raises the correct custom error when a specific SQLAlchemy exception occurs.
 
         Args:
             caught_exception (Exception): The exception our code caught
             raised_exception (type[Exception]): The exception our code raised
-            uuid_factory (UUID): A parametrized UUID covering multiple UUID versions
+            uuid_factory (UUIDFactory): A parametrized UUID covering multiple UUID versions
         """
-        template_id = uuid_factory
-        service_id = uuid_factory
+        template_id = uuid_factory()
+        service_id = uuid_factory()
 
         # Patch the session context and simulate the exception during execution
         with patch('app.legacy.dao.templates_dao.get_read_session_with_context') as mock_session_ctx:

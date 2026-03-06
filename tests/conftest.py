@@ -4,7 +4,7 @@ import asyncio
 import os
 import time
 import tomllib
-from typing import Any, cast
+from typing import Any, Callable, cast
 from unittest.mock import AsyncMock, Mock
 from uuid import NAMESPACE_DNS, UUID, uuid1, uuid3, uuid4, uuid5
 
@@ -325,15 +325,30 @@ async def _clean_tables(artifact_counts: list[int], tables_with_artifacts: list[
         print(f'\n\n{_COLOR_GREEN}DATABASE IS CLEAN{_COLOR_RESET}')
 
 
+UUIDFactory = Callable[[], UUID]
+
+
 @pytest.fixture(
     params=[
-        uuid1(),
-        uuid4(),
-        uuid3(NAMESPACE_DNS, 'test-service-issuer'),
-        uuid5(NAMESPACE_DNS, 'test-service-issuer'),
+        uuid1,
+        uuid4,
+        lambda: uuid3(NAMESPACE_DNS, f'test-service-issuer-{uuid4()}'),
+        lambda: uuid5(NAMESPACE_DNS, f'test-service-issuer-{uuid4()}'),
     ],
     ids=['uuid1', 'uuid4', 'uuid3', 'uuid5'],
 )
-def uuid_factory(request: pytest.FixtureRequest) -> UUID:
-    """Return a UUID instance for parametrized UUID version testing."""
-    return cast(UUID, request.param)
+def uuid_factory(request: pytest.FixtureRequest) -> UUIDFactory:
+    """Provide a UUID generator function for parametrized UUID version testing.
+
+    The fixture is parametrized across UUID versions (1, 4, 3, and 5) and returns
+    a callable that generates a new UUID each time it is invoked. This allows tests
+    to validate compatibility with multiple UUID versions while still producing
+    unique UUID values within a single test.
+
+    UUID3 and UUID5 values are generated using randomized names to avoid collisions,
+    ensuring each invocation produces a distinct UUID.
+
+    Returns:
+        UUIDFactory: A callable that generates a new UUID when invoked.
+    """
+    return cast(UUIDFactory, request.param)

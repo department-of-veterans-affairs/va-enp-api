@@ -2,7 +2,6 @@
 
 from typing import Any, Generator, cast
 from unittest.mock import AsyncMock
-from uuid import UUID, uuid4
 
 import botocore
 import pytest
@@ -13,6 +12,7 @@ from types_boto3_sqs import SQSClient as SQSClientBoto3
 from app.constants import AWS_REGION, QUEUE_PREFIX
 from app.exceptions import NonRetryableError, RetryableError
 from app.legacy.clients.sqs import CeleryTaskEnvelope, SqsAsyncProducer
+from tests.conftest import UUIDFactory
 
 TEST_QUEUE_NAME = 'test_queue'
 TEST_QUEUE_WITH_PREFIX = f'{QUEUE_PREFIX}test_queue'
@@ -65,10 +65,10 @@ class TestSqsAsyncProducer:
     async def test_enqueue_message(
         setup_queue: None,
         task_templates: list[tuple[str, str]],
-        uuid_factory: UUID,
+        uuid_factory: UUIDFactory,
     ) -> None:
         """Test the enqueue_message method of the SqsAsyncProducer."""
-        test_tasks = [(queue, (name, uuid_factory)) for queue, name in task_templates]
+        test_tasks = [(queue, (name, uuid_factory())) for queue, name in task_templates]
         producer = SqsAsyncProducer()
         await producer.enqueue_message(test_tasks)
 
@@ -76,10 +76,11 @@ class TestSqsAsyncProducer:
     async def test_exception_raised_in_enqueue_message(
         moto_server: Generator[None, Any, None],
         mocker: AsyncMock,
+        uuid_factory: UUIDFactory,
     ) -> None:
         """Test the enqueue_message method of the SqsAsyncProducer."""
         mock_logger = mocker.patch('app.legacy.clients.sqs.logger.exception')
-        notification_id = uuid4()
+        notification_id = uuid_factory()
         producer = SqsAsyncProducer()
 
         # exception raised because queue not found
@@ -187,10 +188,10 @@ class TestSqsAscyncProducerGenerateTasks:
     """Test the SqsAsyncProducer task envelope generation methods."""
 
     @staticmethod
-    def test_generate_celery_task_fields(uuid_factory: UUID) -> None:
+    def test_generate_celery_task_fields(uuid_factory: UUIDFactory) -> None:
         """Test the generate_celery_task function returns the expected envelope structure."""
         producer = SqsAsyncProducer()
-        test_args = ('task_name', uuid_factory)
+        test_args = ('task_name', uuid_factory())
 
         # mimicing how the task is called in the app
         result: CeleryTaskEnvelope = producer._generate_celery_task(TEST_QUEUE_NAME, *test_args)
@@ -202,14 +203,14 @@ class TestSqsAscyncProducerGenerateTasks:
         assert result['content-type'] == 'application/json'
 
     @staticmethod
-    def test_generate_celery_task_chain(uuid_factory: UUID) -> None:
+    def test_generate_celery_task_chain(uuid_factory: UUIDFactory) -> None:
         """Test the generate_celery_task_chain function returns the expected envelope structure."""
         producer = SqsAsyncProducer()
         task1_name = 'task_name'
         task2_name = 'task2_name'
         test_tasks = [
-            (TEST_QUEUE_NAME, (task1_name, uuid_factory)),
-            ('another_queue', (task2_name, uuid_factory)),
+            (TEST_QUEUE_NAME, (task1_name, uuid_factory())),
+            ('another_queue', (task2_name, uuid_factory())),
         ]
 
         # mimicing how the task is called in the app
@@ -224,16 +225,16 @@ class TestSqsAscyncProducerGenerateTasks:
         assert result['headers']['chain'][0]['task'] == task2_name
 
     @staticmethod
-    def test_generate_celery_task_chain_with_3_tasks(uuid_factory: UUID) -> None:
+    def test_generate_celery_task_chain_with_3_tasks(uuid_factory: UUIDFactory) -> None:
         """Test the generate_celery_task_chain function returns the expected envelope structure."""
         producer = SqsAsyncProducer()
         task1_name = 'task_name'
         task2_name = 'task2_name'
         task3_name = 'task3_name'
         test_tasks = [
-            (TEST_QUEUE_NAME, (task1_name, uuid_factory)),
-            ('another_queue', (task2_name, uuid_factory)),
-            ('third_queue', (task3_name, uuid_factory)),
+            (TEST_QUEUE_NAME, (task1_name, uuid_factory())),
+            ('another_queue', (task2_name, uuid_factory())),
+            ('third_queue', (task3_name, uuid_factory())),
         ]
 
         # mimicing how the task is called in the app

@@ -2,7 +2,6 @@
 
 from typing import Callable, Generator, Tuple
 from unittest.mock import AsyncMock, Mock, patch
-from uuid import UUID
 
 import pytest
 from fastapi import HTTPException, status
@@ -23,18 +22,19 @@ from app.limits import (
     WindowType,
     _get_strategy_class,
 )
+from tests.conftest import UUIDFactory
 
 
 @pytest.fixture
-def mock_context(uuid_factory: UUID) -> Generator[Tuple[str, str], None, None]:
+def mock_context(uuid_factory: UUIDFactory) -> Generator[Tuple[str, str], None, None]:
     """Fixture that mocks the starlette_context context used by ServiceRateLimiter to inject service_id and api_key_id.
 
     Yields:
         Tuple[str, str]: A tuple containing the mocked service_id and api_key_id (as UUID strings).
     """
-    request_id = str(uuid_factory)
-    service_id = str(uuid_factory)
-    api_key_id = str(uuid_factory)
+    request_id = str(uuid_factory())
+    service_id = str(uuid_factory())
+    api_key_id = str(uuid_factory())
 
     with patch('app.limits.context', {'request_id': request_id, 'service_id': service_id, 'api_key_id': api_key_id}):
         yield service_id, api_key_id

@@ -3,13 +3,12 @@
 from asyncio import CancelledError
 from typing import Any, Callable
 from unittest.mock import AsyncMock, Mock, patch
-from uuid import UUID
 
 from starlette import status
 
 from app.clients.redis_client import RedisClientManager
 from app.main import CustomFastAPI, lifespan, safe_cleanup
-from tests.conftest import ENPTestClient
+from tests.conftest import ENPTestClient, UUIDFactory
 
 
 def test_simple_route(client: ENPTestClient) -> None:
@@ -38,15 +37,15 @@ def test_simple_route_logs_hello_world(mock_logger: Mock, client: ENPTestClient)
     mock_logger.info.assert_called_with('Hello World')
 
 
-def test_specified_request_id_is_preserved(client: ENPTestClient, uuid_factory: UUID) -> None:
+def test_specified_request_id_is_preserved(client: ENPTestClient, uuid_factory: UUIDFactory) -> None:
     """Test that GET /enp headers propagate x-request-id from request to response.
 
     Args:
         client (ENPTestClient): Custom FastAPI client fixture
-        uuid_factory (UUID): A parametrized UUID covering multiple UUID versions
+        uuid_factory (UUIDFactory): A parametrized UUID covering multiple UUID versions
 
     """
-    request_id = uuid_factory.hex
+    request_id = uuid_factory().hex
     response = client.get('/enp', headers={'X-Request-ID': request_id})
     # Ensure context data is available in the response
     assert 'X-Request-ID' in response.headers

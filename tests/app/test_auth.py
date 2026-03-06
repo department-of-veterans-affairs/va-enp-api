@@ -3,7 +3,7 @@
 import time
 from datetime import datetime, timezone
 from unittest.mock import AsyncMock, patch
-from uuid import UUID, uuid4
+from uuid import uuid4
 
 import jwt
 import pytest
@@ -49,6 +49,7 @@ from app.constants import (
 from app.exceptions import NonRetryableError, RetryableError
 from app.legacy.dao.api_keys_dao import ApiKeyRecord
 from tests.app.legacy.dao.test_api_keys import encode_and_sign
+from tests.conftest import UUIDFactory
 
 
 @patch('app.auth.context')
@@ -59,22 +60,22 @@ class TestVerifyServiceToken:
         self,
         mock_context: AsyncMock,
         mocker: AsyncMock,
-        uuid_factory: UUID,
+        uuid_factory: UUIDFactory,
     ) -> None:
         """Test happy path.
 
         Args:
             mock_context (AsyncMock): Mocked starlette context
             mocker (AsyncMock): Mock object
-            uuid_factory (UUID): A parametrized UUID covering multiple UUID versions
+            uuid_factory (UUIDFactory): A parametrized UUID covering multiple UUID versions
         """
         # new_callable=AsyncMock to avoid the cache
         mock_service = mocker.patch(
             'app.auth.get_active_service_for_issuer',
             new_callable=AsyncMock,
-            return_value=(uuid_factory, 'service_name'),
+            return_value=(uuid_factory(), 'service_name'),
         )
-        mock_service.id = uuid_factory
+        mock_service.id = uuid_factory()
         mock_service.name = 'Mock Name'
         mock_api_key = mocker.patch.object(ApiKeyRecord, 'from_row')
         mocker.patch('app.auth._get_service_api_keys', new_callable=AsyncMock, return_value=[mock_api_key])
@@ -84,32 +85,34 @@ class TestVerifyServiceToken:
         await verify_service_token(str(mock_service.id), 'Fake token')
 
     @pytest.mark.parametrize('token', ['', '12345', '💬', '短信'], ids=['empty', 'number', 'emoji', 'sms-character'])
-    async def test_token_error_exception(self, mock_context: AsyncMock, token: str, uuid_factory: UUID) -> None:
+    async def test_token_error_exception(self, mock_context: AsyncMock, token: str, uuid_factory: UUIDFactory) -> None:
         """Test token fail is compatible with notification-api.
 
         Args:
             mock_context (AsyncMock): Mocked starlette context
             token (str): A token value
-            uuid_factory (UUID): A parametrized UUID covering multiple UUID versions
+            uuid_factory (UUIDFactory): A parametrized UUID covering multiple UUID versions
         """
         with pytest.raises(HTTPException) as exc_info:
-            await verify_service_token(str(uuid_factory), token)
+            await verify_service_token(str(uuid_factory()), token)
         assert exc_info.value.status_code == status.HTTP_403_FORBIDDEN
         assert exc_info.value.detail == RESPONSE_LEGACY_INVALID_TOKEN_NO_SERVICE
 
-    async def test_no_valid_api_keys(self, mock_context: AsyncMock, mocker: AsyncMock, uuid_factory: UUID) -> None:
+    async def test_no_valid_api_keys(
+        self, mock_context: AsyncMock, mocker: AsyncMock, uuid_factory: UUIDFactory
+    ) -> None:
         """Test no valid api keys fail is compatible with notification-api.
 
         Args:
             mock_context (AsyncMock): Mocked starlette context
             mocker (AsyncMock): Mock object
-            uuid_factory (UUID): A parametrized UUID covering multiple UUID versions
+            uuid_factory (UUIDFactory): A parametrized UUID covering multiple UUID versions
         """
         # new_callable=AsyncMock to avoid the cache
         mock_service = mocker.patch(
             'app.auth.get_active_service_for_issuer',
             new_callable=AsyncMock,
-            return_value=(uuid_factory, str(uuid_factory)),
+            return_value=(uuid_factory(), str(uuid_factory())),
         )
         mock_api_key = mocker.patch.object(ApiKeyRecord, 'from_row')
         mocker.patch('app.auth._get_service_api_keys', new_callable=AsyncMock, return_value=[mock_api_key])
@@ -143,7 +146,7 @@ class TestVerifyAdminToken:
 class TestGetServiceApiKeys:
     """Test _get_service_api_keys method."""
 
-    async def test_happy_path(self, mocker: AsyncMock, uuid_factory: UUID) -> None:
+    async def test_happy_path(self, mocker: AsyncMock, uuid_factory: UUIDFactory) -> None:
         """Test happy path.
 
         This test verifies that _get_service_api_keys does not raise an HTTPException
@@ -152,13 +155,13 @@ class TestGetServiceApiKeys:
 
         Args:
             mocker (AsyncMock): Mock object
-            uuid_factory (UUID): UUID instance
+            uuid_factory (UUIDFactory): UUID instance
         """
         mock_dao = mocker.patch('app.auth.LegacyApiKeysDao.get_service_api_keys', new_callable=AsyncMock)
         mock_dao.return_value = [mocker.Mock()]
 
         # Should not raise HTTPException
-        await _get_service_api_keys(uuid_factory)
+        await _get_service_api_keys(uuid_factory())
 
     async def test_no_api_keys(self, mocker: AsyncMock) -> None:
         """Test happy path.
@@ -591,11 +594,11 @@ class TestGetTokenIssuer:
 class TestValidateServiceApiKey:
     """Test _validate_service_api_key method."""
 
-    def test_happy_path(self, uuid_factory: UUID) -> None:
+    def test_happy_path(self, uuid_factory: UUIDFactory) -> None:
         """Test happy path."""
-        service_id = uuid_factory
+        service_id = uuid_factory()
         expiry = datetime(2222, 12, 31, tzinfo=timezone.utc)
-        api_key = ApiKeyRecord(uuid_factory, encode_and_sign('fake secret'), service_id, expiry, False, 'normal')
+        api_key = ApiKeyRecord(uuid_factory(), encode_and_sign('fake secret'), service_id, expiry, False, 'normal')
         _validate_service_api_key(api_key, str(service_id), 'fake name')
 
     def test_revoked(self) -> None:
@@ -625,9 +628,9 @@ class TestValidateServiceApiKey:
 class TestGetActiveServiceForIssuer:
     """Test class for get_active_service_for_issuer method."""
 
-    async def test_happy_path(self, mocker: AsyncMock, uuid_factory: UUID) -> None:
+    async def test_happy_path(self, mocker: AsyncMock, uuid_factory: UUIDFactory) -> None:
         """Test happy path with all UUID versions."""
-        service_id = uuid_factory
+        service_id = uuid_factory()
         mock_service = mocker.patch('app.auth.LegacyServiceDao.get', new_callable=AsyncMock)
         mock_service.active = True
         mock_service.id = service_id

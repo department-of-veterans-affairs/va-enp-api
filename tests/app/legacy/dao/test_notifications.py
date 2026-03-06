@@ -2,7 +2,6 @@
 
 from typing import Any, Awaitable, Callable
 from unittest.mock import AsyncMock, patch
-from uuid import UUID
 
 import pytest
 from sqlalchemy import delete
@@ -22,6 +21,7 @@ from app.constants import NotificationType
 from app.db.db_init import get_write_session_with_context, metadata_legacy
 from app.exceptions import NonRetryableError, RetryableError
 from app.legacy.dao.notifications_dao import LegacyNotificationDao
+from tests.conftest import UUIDFactory
 
 
 class TestLegacyNotificationDaoGet:
@@ -36,10 +36,10 @@ class TestLegacyNotificationDaoGet:
         notification_row = await LegacyNotificationDao.get(commit_notification.id)
         assert notification_row.id == commit_notification.id
 
-    async def test_get_non_existent_notification(self, uuid_factory: UUID) -> None:
+    async def test_get_non_existent_notification(self, uuid_factory: UUIDFactory) -> None:
         """Should raise NonRetryableError when notification does not exist in DB."""
         with pytest.raises(NonRetryableError):
-            await LegacyNotificationDao.get(uuid_factory)
+            await LegacyNotificationDao.get(uuid_factory())
 
     @pytest.mark.parametrize(
         ('caught_exception', 'raised_exception'),
@@ -54,16 +54,16 @@ class TestLegacyNotificationDaoGet:
         ],
     )
     async def test_get_exception_handling(
-        self, caught_exception: Exception, raised_exception: type[Exception], uuid_factory: UUID
+        self, caught_exception: Exception, raised_exception: type[Exception], uuid_factory: UUIDFactory
     ) -> None:
         """Test that _get raises the correct custom error when a specific SQLAlchemy exception occurs.
 
         Args:
             caught_exception (Exception): The exception our code caught
             raised_exception (type[Exception]): The exception our code raised
-            uuid_factory (UUID): A parametrized UUID covering multiple UUID versions
+            uuid_factory (UUIDFactory): A parametrized UUID covering multiple UUID versions
         """
-        notification_id = uuid_factory
+        notification_id = uuid_factory()
 
         # Patch the session context and simulate the exception during execution
         with patch('app.legacy.dao.notifications_dao.get_read_session_with_context') as mock_session_ctx:
@@ -79,14 +79,14 @@ class TestLegacyNotificationDaoCreateNotification:
     """Test class for LegacyNotificationDao.create_notification method."""
 
     async def test_get_happy_path(
-        self, commit_template: Row[Any], sample_api_key: Callable[..., Awaitable[Row[Any]]], uuid_factory: UUID
+        self, commit_template: Row[Any], sample_api_key: Callable[..., Awaitable[Row[Any]]], uuid_factory: UUIDFactory
     ) -> None:
         """Test the ability to create a notification in the database.
 
         Args:
             commit_template (Row[Any]): Template that was committed to the database
             sample_api_key (Callable): A factory fixture that returns a new API key row for a given service.
-            uuid_factory (UUID): A parametrized UUID covering multiple UUID versions
+            uuid_factory (UUIDFactory): A parametrized UUID covering multiple UUID versions
         """
         # setup
         async with get_write_session_with_context() as session:
@@ -96,7 +96,7 @@ class TestLegacyNotificationDaoCreateNotification:
             )
             await session.commit()
 
-        notification_id = uuid_factory
+        notification_id = uuid_factory()
 
         # test
         await LegacyNotificationDao.create_notification(
@@ -106,7 +106,7 @@ class TestLegacyNotificationDaoCreateNotification:
             reply_to_text='111-111-1111',
             service_id=commit_template.service_id,
             api_key_id=api_key.id,
-            reference=str(uuid_factory),
+            reference=str(uuid_factory()),
             template_id=commit_template.id,
             template_version=commit_template.version,
             key_type=api_key.key_type,
@@ -142,7 +142,7 @@ class TestLegacyNotificationDaoCreateNotification:
     async def test_create_notification_exception_handling(
         self,
         caught_exception: Exception,
-        uuid_factory: UUID,
+        uuid_factory: UUIDFactory,
     ) -> None:
         """Test that _insert_notification raises the correct custom error when a specific SQLAlchemy exception occurs.
 
@@ -151,7 +151,7 @@ class TestLegacyNotificationDaoCreateNotification:
 
         Args:
             caught_exception (Exception): The exception our code caught
-            uuid_factory (UUID): A parametrized UUID covering multiple UUID versions
+            uuid_factory (UUIDFactory): A parametrized UUID covering multiple UUID versions
         """
         # Patch the session context and simulate the exception during execution
         with patch('app.legacy.dao.notifications_dao.get_write_session_with_context') as mock_session_ctx:
@@ -161,14 +161,14 @@ class TestLegacyNotificationDaoCreateNotification:
 
             with pytest.raises(NonRetryableError):
                 await LegacyNotificationDao.create_notification(
-                    id=uuid_factory,
+                    id=uuid_factory(),
                     notification_type=NotificationType.SMS,
                     to='888-888-8888',
                     reply_to_text='111-111-1111',
-                    service_id=uuid_factory,
-                    api_key_id=uuid_factory,
-                    reference=str(uuid_factory),
-                    template_id=uuid_factory,
+                    service_id=uuid_factory(),
+                    api_key_id=uuid_factory(),
+                    reference=str(uuid_factory()),
+                    template_id=uuid_factory(),
                     template_version=0,
                     billable_units=0,
                     key_type='normal',
@@ -192,14 +192,14 @@ class TestLegacyNotificationDaoCreateNotification:
         self,
         caught_exception: Exception,
         raised_exception: type[Exception],
-        uuid_factory: UUID,
+        uuid_factory: UUIDFactory,
     ) -> None:
         """Test that _insert_notification raises the correct custom error when a specific SQLAlchemy exception occurs.
 
         Args:
             caught_exception (Exception): The exception our code caught
             raised_exception (type[Exception]): The exception our code raised
-            uuid_factory (UUID): A parametrized UUID covering multiple UUID versions
+            uuid_factory (UUIDFactory): A parametrized UUID covering multiple UUID versions
         """
         # Patch the session context and simulate the exception during execution
         with patch('app.legacy.dao.notifications_dao.get_write_session_with_context') as mock_session_ctx:
@@ -209,14 +209,14 @@ class TestLegacyNotificationDaoCreateNotification:
 
             with pytest.raises(raised_exception):
                 await LegacyNotificationDao._insert_notification(
-                    id=uuid_factory,
+                    id=uuid_factory(),
                     notification_type=NotificationType.SMS,
                     to='888-888-8888',
                     reply_to_text='111-111-1111',
-                    service_id=uuid_factory,
-                    api_key_id=uuid_factory,
-                    reference=str(uuid_factory),
-                    template_id=uuid_factory,
+                    service_id=uuid_factory(),
+                    api_key_id=uuid_factory(),
+                    reference=str(uuid_factory()),
+                    template_id=uuid_factory(),
                     template_version=0,
                     billable_units=0,
                     key_type='normal',
@@ -238,9 +238,9 @@ class TestLegacyNotificationDaoDeleteNotification:
         with pytest.raises(NonRetryableError):
             await LegacyNotificationDao.get(commit_notification.id)
 
-    async def test_delete_non_existent_notification(self, uuid_factory: UUID) -> None:
+    async def test_delete_non_existent_notification(self, uuid_factory: UUIDFactory) -> None:
         """Should not raise NonRetryableError when notification does not exist in DB."""
-        await LegacyNotificationDao.delete_notification(uuid_factory)
+        await LegacyNotificationDao.delete_notification(uuid_factory())
 
     @pytest.mark.parametrize(
         'caught_exception',
@@ -256,7 +256,7 @@ class TestLegacyNotificationDaoDeleteNotification:
     async def test_delete_notification_exception_handling(
         self,
         caught_exception: Exception,
-        uuid_factory: UUID,
+        uuid_factory: UUIDFactory,
     ) -> None:
         """Test that delete_notification raises the correct custom error when a specific SQLAlchemy exception occurs.
 
@@ -265,7 +265,7 @@ class TestLegacyNotificationDaoDeleteNotification:
 
         Args:
             caught_exception (Exception): The exception our code caught
-            uuid_factory (UUID): A parametrized UUID covering multiple UUID versions
+            uuid_factory (UUIDFactory): A parametrized UUID covering multiple UUID versions
         """
         # Patch the session context and simulate the exception during execution
         with patch('app.legacy.dao.notifications_dao.get_write_session_with_context') as mock_session_ctx:
@@ -274,7 +274,7 @@ class TestLegacyNotificationDaoDeleteNotification:
             mock_session_ctx.return_value.__aenter__.return_value = mock_session
 
             with pytest.raises(NonRetryableError):
-                await LegacyNotificationDao.delete_notification(uuid_factory)
+                await LegacyNotificationDao.delete_notification(uuid_factory())
 
     @pytest.mark.parametrize(
         ('caught_exception', 'raised_exception'),
@@ -291,14 +291,14 @@ class TestLegacyNotificationDaoDeleteNotification:
         self,
         caught_exception: Exception,
         raised_exception: type[Exception],
-        uuid_factory: UUID,
+        uuid_factory: UUIDFactory,
     ) -> None:
         """Test that _delete raises the correct custom error when a specific SQLAlchemy exception occurs.
 
         Args:
             caught_exception (Exception): The exception our code caught
             raised_exception (type[Exception]): The exception our code raised
-            uuid_factory (UUID): A parametrized UUID covering multiple UUID versions
+            uuid_factory (UUIDFactory): A parametrized UUID covering multiple UUID versions
         """
         # Patch the session context and simulate the exception during execution
         with patch('app.legacy.dao.notifications_dao.get_write_session_with_context') as mock_session_ctx:
@@ -307,4 +307,4 @@ class TestLegacyNotificationDaoDeleteNotification:
             mock_session_ctx.return_value.__aenter__.return_value = mock_session
 
             with pytest.raises(raised_exception):
-                await LegacyNotificationDao._delete(uuid_factory)
+                await LegacyNotificationDao._delete(uuid_factory())

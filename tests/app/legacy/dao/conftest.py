@@ -8,7 +8,6 @@ from sqlalchemy import Row, delete
 from sqlalchemy.ext.asyncio import AsyncSession, async_scoped_session
 
 from app.db.db_init import get_write_session_with_context, metadata_legacy
-from tests.conftest import uuid_factory  # noqa: F401
 
 
 @pytest.fixture

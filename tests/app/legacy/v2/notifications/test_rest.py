@@ -28,7 +28,7 @@ from app.legacy.v2.notifications.route_schema import (
     ValidatedPhoneNumber,
 )
 from app.legacy.v2.notifications.utils import ChainedDepends
-from tests.conftest import ENPTestClient, generate_headers
+from tests.conftest import ENPTestClient, UUIDFactory, generate_headers
 
 _push_path = '/legacy/v2/notifications/push'
 
@@ -362,10 +362,10 @@ class TestSmsPostHandler:
         prepare_database: Callable[[], Coroutine[Any, Any, dict[str, Row[Any]]]],
         path_request: Callable[..., dict[str, object]],
         build_headers: Callable[[UUID, UUID], dict[str, str]],
-        uuid_factory: UUID,
+        uuid_factory: UUIDFactory,
     ) -> None:
         """Test sms notification route returns 201 with UUID reference values."""
-        reference = str(uuid_factory)
+        reference = str(uuid_factory())
         db_data = await prepare_database()
         request = path_request(db_data['template'].id, phone_number='+18005550101', reference=reference)
         headers = build_headers(db_data['api_key'].id, db_data['service'].id)
@@ -511,22 +511,22 @@ class TestSmsPost:
     """Test the _sms_post method."""
 
     @pytest.fixture
-    def mock_template_validations(self, mocker: AsyncMock, uuid_factory: UUID) -> UUID:
+    def mock_template_validations(self, mocker: AsyncMock, uuid_factory: UUIDFactory) -> UUID:
         """Fixture to mock a template.
 
         Args:
             mocker (AsyncMock): Mock object
-            uuid_factory (UUID): A parametrized UUID covering multiple UUID versions
+            uuid_factory (UUIDFactory): A parametrized UUID covering multiple UUID versions
 
         Returns:
             Any: The mocked template
         """
-        template_id = uuid_factory
+        template_id = uuid_factory()
         mock_template = mocker.AsyncMock()
         mock_template.id = template_id
         mock_template.template_type = NotificationType.SMS
         mock_template.archived = False
-        mock_template.service_id = uuid_factory
+        mock_template.service_id = uuid_factory()
         mocker.patch('app.legacy.v2.notifications.rest.validate_template', return_value=mock_template)
         mocker.patch('app.legacy.v2.notifications.rest.validate_template_personalisation')
         return template_id
@@ -537,10 +537,10 @@ class TestSmsPost:
         mock_context: AsyncMock,
         mocker: AsyncMock,
         mock_template_validations: AsyncMock,
-        uuid_factory: UUID,
+        uuid_factory: UUIDFactory,
     ) -> None:
         """Test _sms_post works with a recipient identifier."""
-        mock_context.data = {'request_id': uuid_factory, 'service_id': uuid_factory}
+        mock_context.data = {'request_id': uuid_factory(), 'service_id': uuid_factory()}
         mocker.patch('app.legacy.v2.notifications.rest.create_notification')
 
         request = V2PostSmsRequestModel(phone_number='+18005550101', template_id=mock_template_validations)
@@ -553,10 +553,10 @@ class TestSmsPost:
         mock_context: AsyncMock,
         mocker: AsyncMock,
         mock_template_validations: AsyncMock,
-        uuid_factory: UUID,
+        uuid_factory: UUIDFactory,
     ) -> None:
         """Test _sms_post works with a recipient identifier."""
-        mock_context.data = {'request_id': uuid_factory, 'service_id': uuid_factory}
+        mock_context.data = {'request_id': uuid_factory(), 'service_id': uuid_factory()}
         mocker.patch('app.legacy.v2.notifications.rest.create_notification')
         mock_resolver = mocker.AsyncMock(spec=IdentifierSmsTaskResolver)
         recipient = RecipientIdentifierModel(id_type=IdentifierType.VA_PROFILE_ID, id_value='12345')

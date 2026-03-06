@@ -9,7 +9,7 @@ from fastapi.encoders import jsonable_encoder
 from pydantic import BaseModel
 
 from app.constants import RESPONSE_500
-from tests.conftest import ENPTestClient, router
+from tests.conftest import ENPTestClient, UUIDFactory, router
 
 
 class UuidRaise(BaseModel):
@@ -102,11 +102,11 @@ class TestLegacyTimedAPIRoute:
         assert response.status_code == status.HTTP_401_UNAUTHORIZED
         assert response.json() == error_details
 
-    def test_uuid_raise(self, client: ENPTestClient, uuid_factory: UUID) -> None:
+    def test_uuid_raise(self, client: ENPTestClient, uuid_factory: UUIDFactory) -> None:
         """Assert handler is tested.
 
         Args:
             client (ENPTestClient): Test client
-            uuid_factory (UUID): A parametrized UUID covering multiple UUID versions
+            uuid_factory (UUIDFactory): A parametrized UUID covering multiple UUID versions
         """
-        client.post('/test/uuid', json=jsonable_encoder(UuidRaise(item=uuid_factory)))
+        client.post('/test/uuid', json=jsonable_encoder(UuidRaise(item=uuid_factory())))

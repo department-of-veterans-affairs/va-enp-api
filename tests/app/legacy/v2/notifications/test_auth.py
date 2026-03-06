@@ -4,7 +4,6 @@ import time
 from datetime import datetime, timedelta, timezone
 from typing import Any, Awaitable, Callable, Type
 from unittest.mock import AsyncMock, patch
-from uuid import UUID
 
 import jwt
 import pytest
@@ -33,7 +32,7 @@ from app.constants import RESPONSE_LEGACY_INVALID_TOKEN_WRONG_TYPE
 from app.exceptions import NonRetryableError, RetryableError
 from app.legacy.dao.api_keys_dao import ApiKeyRecord
 from tests.app.legacy.dao.test_api_keys import encode_and_sign
-from tests.conftest import generate_token, generate_token_with_partial_payload
+from tests.conftest import UUIDFactory, generate_token, generate_token_with_partial_payload
 
 
 @pytest.fixture
@@ -179,10 +178,10 @@ class TestGetActiveServiceForIssuer:
         ],
     )
     async def test_raises_on_any_service_DAO_error(
-        self, raises: Type[Exception], expected_detail: str, uuid_factory: UUID
+        self, raises: Type[Exception], expected_detail: str, uuid_factory: UUIDFactory
     ) -> None:
         """Should raise 403 with correct detail if the service ID is invalid or not found."""
-        issuer = str(uuid_factory)
+        issuer = str(uuid_factory())
 
         with patch('app.auth.LegacyServiceDao.get', side_effect=raises):
             with pytest.raises(HTTPException) as exc_info:
@@ -193,10 +192,10 @@ class TestGetActiveServiceForIssuer:
         assert exc.detail == expected_detail
 
     async def test_raises_with_inactive_service(
-        self, mocker: AsyncMock, sample_service: Callable[..., Awaitable[Row[Any]]], uuid_factory: UUID
+        self, mocker: AsyncMock, sample_service: Callable[..., Awaitable[Row[Any]]], uuid_factory: UUIDFactory
     ) -> None:
         """Should raise 403 if the service is archived (inactive)."""
-        service = await sample_service(id=uuid_factory, active=False)
+        service = await sample_service(id=uuid_factory(), active=False)
         issuer = str(service.id)
 
         mocker.patch('app.auth.LegacyServiceDao.get', return_value=service, new_callable=AsyncMock)
@@ -212,12 +211,12 @@ class TestValidateServiceApiKey:
     """Test suite for validating service API key behavior and associated edge cases."""
 
     @pytest.fixture
-    def sample_api_key_record(self, uuid_factory: UUID) -> ApiKeyRecord:
+    def sample_api_key_record(self, uuid_factory: UUIDFactory) -> ApiKeyRecord:
         """Return valid sample api key record."""
         api_key = ApiKeyRecord(
-            id=uuid_factory,
+            id=uuid_factory(),
             _secret_encrypted=encode_and_sign('not-so-secret'),
-            service_id=uuid_factory,
+            service_id=uuid_factory(),
             expiry_date=datetime.now(timezone.utc) + timedelta(days=1),
             revoked=False,
             key_type='normal',
@@ -282,10 +281,10 @@ class TestValidateServiceApiKey:
 class TestGetTokenIssuer:
     """Test suite for verifying behavior of get_token_issuer function with various token conditions."""
 
-    def test_returns_issuer_for_decodable_token(self, uuid_factory: UUID) -> None:
+    def test_returns_issuer_for_decodable_token(self, uuid_factory: UUIDFactory) -> None:
         """Test that get_token_issuer returns the correct issuer from a valid token."""
         current_timestamp = int(time.time())
-        issuer = str(uuid_factory)
+        issuer = str(uuid_factory())
         payload: JWTPayloadDict = {
             'iss': issuer,
             'iat': current_timestamp,
@@ -329,11 +328,11 @@ class TestGetTokenIssuer:
 class TestValidateJwtToken:
     """Test suite for validating JWT token claims and expiration handling."""
 
-    def test_validates_token(self, uuid_factory: UUID) -> None:
+    def test_validates_token(self, uuid_factory: UUIDFactory) -> None:
         """Should return True for valid token."""
         current_timestamp = int(time.time())
         payload = {
-            'iss': str(uuid_factory),
+            'iss': str(uuid_factory()),
             'iat': current_timestamp,
             'exp': current_timestamp + ACCESS_TOKEN_EXPIRE_SECONDS,
         }

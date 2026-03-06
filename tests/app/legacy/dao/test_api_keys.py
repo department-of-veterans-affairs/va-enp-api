@@ -4,7 +4,6 @@ import os
 from datetime import datetime, timezone
 from typing import Any, Awaitable, Callable
 from unittest.mock import AsyncMock, Mock, patch
-from uuid import UUID
 from zoneinfo import ZoneInfo
 
 import pytest
@@ -20,6 +19,7 @@ from sqlalchemy.exc import (
 
 from app.exceptions import NonRetryableError, RetryableError
 from app.legacy.dao.api_keys_dao import ApiKeyRecord, LegacyApiKeysDao
+from tests.conftest import UUIDFactory
 
 
 # TODO: TEAM-1664
@@ -68,9 +68,9 @@ class TestLegacyApiKeysDao:
             actual = api_key._mapping[column]
             assert actual == expected, f'{column} mismatch: expected {expected}, got {actual}'
 
-    async def test_get_api_keys_should_return_empty_list(self, uuid_factory: UUID) -> None:
+    async def test_get_api_keys_should_return_empty_list(self, uuid_factory: UUIDFactory) -> None:
         """API keys should not exist for non-existant service."""
-        keys = await LegacyApiKeysDao.get_service_api_keys(uuid_factory)
+        keys = await LegacyApiKeysDao.get_service_api_keys(uuid_factory())
 
         assert len(keys) == 0, 'keys should not exist'
 
@@ -85,13 +85,13 @@ class TestLegacyApiKeysDao:
         ],
     )
     async def test_get_service_api_keys_exception_handling(
-        self, raised_exception: Exception, uuid_factory: UUID
+        self, raised_exception: Exception, uuid_factory: UUIDFactory
     ) -> None:
         """Test that get_service_api_keys raises custom NonRetryableError when SQLAlchemy exceptions occurs.
 
         NonRetryableError raised for all errors since retries exceeded or was never retryable.
         """
-        service_id = uuid_factory
+        service_id = uuid_factory()
 
         # Patch the session context and simulate the exception during execution
         with patch('app.legacy.dao.api_keys_dao.get_read_session_with_context') as mock_session_ctx:
@@ -113,10 +113,10 @@ class TestLegacyApiKeysDao:
         ],
     )
     async def test_get_api_keys_for_service_exception_handling(
-        self, raised_exception: Exception, expected_error: type[Exception], uuid_factory: UUID
+        self, raised_exception: Exception, expected_error: type[Exception], uuid_factory: UUIDFactory
     ) -> None:
         """Test that get_api_keys raises the correct custom error when a specific SQLAlchemy exception occurs."""
-        service_id = uuid_factory
+        service_id = uuid_factory()
 
         # Patch the session context and simulate the exception during execution
         with patch('app.legacy.dao.api_keys_dao.get_read_session_with_context') as mock_session_ctx:
@@ -181,14 +181,14 @@ class TestApiKeyRecord:
 
         assert record.expiry_date == aware_dt
 
-    def test_secret_returns_decrypted_value(self, uuid_factory: UUID) -> None:
+    def test_secret_returns_decrypted_value(self, uuid_factory: UUIDFactory) -> None:
         """Ensure the secret property decrypts the encrypted string."""
         secret = 'not_very_secret'
 
         record = ApiKeyRecord(
-            id=uuid_factory,
+            id=uuid_factory(),
             _secret_encrypted=encode_and_sign(secret),
-            service_id=uuid_factory,
+            service_id=uuid_factory(),
             expiry_date=None,
             revoked=False,
             key_type='normal',
@@ -196,12 +196,12 @@ class TestApiKeyRecord:
 
         assert record.secret == secret
 
-    def test_secret_raises_and_logs_error_if_secret_not_decodeable(self, uuid_factory: UUID) -> None:
+    def test_secret_raises_and_logs_error_if_secret_not_decodeable(self, uuid_factory: UUIDFactory) -> None:
         """Ensure NonRetryableError raised if secret not decodable."""
         record = ApiKeyRecord(
-            id=uuid_factory,
+            id=uuid_factory(),
             _secret_encrypted='invalid-secret',
-            service_id=uuid_factory,
+            service_id=uuid_factory(),
             expiry_date=None,
             revoked=False,
             key_type='normal',

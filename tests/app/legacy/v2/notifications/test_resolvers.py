@@ -13,6 +13,7 @@ from app.legacy.v2.notifications.resolvers import (
     get_sms_task_resolver,
 )
 from app.legacy.v2.notifications.route_schema import RecipientIdentifierModel, V2PostSmsRequestModel
+from tests.conftest import UUIDFactory
 
 
 class TestSmsTaskResolver:
@@ -105,9 +106,9 @@ class TestIdentifierSmsTaskResolver:
 class TestGetSmsTaskResolver:
     """Test get_sms_task_resolver method."""
 
-    def test_happy_path_phone(self, uuid_factory: UUID) -> None:
+    def test_happy_path_phone(self, uuid_factory: UUIDFactory) -> None:
         """Test happy path with a phone number."""
-        request = V2PostSmsRequestModel(phone_number='+18005550101', template_id=uuid_factory)
+        request = V2PostSmsRequestModel(phone_number='+18005550101', template_id=uuid_factory())
         get_sms_task_resolver(request)
 
     @pytest.mark.parametrize(
@@ -119,14 +120,14 @@ class TestGetSmsTaskResolver:
             (IdentifierType.PID, '12345'),
         ],
     )
-    def test_happy_recipient(self, id_type: IdentifierType, id_value: str, uuid_factory: UUID) -> None:
+    def test_happy_recipient(self, id_type: IdentifierType, id_value: str, uuid_factory: UUIDFactory) -> None:
         """Test happy path with recipient.
 
         Args:
             id_type (IdentifierType): Identifier type
             id_value (str): Identifier value
-            uuid_factory (UUID): A parametrized UUID covering multiple UUID versions
+            uuid_factory (UUIDFactory): A parametrized UUID covering multiple UUID versions
         """
         recipient = RecipientIdentifierModel(id_type=id_type, id_value=id_value)
-        request = V2PostSmsRequestModel(recipient_identifier=recipient, template_id=uuid_factory)
+        request = V2PostSmsRequestModel(recipient_identifier=recipient, template_id=uuid_factory())
         get_sms_task_resolver(request)

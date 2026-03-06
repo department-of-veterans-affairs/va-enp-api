@@ -1,23 +1,21 @@
 """Test module for app/v3/notifications/rest.py."""
 
-from uuid import UUID
-
 from fastapi import status
 
 from app.constants import RESPONSE_400
 from app.v3.notifications.route_schema import NotificationSingleRequest
-from tests.conftest import ENPTestClient
+from tests.conftest import ENPTestClient, UUIDFactory
 
 
-def test_get(client: ENPTestClient, uuid_factory: UUID) -> None:
+def test_get(client: ENPTestClient, uuid_factory: UUIDFactory) -> None:
     """Test GET /v3/notifications/.
 
     Args:
         client(ENPTestClient): Custom FastAPI client fixture
-        uuid_factory (UUID): A parametrized UUID covering multiple UUID versions
+        uuid_factory (UUIDFactory): A parametrized UUID covering multiple UUID versions
 
     """
-    resp = client.get(f'/v3/notifications/{uuid_factory}')
+    resp = client.get(f'/v3/notifications/{uuid_factory()}')
     assert resp.status_code == status.HTTP_200_OK
 
 
@@ -52,34 +50,34 @@ def test_get_malformed_request(client: ENPTestClient) -> None:
     assert malformed_uuid in resp_text
 
 
-def test_post(client: ENPTestClient, uuid_factory: UUID) -> None:
+def test_post(client: ENPTestClient, uuid_factory: UUIDFactory) -> None:
     """Test POST /v3/notifications/.
 
     Args:
         client(ENPTestClient): Custom FastAPI client fixture
-        uuid_factory (UUID): A parametrized UUID covering multiple UUID versions
+        uuid_factory (UUIDFactory): A parametrized UUID covering multiple UUID versions
 
     """
     srequest = NotificationSingleRequest(
         to='vanotify@va.gov',
         personalization={'hello': 'world'},
-        template=uuid_factory,
+        template=uuid_factory(),
     )
     resp = client.post('v3/notifications', json=srequest.serialize())
     assert resp.status_code == status.HTTP_202_ACCEPTED
 
 
-def test_post_no_personalization(client: ENPTestClient, uuid_factory: UUID) -> None:
+def test_post_no_personalization(client: ENPTestClient, uuid_factory: UUIDFactory) -> None:
     """Test POST /v3/notifications/ with no personalization.
 
     Args:
         client(ENPTestClient): Custom FastAPI client fixture
-        uuid_factory (UUID): A parametrized UUID covering multiple UUID versions
+        uuid_factory (UUIDFactory): A parametrized UUID covering multiple UUID versions
 
     """
     srequest = NotificationSingleRequest(
         to='vanotify@va.gov',
-        template=uuid_factory,
+        template=uuid_factory(),
     )
     resp = client.post('v3/notifications', json=srequest.serialize())
     assert resp.status_code == status.HTTP_202_ACCEPTED
