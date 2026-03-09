@@ -3,12 +3,11 @@
 import base64
 import json
 from typing import Any, NotRequired, TypedDict
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 from aiobotocore.session import ClientCreatorContext, get_session
 from async_lru import alru_cache
 from botocore.exceptions import ClientError
-from pydantic import UUID4
 from types_aiobotocore_sqs import SQSClient
 from types_aiobotocore_sqs.type_defs import SendMessageResultTypeDef
 
@@ -79,7 +78,7 @@ class SqsAsyncProducer:
 
     def __init__(self) -> None:
         """Initialize the SQS client."""
-        self._client: 'ClientCreatorContext[SQSClient]' | None = None
+        self._client: 'ClientCreatorContext[SQSClient] | None' = None
 
     def __str__(self) -> str:
         """Return the name of the client."""
@@ -101,11 +100,11 @@ class SqsAsyncProducer:
 
         return self._client
 
-    async def enqueue_message(self, tasks: list[tuple[str, tuple[str, UUID4]]]) -> None:
+    async def enqueue_message(self, tasks: list[tuple[str, tuple[str, UUID]]]) -> None:
         """Enqueue multiple messages to SQS.
 
         Args:
-            tasks (list[tuple[str, tuple[str, UUID4]]]): List of tuples containing queue name and task details
+            tasks (list[tuple[str, tuple[str, UUID]]]): List of tuples containing queue name and task details
         """
         if len(tasks) == 1:
             # build body for 1 task
@@ -261,7 +260,7 @@ class SqsAsyncProducer:
     def _generate_celery_task(
         queue_name: str,
         task_name: str,
-        notification_id: UUID4,
+        notification_id: UUID,
     ) -> CeleryTaskEnvelope:
         """Create a celery task envelope.
 
@@ -270,7 +269,7 @@ class SqsAsyncProducer:
         Args:
             queue_name (str): The name of the SQS queue
             task_name (str): The name of the task to be executed
-            notification_id (UUID4): The ID of the notification
+            notification_id (UUID): The ID of the notification
 
         Returns:
             CeleryTaskEnvelope: The dictionary envelope containing the task body and properties
@@ -306,11 +305,11 @@ class SqsAsyncProducer:
         return envelope
 
     @staticmethod
-    def _generate_celery_task_chain(tasks: list[tuple[str, tuple[str, UUID4]]]) -> CeleryTaskEnvelope:
+    def _generate_celery_task_chain(tasks: list[tuple[str, tuple[str, UUID]]]) -> CeleryTaskEnvelope:
         """Generate a celery task envelope for a celery task chain.
 
         Args:
-            tasks (list[tuple[str, tuple[str, UUID4]]]): List of tuples containing queue name and task details
+            tasks (list[tuple[str, tuple[str, UUID]]]): List of tuples containing queue name and task details
 
         Returns:
             CeleryTaskEnvelope: The envelope containing the task body and properties

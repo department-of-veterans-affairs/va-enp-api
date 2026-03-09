@@ -1,21 +1,21 @@
 """Test file for routers."""
 
 from unittest.mock import AsyncMock
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 import pytest
 from fastapi import HTTPException, status
 from fastapi.encoders import jsonable_encoder
-from pydantic import UUID4, BaseModel
+from pydantic import BaseModel
 
 from app.constants import RESPONSE_500
 from tests.conftest import ENPTestClient, router
 
 
 class UuidRaise(BaseModel):
-    """Model to test a response to faulty UUID4 input."""
+    """Model to test a response to faulty UUID input."""
 
-    item: UUID4
+    item: UUID
 
 
 @router.post('/uuid')
@@ -23,7 +23,7 @@ async def uuid_validation_fail(item: UuidRaise) -> None:
     """Route for a failed validation check to maintain backwards compatability with notification-api.
 
     Args:
-        item (UuidRaise): Pydantic model that has a UUID4 field
+        item (UuidRaise): Pydantic model that has a UUID field
     """
     ...
 

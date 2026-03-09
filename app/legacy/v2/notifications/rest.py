@@ -1,9 +1,9 @@
 """All endpoints for the v2/notifications route."""
 
 from typing import Annotated
+from uuid import UUID
 
 from fastapi import APIRouter, BackgroundTasks, Body, Depends, Request, status
-from pydantic import UUID4
 from starlette_context import context
 
 from app.auth import JWTBearer
@@ -67,7 +67,7 @@ async def create_push_notification(
 
     """
     icn = request_data.recipient_identifier.id_value
-    template_id = UUID4(request_data.template_id)
+    template_id = UUID(request_data.template_id)
     personalization = request_data.personalisation
     msg_template = 'Temporary string - Will be ((record)) from a push template ((table))'
 
@@ -128,7 +128,7 @@ async def _sms_post(
     """
     logger.debug('Creating SMS notification with request data: {}', request)
     service_id = context['service_id']
-    notification_id: UUID4 = context.data['request_id']
+    notification_id: UUID = context.data['request_id']
 
     template_row = await validate_template(request.template_id, service_id, request.get_channel())
     validate_template_personalisation(template_row, request.personalisation)

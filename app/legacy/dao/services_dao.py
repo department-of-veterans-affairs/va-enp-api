@@ -1,8 +1,8 @@
 """The data access objects for services."""
 
 from typing import Any
+from uuid import UUID
 
-from pydantic import UUID4
 from sqlalchemy import Row, select
 from sqlalchemy.exc import (
     DataError,
@@ -28,11 +28,11 @@ class LegacyServiceDao:
     """
 
     @staticmethod
-    async def get(id: UUID4) -> Row[Any]:
+    async def get(id: UUID) -> Row[Any]:
         """Retrieve a single service row by its ID.
 
         Args:
-            id (UUID4): The unique identifier of the service to retrieve.
+            id (UUID): The unique identifier of the service to retrieve.
 
         Returns:
             Row[Any]: A SQLAlchemy Core Row object containing the service data.
@@ -48,11 +48,11 @@ class LegacyServiceDao:
 
     @db_retry
     @staticmethod
-    async def _get(id: UUID4) -> Row[Any]:
+    async def _get(id: UUID) -> Row[Any]:
         """Retryable and cached function to get a Service row.
 
         Args:
-            id (UUID4): The service id to get
+            id (UUID): The service id to get
 
         Raises:
             NonRetryableError: If the error is non-retryable

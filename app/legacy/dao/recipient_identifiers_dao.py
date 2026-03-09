@@ -1,6 +1,7 @@
 """Data Access Object for recipient identifiers in the legacy database schema."""
 
-from pydantic import UUID4
+from uuid import UUID
+
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.exc import (
     DataError,
@@ -23,13 +24,13 @@ class RecipientIdentifiersDao:
 
     @staticmethod
     async def set_recipient_identifiers(
-        notification_id: UUID4,
+        notification_id: UUID,
         recipient_identifiers: RecipientIdentifierModel,
     ) -> None:
         """Set recipient identifiers for a notification.
 
         Args:
-            notification_id (UUID4): The unique identifier of the notification.
+            notification_id (UUID): The unique identifier of the notification.
             recipient_identifiers (RecipientIdentifierModel): The recipient identifiers to set.
 
         Raises:
@@ -44,13 +45,13 @@ class RecipientIdentifiersDao:
     @db_retry
     @staticmethod
     async def _set_recipient_identifiers(
-        notification_id: UUID4,
+        notification_id: UUID,
         recipient_identifiers: RecipientIdentifierModel,
     ) -> None:
         """Set the recipient identifiers for a notification.
 
         Args:
-            notification_id (UUID4): id of the notification
+            notification_id (UUID): id of the notification
             recipient_identifiers (dict[str, str]): The recipient identifiers
 
         Raises:
