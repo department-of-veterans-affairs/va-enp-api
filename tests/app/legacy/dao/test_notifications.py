@@ -22,6 +22,7 @@ from app.constants import NotificationType
 from app.db.db_init import get_write_session_with_context, metadata_legacy
 from app.exceptions import NonRetryableError, RetryableError
 from app.legacy.dao.notifications_dao import LegacyNotificationDao
+from tests.conftest import UUIDFactory
 
 
 class TestLegacyNotificationDaoGet:
@@ -80,15 +81,14 @@ class TestLegacyNotificationDaoCreateNotification:
     """Test class for LegacyNotificationDao.create_notification method."""
 
     async def test_get_happy_path(
-        self,
-        commit_template: Row[Any],
-        sample_api_key: Callable[..., Awaitable[Row[Any]]],
+        self, commit_template: Row[Any], sample_api_key: Callable[..., Awaitable[Row[Any]]], uuid_factory: UUIDFactory
     ) -> None:
         """Test the ability to create a notification in the database.
 
         Args:
             commit_template (Row[Any]): Template that was committed to the database
             sample_api_key (Callable): A factory fixture that returns a new API key row for a given service.
+            uuid_factory (UUIDFactory): A parametrized UUID covering multiple UUID versions
         """
         # setup
         async with get_write_session_with_context() as session:
@@ -98,7 +98,7 @@ class TestLegacyNotificationDaoCreateNotification:
             )
             await session.commit()
 
-        notification_id = uuid4()
+        notification_id = uuid_factory()
 
         # test
         await LegacyNotificationDao.create_notification(
@@ -108,7 +108,7 @@ class TestLegacyNotificationDaoCreateNotification:
             reply_to_text='111-111-1111',
             service_id=commit_template.service_id,
             api_key_id=api_key.id,
-            reference=str(uuid4()),
+            reference=str(uuid_factory()),
             template_id=commit_template.id,
             template_version=commit_template.version,
             key_type=api_key.key_type,

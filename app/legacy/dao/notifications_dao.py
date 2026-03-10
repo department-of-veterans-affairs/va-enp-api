@@ -2,8 +2,8 @@
 
 from datetime import datetime
 from typing import Any
+from uuid import UUID
 
-from pydantic import UUID4
 from sqlalchemy import Row, delete, select
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.exc import (
@@ -33,11 +33,11 @@ class LegacyNotificationDao:
     """
 
     @staticmethod
-    async def get(id: UUID4) -> Row[Any]:
+    async def get(id: UUID) -> Row[Any]:
         """Get a Notification from the legacy database.
 
         Args:
-            id (UUID4): id of the notification
+            id (UUID): id of the notification
 
         Raises:
             NonRetryableError: Unable to get the notification
@@ -53,7 +53,7 @@ class LegacyNotificationDao:
 
     @db_retry
     @staticmethod
-    async def _get(id: UUID4) -> Row[Any]:
+    async def _get(id: UUID) -> Row[Any]:
         legacy_notifications = metadata_legacy.tables['notifications']
         try:
             stmt = select(legacy_notifications).where(legacy_notifications.c.id == id)
@@ -76,14 +76,14 @@ class LegacyNotificationDao:
 
     @staticmethod
     async def create_notification(
-        id: UUID4,
+        id: UUID,
         notification_type: NotificationType,
         to: str | None,
         reply_to_text: str,
-        service_id: UUID4,
-        api_key_id: UUID4,
+        service_id: UUID,
+        api_key_id: UUID,
         reference: str | None,
-        template_id: UUID4,
+        template_id: UUID,
         template_version: int,
         billable_units: int = 0,
         key_type: str = 'normal',
@@ -93,14 +93,14 @@ class LegacyNotificationDao:
         """Public interface for creating a notification.
 
         Args:
-            id (UUID4): id of the notification
+            id (UUID): id of the notification
             notification_type (NotificationType): Channel
             to (str | None): Recipient
             reply_to_text (str): Origination phone, email, etc.
-            service_id (UUID4): The service id
-            api_key_id (UUID4): The api key id
+            service_id (UUID): The service id
+            api_key_id (UUID): The api key id
             reference (str | None): Client provided reference
-            template_id (UUID4): The template id
+            template_id (UUID): The template id
             template_version (int): The template version
             billable_units (int, optional): How many billable units this is. Defaults to 0.
             key_type (str, optional): ApiKey type. Defaults to 'normal'.
@@ -132,14 +132,14 @@ class LegacyNotificationDao:
     @db_retry
     @staticmethod
     async def _insert_notification(
-        id: UUID4,
+        id: UUID,
         notification_type: NotificationType,
         to: str | None,
         reply_to_text: str,
-        service_id: UUID4,
-        api_key_id: UUID4,
+        service_id: UUID,
+        api_key_id: UUID,
         reference: str | None,
-        template_id: UUID4,
+        template_id: UUID,
         template_version: int,
         billable_units: int,
         key_type: str,
@@ -187,12 +187,12 @@ class LegacyNotificationDao:
 
     @staticmethod
     async def delete_notification(
-        id: UUID4,
+        id: UUID,
     ) -> None:
         """Delete a Notification from the legacy database.
 
         Args:
-            id (UUID4): id of the notification
+            id (UUID): id of the notification
 
         Raises:
             NonRetryableError: If unable to delete the notification
@@ -205,7 +205,7 @@ class LegacyNotificationDao:
 
     @db_retry
     @staticmethod
-    async def _delete(id: UUID4) -> None:
+    async def _delete(id: UUID) -> None:
         legacy_notifications = metadata_legacy.tables['notifications']
         try:
             stmt = delete(legacy_notifications).where(legacy_notifications.c.id == id)

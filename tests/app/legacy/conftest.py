@@ -3,10 +3,9 @@
 from datetime import datetime, timezone
 from random import randint
 from typing import Any, Awaitable, Callable, Coroutine
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 import pytest
-from pydantic import UUID4
 from sqlalchemy import Row, insert, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -34,7 +33,7 @@ def sample_user(
 
     async def _wrapper(
         session: AsyncSession | None = None,
-        id: UUID4 | None = None,
+        id: UUID | None = None,
         name: str | None = None,
         email_address: str | None = None,
         created_at: datetime | None = None,
@@ -82,14 +81,14 @@ def sample_service(
 
     async def _wrapper(
         session: AsyncSession | None = None,
-        id: UUID4 | None = None,
+        id: UUID | None = None,
         name: str | None = None,
         created_at: datetime | None = None,
         active: bool = True,
         message_limit: int = 1000,
         restricted: bool = False,
         research_mode: bool = False,
-        created_by_id: UUID4 | None = None,  # Expecting a FK to this if it is here
+        created_by_id: UUID | None = None,  # Expecting a FK to this if it is here
         prefix_sms: bool = False,
         rate_limit: int = 3000,
         count_as_live: bool = True,
@@ -145,15 +144,15 @@ def sample_api_key(
 
     async def _wrapper(
         session: AsyncSession | None = None,
-        id: UUID4 | None = None,
+        id: UUID | None = None,
         name: str | None = None,
         secret: str | None = None,
-        service_id: UUID4 | None = None,
+        service_id: UUID | None = None,
         key_type: str = 'normal',
         revoked: bool = False,
         expiry_date: datetime | None = None,
         created_at: datetime | None = None,
-        created_by_id: UUID4 | None = None,
+        created_by_id: UUID | None = None,
         version: int = 0,
     ) -> Row[Any]:
         id = id or uuid4()
@@ -214,16 +213,16 @@ def sample_template(
 
     async def _wrapper(
         session: AsyncSession | None = None,
-        id: UUID4 | None = None,
+        id: UUID | None = None,
         name: str | None = None,
         template_type: str | None = None,
         created_at: datetime | None = None,
         content: str | None = None,
         archived: bool = False,
         hidden: bool = False,
-        service_id: UUID4 | None = None,
+        service_id: UUID | None = None,
         process_type: str | None = None,
-        created_by_id: UUID4 | None = None,
+        created_by_id: UUID | None = None,
         version: int = 0,
     ) -> Row[Any]:
         id = id or uuid4()
@@ -288,11 +287,11 @@ def sample_service_sms_sender(
     """
 
     async def _wrapper(
-        service_id: UUID4,
+        service_id: UUID,
         session: AsyncSession | None = None,
         archived: bool = False,
         created_at: datetime | None = None,
-        id: UUID4 | None = None,
+        id: UUID | None = None,
         is_default: bool = True,
         sms_sender: str | None = None,
     ) -> Row[Any]:
@@ -337,14 +336,14 @@ def sample_notification(
 
     async def _wrapper(
         session: AsyncSession | None = None,
-        id: UUID4 | None = None,
+        id: UUID | None = None,
         notification_type: NotificationType | None = None,
         to: str | None = None,
         reply_to_text: str | None = None,
-        service_id: UUID4 | None = None,
-        api_key_id: UUID4 | None = None,
+        service_id: UUID | None = None,
+        api_key_id: UUID | None = None,
         reference: str | None = None,
-        template_id: UUID4 | None = None,
+        template_id: UUID | None = None,
         billable_units: int = 0,
         personalisation: dict[str, str | int | float | list[str | int | float] | PersonalisationFileObject]
         | None = None,

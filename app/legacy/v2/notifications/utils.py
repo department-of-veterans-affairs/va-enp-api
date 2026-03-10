@@ -2,10 +2,10 @@
 
 import re
 from typing import Any, Awaitable, Callable
+from uuid import UUID
 
 from async_lru import alru_cache
 from fastapi import HTTPException, Request, status
-from pydantic import UUID4
 from sqlalchemy import Row
 from starlette_context import context
 
@@ -92,11 +92,11 @@ async def get_arn_from_icn(icn: str) -> str:
     raise NotImplementedError('get_arn_from_icn has not been implemented.')
 
 
-async def validate_push_template(template_id: UUID4) -> None:
+async def validate_push_template(template_id: UUID) -> None:
     """Future method to validate the template.
 
     Args:
-        template_id (UUID4): The template ID to validate
+        template_id (UUID): The template ID to validate
 
     Raises:
         NotImplementedError: For now, raise an exception. Change the type when implemented.
@@ -109,8 +109,8 @@ async def validate_push_template(template_id: UUID4) -> None:
 
 @alru_cache(maxsize=1024, ttl=FIVE_MINUTES)
 async def validate_template(
-    template_id: UUID4,
-    service_id: UUID4,
+    template_id: UUID,
+    service_id: UUID,
     expected_type: NotificationType,
 ) -> Row[Any]:
     """Validates the template with the given ID.
@@ -119,8 +119,8 @@ async def validate_template(
     of these conditions are not met.
 
     Args:
-        template_id (UUID4): The template_id to validate
-        service_id (UUID4): The service_id to validate
+        template_id (UUID): The template_id to validate
+        service_id (UUID): The service_id to validate
         expected_type (NotificationType): The expected type of the template
 
     Returns:
@@ -150,14 +150,14 @@ async def validate_template(
 
 
 async def create_notification(
-    id: UUID4,
+    id: UUID,
     template_row: Row[Any],
     request: V2PostSmsRequestModel | V2PostEmailRequestModel,
 ) -> None:
     """Utility function to help the route create a notification using LegacyNotificationDao.create_notification.
 
     Args:
-        id (UUID4): notification id to use
+        id (UUID): notification id to use
         template_row (Row[Any]): Row of template data
         request (V2PostSmsRequestModel | V2PostEmailRequestModel): The request data
 
@@ -193,14 +193,14 @@ async def create_notification(
 def _validate_template_type(
     template_type: NotificationType,
     expected_type: NotificationType,
-    template_id: UUID4,
+    template_id: UUID,
 ) -> None:
     """Validates that the template is of the expected type.
 
     Args:
         template_type (NotificationType): The template type to validate
         expected_type (NotificationType): The expected type of the template
-        template_id (UUID4): The ID of the template
+        template_id (UUID): The ID of the template
 
     Raises:
         NonRetryableError: If the template is not of the expected type
@@ -215,12 +215,12 @@ def _validate_template_type(
         raise NonRetryableError(f'{template_type} template is not suitable for {expected_type} notification')
 
 
-def _validate_template_active(archived: bool, template_id: UUID4) -> None:
+def _validate_template_active(archived: bool, template_id: UUID) -> None:
     """Validates that the template is active.
 
     Args:
         archived (bool): The archived status of the template
-        template_id (UUID4): The ID of the template
+        template_id (UUID): The ID of the template
 
     Raises:
         NonRetryableError: If the template is archived (not active)
@@ -282,11 +282,11 @@ def _collect_personalisation_from_template(template_content: str) -> set[str]:
     return set(matches)
 
 
-async def enqueue_notification_tasks(tasks: list[tuple[str, tuple[str, UUID4]]]) -> None:
+async def enqueue_notification_tasks(tasks: list[tuple[str, tuple[str, UUID]]]) -> None:
     """Uses the SqsAsyncProducer to enqueue tasks for processing by Celery.
 
     Args:
-        tasks (list[tuple[str, tuple[str, UUID4]]]): The tasks to enqueue
+        tasks (list[tuple[str, tuple[str, UUID]]]): The tasks to enqueue
 
     """
     sqs_producer = SqsAsyncProducer()

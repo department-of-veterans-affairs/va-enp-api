@@ -1,6 +1,8 @@
 """Request and Response bodies for v3/notifications."""
 
-from pydantic import UUID4, AwareDatetime, BaseModel, ConfigDict
+from uuid import UUID
+
+from pydantic import AwareDatetime, BaseModel, ConfigDict
 
 
 class RestrictiveBaseModel(BaseModel):
@@ -14,7 +16,7 @@ class NotificationSingleRequest(RestrictiveBaseModel):
 
     to: str
     personalization: dict[str, str] | None = None
-    template: UUID4
+    template: UUID
 
     def serialize(self) -> dict[str, str | dict[str, str] | None]:
         """Serialize the pydantic model.
@@ -31,7 +33,7 @@ class NotificationSingleRequest(RestrictiveBaseModel):
 class NotificationSingleResponse(BaseModel):
     """Response for notification endpoint."""
 
-    id: UUID4
+    id: UUID
     created_at: AwareDatetime
     updated_at: AwareDatetime
     sent_at: AwareDatetime | None = None

@@ -9,6 +9,7 @@ from types import FrameType
 from typing import Dict, Optional
 
 from loguru import logger as loguru_logger
+from opentelemetry import trace as otel_trace
 from starlette_context import context
 from starlette_context.errors import ContextDoesNotExistError
 
@@ -34,13 +35,20 @@ LOGLEVEL_MAPPING: Dict[int, str] = {
 SERIALIZE = ENV in DEPLOYMENT_ENVS
 
 
+def get_trace_context() -> dict[str, str]:
+    """Return the current OTel trace and span IDs if an active span exists."""
+    span = otel_trace.get_current_span()
+    ctx = span.get_span_context()
+    if ctx and ctx.is_valid:
+        return {
+            'trace_id': format(ctx.trace_id, '032x'),
+            'span_id': format(ctx.span_id, '016x'),
+        }
+    return {'trace_id': 'none', 'span_id': 'none'}
+
+
 def get_context() -> dict[str, str]:
-    """Return the context for the logger.
-
-    Returns:
-        dict[str, str]: The context for the logger
-
-    """
+    """Return the current request context from starlette_context, if it exists."""
     ctx = {}
     with suppress(ContextDoesNotExistError):
         ctx = context.data
@@ -48,7 +56,7 @@ def get_context() -> dict[str, str]:
 
 
 # Define the logger after the get_context function is defined
-logger = loguru_logger.patch(lambda r: r['extra'].update(**get_context()))
+logger = loguru_logger.patch(lambda r: r['extra'].update(**get_context(), **get_trace_context()))
 
 
 class InterceptHandler(logging.Handler):

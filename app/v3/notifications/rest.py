@@ -1,10 +1,9 @@
 """All endpoints for the v3/notifications route."""
 
 from datetime import datetime, timezone
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 from fastapi import APIRouter, status
-from pydantic import UUID4
 
 from app.routers import TimedAPIRoute
 from app.v3.notifications.route_schema import NotificationSingleRequest, NotificationSingleResponse
@@ -16,14 +15,14 @@ api_router = APIRouter(
 
 
 @api_router.get('/{notification_id}', status_code=status.HTTP_200_OK)
-async def get_notification(notification_id: UUID4) -> UUID4:
+async def get_notification(notification_id: UUID) -> UUID:
     """Get a notification.
 
     Args:
-        notification_id (UUID4): The notification to get
+        notification_id (UUID): The notification to get
 
     Returns:
-        UUID4: The notification object
+        UUID: The notification object
 
     """
     return notification_id
@@ -37,7 +36,7 @@ async def create_notification(request: NotificationSingleRequest) -> Notificatio
         request (NotificationSingleRequest): Data for the request
 
     Returns:
-        UUID4: The notification object
+        NotificationSingleResponse: The notification object
 
     """
     response = NotificationSingleResponse(
