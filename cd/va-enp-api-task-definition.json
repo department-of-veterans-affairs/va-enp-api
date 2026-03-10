@@ -66,6 +66,11 @@
           "containerPort": 8126,
           "hostPort": 8126,
           "protocol": "tcp"
+        },
+        {
+          "containerPort": 4317,
+          "hostPort": 4317,
+          "protocol": "tcp"
         }
       ],
       "environment": [
@@ -112,6 +117,10 @@
         {
           "name": "DD_PROFILING_ENABLE_CODE_PROVENANCE",
           "value": "true"
+        },
+        {
+          "name": "DD_OTLP_CONFIG_RECEIVER_PROTOCOLS_GRPC_ENDPOINT",
+          "value": "0.0.0.0:4317"
         }
       ],
       "secrets": [
