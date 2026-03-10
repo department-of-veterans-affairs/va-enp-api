@@ -32,6 +32,10 @@
         {
           "name": "DD_SERVICE",
           "value": "va-enp-api"
+        },
+        {
+          "name": "OTEL_EXPORTER_OTLP_ENDPOINT",
+          "value": "http://localhost:4317"
         }
       ],
       "secrets": ${TASK_DEFINITION_SECRETS_JSON},
